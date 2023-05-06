@@ -1,31 +1,28 @@
-import anndata as ad
+import os
+import warnings
+
 import numpy as np
 import pandas as pd
-import flowio
-import copy
-import logging
-from ..transforms._matrix import Matrix
-from ..gates.gating_strategy import GatingStrategy
-from ..io.load import load_fcs_file_from_disk
 
-from .workspaces import FlowJoWorkspace, DivaWorkspace
 from flowio import FlowData
-from typing import Union, Optional
+from ..transforms._matrix import Matrix
 
-class Sample:
+from typing import Optional
+
+class FCSFile:
     """
-    intermediate representation of a sample FCS file,
-    is meant to return an anndata representation.
+    intermediate representation of a sample FCS file.
     Organization into an object is meant to facilitate cleaner code
     """
     def __init__(self,
-                 input_directory,
-                 workspace: Union[FlowJoWorkspace, DivaWorkspace],
-                 subsample = False
-                 ):
+                 input_directory: str,
+                 file_name: str
+                 ) -> None:
         
-        raw_data = load_fcs_file_from_disk(input_directory,
-                                           ignore_offset_error = False)
+        self.original_filename = file_name
+        raw_data = self.load_fcs_file_from_disk(input_directory,
+                                                file_name,
+                                                ignore_offset_error = False)
         
         self.compensation_status = "uncompensated"
         self.transform_status = "untransformed"
@@ -34,20 +31,47 @@ class Sample:
         self.event_count = self.parse_event_count(raw_data)
         self.version = self.parse_fcs_version(raw_data)
         self.fcs_metadata = self.parse_fcs_metadata(raw_data)
+        
         self.channels = self.parse_channel_information(raw_data)
-        #self.original_events = self.parse_and_process_original_events(raw_data)
+        
+        self.original_events = self.parse_and_process_original_events(raw_data)
 
-    def __repr__(self):
+        self.fcs_compensation = self.parse_compensation_matrix_from_fcs(raw_data)
+
+
+    def __repr__(self) -> str:
         return (
             f'{self.__class__.__name__}('
             f'v{self.version}, ' +
-            #f'{self.original_filename}, '
-            #f'{len(self.pnn_labels)} channels, ' + 
+            f'{self.original_filename}, '
+            f'{self.channels.shape[0]} channels, ' + 
             f'{self.event_count} events, ' +
             f'gating status: {self.gating_status}, ' + 
             f'compensation status: {self.compensation_status}, ' + 
             f'transform status: {self.transform_status})'
         )
+
+    def parse_compensation_matrix_from_fcs(self) -> Matrix:
+        
+        if "spill" not in self.fcs_metadata:
+            fluoro_channels_no = len(
+                [
+                    channel
+                    for channel in self.channels.index
+                    if any(k not in channel.lower() for k in ["fsc", "ssc", "time"])
+                ]
+            )
+            return Matrix(matrix_id = "FACSPy_empty",
+                        detectors = self.channels.index,
+                        fluorochromes = self.channels["pns"],
+                        spill_data_or_file = np.eye(N = fluoro_channels_no, M = fluoro_channels_no)
+                        )
+
+        return Matrix(matrix_id = "acquisition_defined",
+                          detectors = self.channels.index,
+                          fluorochromes = self.channels["pns"],
+                          spill_data_or_file = self.fcs_metadata["spill"]
+                          )
 
     def parse_event_count(self,
                           fcs_data: FlowData):
@@ -56,14 +80,21 @@ class Sample:
     def parse_and_process_original_events(self,
                                           fcs_data: FlowData) -> np.ndarray:
         tmp_orig_events = self.parse_original_events(fcs_data)
+        tmp_orig_events = self.process_original_events(tmp_orig_events)
+        return tmp_orig_events
+
+    def process_original_events(self,
+                                tmp_orig_events: np.ndarray) -> np.ndarray:
         tmp_orig_events = self.adjust_time_channel(tmp_orig_events)
         tmp_orig_events = self.adjust_decades(tmp_orig_events)
         tmp_orig_events = self.adjust_channel_gain(tmp_orig_events)
+        return tmp_orig_events
 
     def adjust_channel_gain(self,
-                            events: np.ndarray) -> np.ndarray:
+                            events: np.ndarray,
+                            channel_gains: np.ndarray) -> np.ndarray:
         channel_gains = self.channels.sort_values("channel_numbers")["png"].to_numpy()
-        return channel_gains + 1
+        return np.divide(events, channel_gains)
     
     def adjust_decades(self,
                        events: np.ndarray) -> np.ndarray:
@@ -86,7 +117,7 @@ class Sample:
 
     def find_time_channel(self) -> tuple[int, float]:
         time_step = float(self.fcs_metadata["timestep"]) if "timestep" in self.fcs_metadata else 1.0
-        time_index = int(self.channels.loc[self.channels.index.isin(["Time", "time"]), "channel_number"]) -1
+        time_index = int(self.channels.loc[self.channels.index.isin(["Time", "time"]), "channel_numbers"]) -1
         return (time_index, time_step)
 
     def time_channel_exists(self) -> bool:
@@ -124,7 +155,7 @@ class Sample:
         
         channel_numbers = [int(k) for k in channels]
 
-        return pd.DataFrame(
+        channel_frame = pd.DataFrame(
             data = {"pns": pns_labels,
                     "png": channel_gains,
                     "pne": channel_lin_log,
@@ -133,6 +164,8 @@ class Sample:
                     },
             index = pnn_labels
         )
+
+        return channel_frame.sort_values("channel_numbers")
 
     def parse_pnn_label(self,
                         channels: dict,
@@ -163,6 +196,10 @@ class Sample:
     
     def parse_channel_gain(self,
                            channel_number: str) -> float:
+        
+        if self.fcs_metadata[f"p{channel_number}n"] in ["Time", "time"]:
+            return 1.0
+        
         try:
             return float(self.fcs_metadata[f"p{channel_number}g"])
         except KeyError:
@@ -180,3 +217,15 @@ class Sample:
             return str(fcs_data.header["version"])
         except KeyError:
             return None
+        
+    def load_fcs_file_from_disk(self,
+                                input_directory: str,
+                                file_name: str,
+                                ignore_offset_error: bool) -> FlowData:
+        try:
+            return FlowData(os.path.join(input_directory, file_name), ignore_offset_error)
+        except ValueError:
+            warnings.warn("FACSPy IO: FCS file could not be read with " + 
+                        f"ignore_offset_error set to {ignore_offset_error}. " +
+                        "Parameter is set to True.")
+            return FlowData(input_directory, ignore_offset_error = True)
