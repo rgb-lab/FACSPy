@@ -1,11 +1,11 @@
 from pkg_resources import resource_filename
 from lxml import etree
 import os
-
+import pandas as pd
 from typing import Optional, Union
 
 from ..gates._gml_gates import GMLRectangleGate, GMLBooleanGate, GMLPolygonGate, GMLQuadrantGate
-from ..gates._gates import PolygonGate
+from ..gates._gates import PolygonGate, RectangleGate
 from ..gates._wsp_gates import WSPEllipsoidGate
 
 from ..gates._gate_utils import find_attribute_value
@@ -15,7 +15,11 @@ from ..transforms import _transforms, _wsp_transforms
 
 import numpy as np
 
+import copy
+import re
+from ..gates.dimension import Dimension
 
+import itertools
 
 wsp_gate_constructor_lut = {
             'RectangleGate': GMLRectangleGate,
@@ -26,24 +30,22 @@ wsp_gate_constructor_lut = {
         }
 
 class FlowJoWorkspace:
-
+    #TODO: refactor self._convert_wsp_gate
+    #TODO: refactor self.parse_wsp_transforms
     def __init__(self,
                  input_directory: str,
-                 file_name: str) -> None:
+                 file_name: str,
+                 ignore_transforms: bool = False) -> None:
         
         #self.resource_path = resource_filename("FACSPy", "_resources")
         self.original_filename = file_name
-        
-        self.ignore_transforms = False
-
+        self.ignore_transforms = ignore_transforms
         self.wsp_dict = self.parse_workspace(input_directory, file_name)
 
-        
 
-    #TODO: add typehinting dict
     def parse_workspace(self,
                         input_directory: str,
-                        file_name: str) -> dict:
+                        file_name: str) -> dict[dict]:
         (wsp_root,
          gating_namespace,
          data_type_namespace,
@@ -51,20 +53,228 @@ class FlowJoWorkspace:
 
         ns_map = wsp_root.nsmap
         
-        sample_list: list[etree._Element] = self.parse_xml_samples(wsp_root, ns_map)
-        
         group_node_list: list[etree._Element] = self.parse_xml_group_nodes(wsp_root, ns_map)
-
-        raw_wsp_groups = self.parse_wsp_groups(group_node_list,
+        self.raw_wsp_groups = self.parse_wsp_groups(group_node_list,
                                                ns_map,
                                                gating_namespace,
                                                data_type_namespace)
         
-        raw_wsp_samples = self.parse_wsp_samples(sample_list, ns_map,
+        sample_list: list[etree._Element] = self.parse_xml_samples(wsp_root, ns_map)
+        self.raw_wsp_samples = self.parse_wsp_samples(sample_list, ns_map,
                                                  gating_namespace,
                                                  transform_namespace,
                                                  data_type_namespace)
+        
+        return self.create_workspace_dictionary(self.raw_wsp_groups, self.raw_wsp_samples)
+
+    def _convert_wsp_gate(self, wsp_gate, comp_matrix, xform_lut, ignore_transforms=False):
+        new_dims = []
+        xforms = []
+
+        for dim in wsp_gate.dimensions:
+            dim_id = dim.id
+
+            if comp_matrix is not None:
+                pre = comp_matrix['prefix']
+                suf = comp_matrix['suffix']
+                if dim_id.startswith(pre):
+                    dim_id = re.sub(f'^{pre}', '', dim_id)
+                if dim_id.endswith(suf):
+                    dim_id = re.sub(f'{suf}$', '', dim_id)
+
+                if dim_id in comp_matrix['detectors']:
+                    comp_ref = comp_matrix['matrix_name']
+                else:
+                    comp_ref = None
+            else:
+                comp_ref = None
+
+            xform_id = None
+            new_dim_min = None
+            new_dim_max = None
+
+            if dim_id in xform_lut and not ignore_transforms:
+                xform = xform_lut[dim_id]
+                xforms.append(xform)  # need these later for vertices, coordinates, etc.
+                xform_id = xform.id
+                if dim.min is not None:
+                    new_dim_min = xform.apply(np.array([[float(dim.min)]]))
+
+                if dim.max is not None:
+                    new_dim_max = xform.apply(np.array([[float(dim.max)]]))
+            else:
+                xforms.append(None)
+                if dim.min is not None:
+                    new_dim_min = float(dim.min)
+
+                if dim.max is not None:
+                    new_dim_max = float(dim.max)
+
+            new_dim = Dimension(
+                dim_id,
+                comp_ref,
+                xform_id,
+                range_min=new_dim_min,
+                range_max=new_dim_max
+            )
+            new_dims.append(new_dim)
+
+        if isinstance(wsp_gate, GMLPolygonGate):
+            # convert vertices using saved xforms
+            vertices = copy.deepcopy(wsp_gate.vertices)
+            for vertex in vertices:
+                for i, coordinate in enumerate(vertex):
+                    if xforms[i] is not None:
+                        vertex[i] = xforms[i].apply(np.array([[float(coordinate)]]))[0][0]
+
+            gate = PolygonGate(wsp_gate.gate_name, new_dims, vertices)
+        elif isinstance(wsp_gate, GMLRectangleGate):
+            gate = copy.deepcopy(wsp_gate)
+            gate.dimensions = new_dims
+        elif isinstance(wsp_gate, WSPEllipsoidGate):
+            # FlowJo ellipse gates must be converted to approximate polygons.
+            # When a mixed set of transforms where 1 transform is the biex,
+            # the ellipse is not a true ellipse. FlowJo also converts all
+            # ellipses to polygons internally when processing gates.
+            gate = wsp_gate.convert_to_polygon_gate(xforms)
+            gate.dimensions = new_dims
+        else:
+            raise NotImplementedError(
+                f"{type(wsp_gate).__name__} gates for FlowJo workspaces are not currently supported."
+            )
+
+        return gate
+   
+    def create_workspace_dictionary(self,
+                                    raw_wsp_groups: dict,
+                                    raw_wsp_samples: dict) -> dict:
+        wsp_dict = {}
+        for group_id, group_dict in raw_wsp_groups.items():
+            wsp_dict[group_id] = {}
+            for sample_id in group_dict["samples"]:
+                sample_dict = raw_wsp_samples[sample_id]
+                sample_name = sample_dict['sample_name']
+                wsp_dict[group_id][sample_name] = self.assemble_sample_from_raw_sample(sample_dict, sample_name, group_dict)
+        return wsp_dict
+
+    def parse_group_gates(self,
+                          group_dict: dict,
+                          sample_dict: dict) -> tuple[list[dict], list[str]]:
+        
+        # check the sample's sample_gates. If it is empty, then the
+        # sample belongs to a group, but it has no gate hierarchy.
+
+#                if len(sample_dict['sample_gates']) == 0:
+#                    print("skipped that...")
+#                    continue     
+        group_sample_gate_names = []
+        group_sample_gates = []
+        
+        for group_gate in group_dict['gates']:
+            group_gate_name = group_gate['gate'].gate_name
+
+            tmp_gate = copy.deepcopy(group_gate['gate'])
+
+            if group_gate_name in sample_dict['custom_gate_ids']:
+                group_gate_path = group_gate['gate_path']
+                for sample_gate_dict in sample_dict['custom_gates']:
+                    tmp_sample_gate = sample_gate_dict['gate']
+                    tmp_sample_gate_path = sample_gate_dict['gate_path']
+                    if group_gate_path == tmp_sample_gate_path and tmp_sample_gate.gate_name == group_gate_name:
+                        # found a match, overwrite tmp_gate
+                        tmp_gate = tmp_sample_gate
+
+            tmp_gate = self._convert_wsp_gate(
+                tmp_gate,
+                sample_dict['comp'],
+                sample_dict['transforms'],
+                ignore_transforms=self.ignore_transforms
+            )
+
+            group_sample_gate_names.append(group_gate_name)
+            group_sample_gates.append(
+                {
+                    'gate': tmp_gate,
+                    'gate_path': group_gate['gate_path']
+                }
+            )
+        return group_sample_gates, group_sample_gate_names
+
+
+    def parse_custom_gates(self,
+                           sample_dict: dict,
+                           group_sample_gate_names: list[str],
+                           group_sample_gates: list[dict]) -> list[dict]:
+        # Now, we need to check if there were only custom sample gates
+        # and no group gates. In this case the above would never have
+        # found the custom sample gates, but we don't want to replicate
+        # them.
+        for sample_gate_dict in sample_dict['custom_gates']:
+            # noinspection PyTypeChecker
+            sample_gate = sample_gate_dict['gate']
+            # noinspection PyUnresolvedReferences
+            if sample_gate.gate_name not in group_sample_gate_names:
+                # noinspection PyTypeChecker
+                tmp_gate = self._convert_wsp_gate(
+                    sample_gate,
+                    sample_dict['comp'],
+                    sample_dict['transforms'],
+                    ignore_transforms=self.ignore_transforms
+                )
+                # noinspection PyTypeChecker
+                sample_gate_path = sample_gate_dict['gate_path']
+
+                group_sample_gates.append(
+                    {
+                        'gate': tmp_gate,
+                        'gate_path': sample_gate_path
+                    }
+                )
+
+        return group_sample_gates
     
+    def parse_raw_sample_gates(self,
+                               sample_dict: dict,
+                               group_dict: dict
+                               ) -> list[dict]:        
+        
+        (group_sample_gates,
+         group_sample_gate_names) = self.parse_group_gates(group_dict, sample_dict)
+        
+        group_sample_gates = self.parse_custom_gates(sample_dict, group_sample_gate_names, group_sample_gates)
+
+        return group_sample_gates
+
+    def assemble_sample_from_raw_sample(self,
+                                        sample_dict: dict,
+                                        sample_name: str,
+                                        group_dict: dict) -> dict:
+        
+        group_sample_gates = self.parse_raw_sample_gates(sample_dict, group_dict)
+        matrix = sample_dict['comp']['matrix'] if sample_dict['comp'] is not None else None
+        transforms = list(sample_dict['transforms'].values())
+        return {
+            'gates': group_sample_gates,
+            'transforms': transforms,
+            'compensation': matrix
+        }
+
+    def parse_sample_gates(self,
+                           sample_node: etree._Element,
+                           gating_namespace: str,
+                           data_type_namespace: str,
+                           ns_map: dict) -> list[dict]:
+        sample_root_subpopulation = sample_node.find("Subpopulations", ns_map)
+        if sample_root_subpopulation is None:
+            return []
+        else:
+            sample_gates = self.parse_wsp_subpopulations(
+                sample_root_subpopulation,
+                None,
+                gating_namespace,
+                data_type_namespace
+            )
+        return sample_gates
 
     def parse_wsp_samples(self,
                           sample_list: list[etree._Element],
@@ -75,34 +285,18 @@ class FlowJoWorkspace:
         wsp_samples = {}
 
         for sample in sample_list:
-            transforms: etree._Element = sample.find("Transformations", ns_map)
-            keywords: etree._Element = sample.find("Keywords", ns_map)
             sample_node: etree._Element = sample.find("SampleNode", ns_map)
-            
-            sample_name = sample_node.attrib["name"]
             sample_id = sample_node.attrib["sampleID"]
-
-            sample_xform_lut = self.parse_wsp_transforms(transforms, transform_namespace, data_type_namespace)
-
-            sample_keywords_lut = self.parse_wsp_keywords(keywords)
-
+            
+            sample_xform_lut = self.parse_wsp_transforms(sample, transform_namespace, data_type_namespace, ns_map)
+            sample_keywords_lut = self.parse_wsp_keywords(sample, ns_map)
             sample_comp = self.parse_wsp_compensation(sample, transform_namespace, data_type_namespace)
-
-            sample_root_subpopulation = sample_node.find("Subpopulations", ns_map)
-            if sample_root_subpopulation is None:
-                sample_gates = []
-            else:
-                sample_gates = self.parse_wsp_subpopulations(
-                    sample_root_subpopulation,
-                    None,
-                    gating_namespace,
-                    data_type_namespace
-                )
-
+            sample_gates = self.parse_sample_gates(sample_node, gating_namespace, data_type_namespace, ns_map)
+            
             # sample gate LUT will store everything we need to convert sample gates,
             # including any custom gates (ones with empty string owning groups).
             wsp_samples[sample_id] = {
-                'sample_name': sample_name,
+                'sample_name': sample_node.attrib["name"],
                 'sample_gates': sample_gates,
                 'custom_gate_ids': set(),
                 'custom_gates': [],
@@ -111,24 +305,29 @@ class FlowJoWorkspace:
                 'comp': sample_comp
             }
 
-            for sample_gate in sample_gates:
-                if sample_gate['owning_group'] == '':
-                    # If the owning group is an empty string, it is a custom gate for that sample
-                    # that is potentially used in another group. However, it appears that if a
-                    # sample has a custom gate then that custom gate cannot be further customized.
-                    # Since there is only a single custom gate per gate name per sample, then we
-                    # can create a LUT of custom gates per sample
-                    wsp_samples[sample_id]['custom_gate_ids'].add(sample_gate['gate'].gate_name)
-                    wsp_samples[sample_id]['custom_gates'].append(
-                        {
-                            'gate': sample_gate['gate'],
-                            'gate_path': sample_gate['gate_path']
-                        }
-                    )
+            wsp_samples = self.process_custom_gates(sample_gates, wsp_samples, sample_id)
 
         return wsp_samples         
 
-
+    def process_custom_gates(self,
+                             sample_gates: list[dict],
+                             wsp_samples: dict,
+                             sample_id: str) -> dict:
+        for sample_gate in sample_gates:
+            if sample_gate['owning_group'] == '':
+                # If the owning group is an empty string, it is a custom gate for that sample
+                # that is potentially used in another group. However, it appears that if a
+                # sample has a custom gate then that custom gate cannot be further customized.
+                # Since there is only a single custom gate per gate name per sample, then we
+                # can create a LUT of custom gates per sample
+                wsp_samples[sample_id]['custom_gate_ids'].add(sample_gate['gate'].gate_name)
+                wsp_samples[sample_id]['custom_gates'].append(
+                    {
+                        'gate': sample_gate['gate'],
+                        'gate_path': sample_gate['gate_path']
+                    }
+                )
+        return wsp_samples
 
     def parse_detectors(self,
                         matrix_element: etree._Element,
@@ -146,11 +345,12 @@ class FlowJoWorkspace:
                      matrix_element: etree._Element,
                      transform_ns: str) -> np.ndarray:
         
-        return self.assemble_matrix(matrix_element)
+        return self.assemble_matrix(matrix_element, transform_ns)
     
     def parse_matrix_row(self,
-                         coefficients: list[etree._Element]) -> np.ndarray:
-        return np.array([find_attribute_value(float(coefficient)) for coefficient in coefficients]) 
+                         coefficients: list[etree._Element],
+                         transform_ns: str) -> np.ndarray:
+        return np.array([float(find_attribute_value(coefficient, transform_ns, "value")) for coefficient in coefficients]) 
 
     def parse_coefficients(self,
                            spill_element: etree._Element,
@@ -163,7 +363,7 @@ class FlowJoWorkspace:
         spill_els: list[etree._Element] = matrix_element.findall(
             f'{transform_ns}:spillover', matrix_element.nsmap
         )
-        return np.ndarray([self.parse_matrix_row(self.parse_coefficients(spill_el, transform_ns)) for spill_el in spill_els])
+        return np.array([self.parse_matrix_row(self.parse_coefficients(spill_el, transform_ns), transform_ns) for spill_el in spill_els])
 
     def parse_wsp_compensation(self,
                                sample: etree._Element,
@@ -200,8 +400,9 @@ class FlowJoWorkspace:
 
 
     def parse_wsp_keywords(self,
-                           keywords: etree._Element) -> dict:
-        
+                           sample: etree._Element,
+                           ns_map: dict) -> dict:
+        keywords: etree._Element = sample.find("Keywords", ns_map)
         keyword_els = keywords.getchildren()
 
         return {
@@ -210,10 +411,11 @@ class FlowJoWorkspace:
         }
 
     def parse_wsp_transforms(self,
-                             transforms_el: etree._Element,
+                             sample: etree._Element,
                              transform_ns: str,
-                              data_type_ns: str) -> dict:
-        
+                             data_type_ns: str,
+                             ns_map: dict) -> dict:
+        transforms_el: etree._Element = sample.find("Transformations", ns_map)
         xform_els: list[etree._Element] = transforms_el.getchildren()
 
         # there should be one transform per channel, use the channel names to create a LUT
@@ -356,7 +558,7 @@ class FlowJoWorkspace:
 
             subpopulations = population.findall("Subpopulations", ns_map)
             child_gate_path = gate_path
-            child_gate_path.append(population)
+            child_gate_path.append(population.attrib["name"])
             for el in subpopulations:
                 gates.extend(self.parse_wsp_subpopulations(el,
                                                            child_gate_path,
@@ -468,5 +670,275 @@ class FlowJoWorkspace:
 
 
 class DivaWorkspace:
+    """
+    Class to represent a diva workspace.
+    Built to be compatible with the flowkit package.
+    Q1-Q4 Quadrant Gates are parsed as Polygon-Gates in contrast to GMLRectangle in Flowkit
+    Quadrant Gates have an upper limit here in contrast to FlowKit were "None" is passed to extend the gates to infinity
+    Binner-Regions are ignored as they define the points where the quadrant gates lie
+    Code is inspired by CytoML, however one notable change: "restore to logicle scale" was removed
+    TODO: Q1-1 is not supported currently...
+    TODO: Add gate names for Q-gates -> check with Diva which Qs are which gates
+    TODO: refactor parse diva gate coordinates
+    """
+    def __init__(self,
+                 input_directory: str,
+                 file_name: str,):
 
-    pass
+        if not self._correct_suffix(file_name):
+            raise ValueError("Only XML Diva Workspaces are supported")
+
+        self.wsp_dict = self.create_workspace_dictionary(input_directory, file_name)
+
+    def parse_experiment(self,
+                         raw_wsp: etree._ElementTree) -> etree._Element:
+        root: etree._Element = raw_wsp.getroot()
+        experiment_list = root.getchildren()
+        if len(experiment_list) != 1:
+            raise ValueError("More than one experiment detected...???")
+        return experiment_list[0]
+    
+    def parse_tubes(self,
+                    raw_wsp: etree._ElementTree) -> list[etree._Element]:
+        experiment = self.parse_experiment(raw_wsp)
+        log_decades = int(experiment.find("log_decades").text)
+        if log_decades == 4:
+            min_val = 26
+        elif log_decades == 5:
+            min_val = 2.6
+        else:
+            raise ValueError("Decade is neither 4 or 5...")
+        specimens = experiment.findall("specimen")
+        return list(itertools.chain(*[specimen.findall("tube") for specimen in specimens]))
+    
+    def create_workspace_dictionary(self,
+                                    input_directory: str,
+                                    file_name: str) -> dict:
+        
+        raw_wsp = self.parse_raw_data(input_directory, file_name)
+        tubes = self.parse_tubes(raw_wsp)
+
+        #self.version = dict(root.items())["version"]
+        #self.experiment_name = dict(experiment.items())["name"]
+
+        ### create custom "All Samples" key to be compatible with Dataset Class
+        wsp_dict = {"All Samples": {}}
+
+        for tube in tubes:
+            tube_id = tube.find("data_filename").text
+            wsp_dict["All Samples"][tube_id] = {}
+            transform_lut = self._parse_diva_transformation(instrument_settings = tube.find("instrument_settings"))
+            wsp_dict["All Samples"][tube_id]["transformations"] = transform_lut
+            wsp_dict["All Samples"][tube_id]["transforms"] = [xform for (_, xform) in transform_lut.items()]
+            wsp_dict["All Samples"][tube_id]["gates"] = self._parse_diva_gates(gate_elements = tube.find("gates"),
+                                                                transform_dict = transform_lut)
+            wsp_dict["All Samples"][tube_id]["compensation"] = self._parse_diva_compensation(instrument_settings = tube.find("instrument_settings"))
+
+
+        return wsp_dict
+
+    def parse_raw_data(self,
+                       input_directory,
+                       file_name: str) -> etree._Element:
+        return etree.parse(os.path.join(input_directory, file_name))
+
+    def _parse_diva_transformation(self,
+                                   instrument_settings) -> dict:
+        transform_dict = {}
+        use_auto_biexp_scale = bool(instrument_settings.find("use_auto_biexp_scale").text)
+        biexp_scale_node = "comp_biexp_scale" if use_auto_biexp_scale else "manual_biexp_scale"
+        parameters = instrument_settings.findall("parameter")
+        #scale_settings = {}
+        for param in parameters:
+            param_name = param.attrib["name"]
+            #scale_settings[param] = {}
+            is_log = param.find("is_log").text == "true"
+            #scale_settings[param]["scale_minimum"] = float(param.find("min"))
+            scale_minimum = float(param.find("min").text)
+            #scale_settings[param]["scale_maximum"] = float(param.find("max"))
+            scale_maximum = float(param.find("max").text)
+            #scale_settings[param]["biexp_scale"] = abs(float(param.find(biexp_scale_node).text))
+
+            if is_log:
+                biexp_scale = abs(float(param.find(biexp_scale_node).text))
+                if biexp_scale == 0:
+                    transform_dict[param_name] = _transforms.LogTransform(
+                                                    transform_id = param_name,
+                                                    param_t = 10**scale_maximum,
+                                                    param_m = 4.5
+                                                )
+                else:
+                    w = max(0, (4.5 - np.log10(10**scale_maximum/biexp_scale)) * 0.5) ## source: CytoML; automatically sets to 0 if less than 0
+                    transform_dict[param_name] = _transforms.LogicleTransform(
+                                                    transform_id = param_name,
+                                                    param_w = w,
+                                                    param_t = 10**scale_maximum,
+                                                    param_m = 4.5,
+                                                    param_a = 0 ## leave at 0 for now, cytoML and FlowJo do so...
+                                                )
+            else:
+                transform_dict[param_name] = _transforms.LinearTransform(
+                                                transform_id = param_name,
+                                                param_t = scale_maximum,
+                                                param_a = 0
+                                            )              
+
+        return transform_dict
+
+
+    def _parse_diva_compensation(self,
+                                 instrument_settings: etree._Element) -> Matrix:
+        parameters = instrument_settings.findall("parameter")
+        fluorochrome_list = [dict(param.items())["name"] for param in parameters if
+                             param.find("can_be_compensated") is not None and
+                             param.find("can_be_compensated").text == "true"]
+        comp_matrix = np.zeros((len(fluorochrome_list),len(fluorochrome_list)))
+        for i, channel in enumerate(fluorochrome_list):
+            comp_list = [param.find("compensation").getchildren() for param in parameters if dict(param.items())["name"] == channel]
+            comp_matrix[:, i] = [value.text for value in comp_list[0]]
+        comp_matrix = np.linalg.solve(comp_matrix, np.eye(N = comp_matrix.shape[0], M = comp_matrix.shape[1]))
+        return Matrix(matrix_id = "Acquisition Defined",
+                      detectors = fluorochrome_list,
+                      fluorochromes = fluorochrome_list,
+                      spill_data_or_file = comp_matrix)
+
+    def _parse_diva_gates(self,
+                          gate_elements: etree._Element,
+                          transform_dict: dict) -> list:
+        
+        gate_list = []
+        for gate in gate_elements.getchildren():
+            gate_name = gate.find("name").text
+            gate_path = gate.attrib["fullname"].split("\\")
+            gate_path.remove(gate_name)
+            if gate_path == []:
+                gate_path.append("root")
+            for i, el in enumerate(gate_path):
+                if el == "All Events":
+                    gate_path[i] = "root"
+                    break
+            gate_path = tuple(gate_path)
+            if gate.find("region") is None:
+                assert "All Events" or "Rest" in gate_name, f"some other gate than all events encountered... {gate_name}"
+            else:
+                x_param, y_param, gate_type, gate_coordinates = self._process_gate_coordinates(gate, transform_dict)
+
+                dims = []
+                for i, param in enumerate([x_param, y_param]):
+                    if param is not None:
+                        new_dim = Dimension(dimension_id = param,
+                                            compensation_ref = None,
+                                            transformation_ref = param,
+                                            range_min = np.min(gate_coordinates[:,i]),
+                                            range_max = np.max(gate_coordinates[:,i])
+                                            )
+                        dims.append(new_dim)
+                if gate_type == "POLYGON_REGION":
+                    gate_list.append({"gate": PolygonGate(gate_name, dims, gate_coordinates), "gate_path": gate_path})
+                elif gate_type in ["RECTANGLE_REGION", "INTERVAL_REGION"]:
+                    gate_list.append({"gate": RectangleGate(gate_name, dims), "gate_path": gate_path})
+                else:
+                    print(gate_type)
+
+        return gate_list
+
+    def _process_gate_coordinates(self,
+                                  gate: etree._Element,
+                                  transform_lut: dict) -> np.ndarray:
+        
+        gate_region = dict(gate.find("region").items())
+        gate_type = gate_region["type"]
+
+        dim_counter = 0
+        try:
+            x_param = gate_region["xparm"]
+            dim_counter += 1
+        except KeyError:
+            x_param = None
+
+        try:
+            y_param = gate_region["yparm"]
+            dim_counter += 1
+        except KeyError:
+            y_param = None
+            assert gate_type == "INTERVAL_REGION"
+
+        gate_points = gate.find("region").find("points").findall("point")
+        gate_points = pd.DataFrame([dict(point.items()) for point in gate_points]).to_numpy(dtype = np.float64)
+        is_x_scaled = gate.find("is_x_parameter_scaled").text == "true"
+        is_y_scaled = gate.find("is_y_parameter_scaled").text == "true"
+        x_parameter_scale_value = float(gate.find("x_parameter_scale_value").text)
+        y_parameter_scale_value = float(gate.find("y_parameter_scale_value").text)
+
+        if is_x_scaled:
+            gate_points[:,0] = gate_points[:,0] / 4096
+            if gate.find("is_x_parameter_log").text == "true":
+                # create temporary transformation, seems to be always a logicle transform so no need for log transform for now
+                # TODO: check if implementing log-transform for no apparent scale value makes sense
+                scale_value = x_parameter_scale_value
+                w = max(0, (4.5 - np.log10(10**5.4185380935668945/scale_value)) * 0.5) ## source: CytoML; automatically sets to 0 if less than 0
+                temp_transform = _transforms.LogicleTransform(
+                                                transform_id = "temporary",
+                                                param_w = w,
+                                                param_t = 10**5.4185380935668945,
+                                                param_m = 4.5,
+                                                param_a = 0 ## leave at 0 for now, cytoML and FlowJo do so...
+                                            )
+                # CytoML does multiply with 4.5 to "restore to the logicle scale"
+                # Comparison with flowkit seems to indicate that this step is not necessary
+                # gate_points[:,0] = gate_points[:,0] * 4.5 # restore it to the logicle scale
+
+                gate_points[:,0] = temp_transform.inverse(gate_points[:,0])
+            else:
+                gate_points[:,0] = gate_points[:,0] * 10**5.4185380935668945
+
+        else: ## x is not scaled
+            if gate.find("is_x_parameter_log").text == "true":
+                gate_points[:,0] = 10 ** gate_points[:,0]
+            ## implicit code chunk
+            #else:
+            #    gate_points[:,0] = gate_points[:,0]
+
+        ## transform them all for compatibility with FlowKit
+        if x_param is not None:
+            gate_points[:,0] = transform_lut[x_param].apply(gate_points[:,0])
+
+
+        if is_y_scaled:
+            gate_points[:,1] = gate_points[:,1] / 4096
+            if gate.find("is_y_parameter_log").text == "true":
+                # create temporary transformation, seems to be always a logicle transform so no need for log transform for now
+                # TODO: check if implementing log-transform for no apparent scale value makes sense
+                scale_value = y_parameter_scale_value
+                w = max(0, (4.5 - np.log10(10**5.4185380935668945/scale_value)) * 0.5) ## source: CytoML; automatically sets to 0 if less than 0
+                temp_transform = _transforms.LogicleTransform(
+                                                transform_id = "temporary",
+                                                param_w = w,
+                                                param_t = 10**5.4185380935668945,
+                                                param_m = 4.5,
+                                                param_a = 0 ## leave at 0 for now, cytoML and FlowJo do so...
+                                            )
+                # CytoML does multiply with 4.5 to "restore to the logicle scale"
+                # Comparison with flowkit seems to indicate that this step is not necessary
+                # gate_points[:,1] = gate_points[:,1] * 4.5 # restore it to the logicle scale
+
+                gate_points[:,1] = temp_transform.inverse(gate_points[:,1])
+            else:
+                gate_points[:,1] = gate_points[:,1] * 10**5.4185380935668945
+
+        else: ## y is not scaled
+            if gate.find("is_y_parameter_log").text == "true":
+                gate_points[:,1] = 10 ** gate_points[:,1]
+            ## implicit code chunk
+            #else:
+            #    gate_points[:,1] = gate_points[:,1]
+
+        if y_param is not None:
+            gate_points[:,1] = transform_lut[y_param].apply(gate_points[:,1])
+
+        return x_param, y_param, gate_type, gate_points
+
+
+    def _correct_suffix(self,
+                        file_name: str) -> bool:
+        return file_name.endswith(".xml")

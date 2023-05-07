@@ -13,9 +13,9 @@ def find_attribute_value(xml_el, namespace, attribute_name):
     :return: value string for the given attribute_name
     """
     attribs = xml_el.xpath(
-        '@%s:%s' % (namespace, attribute_name),
+        f'@{namespace}:{attribute_name}',
         namespaces=xml_el.nsmap,
-        smart_strings=False
+        smart_strings=False,
     )
     attribs_cnt = len(attribs)
 
@@ -40,30 +40,23 @@ def _parse_dimension_element(
     compensation_ref = find_attribute_value(dim_element, gating_namespace, 'compensation-ref')
     transformation_ref = find_attribute_value(dim_element, gating_namespace, 'transformation-ref')
 
-    range_min = None
-    range_max = None
-
     # should be 0 or only 1 'min' attribute (same for 'max')
     _min = find_attribute_value(dim_element, gating_namespace, 'min')
     _max = find_attribute_value(dim_element, gating_namespace, 'max')
 
-    if _min is not None:
-        range_min = float(_min)
-    if _max is not None:
-        range_max = float(_max)
-
+    range_min = float(_min) if _min is not None else None
+    range_max = float(_max) if _max is not None else None
     # ID be here
     fcs_dim_el = dim_element.find(
-        '%s:fcs-dimension' % data_type_namespace,
-        namespaces=dim_element.nsmap
+        f'{data_type_namespace}:fcs-dimension', namespaces=dim_element.nsmap
     )
 
     # if no 'fcs-dimension' element is present, this might be a
     # 'new-dimension'  made from a transformation on other dims
     if fcs_dim_el is None:
         new_dim_el = dim_element.find(
-            '%s:new-dimension' % data_type_namespace,
-            namespaces=dim_element.nsmap
+            f'{data_type_namespace}:new-dimension',
+            namespaces=dim_element.nsmap,
         )
         if new_dim_el is None:
             raise ValueError(
@@ -78,12 +71,12 @@ def _parse_dimension_element(
             raise ValueError(
                 "New dimensions must provide a transform reference (line %d)" % dim_element.sourceline
             )
-        dimension = RatioDimension(
+        return RatioDimension(
             ratio_xform_ref,
             compensation_ref,
             transformation_ref,
             range_min=range_min,
-            range_max=range_max
+            range_max=range_max,
         )
     else:
         dim_id = find_attribute_value(fcs_dim_el, data_type_namespace, 'name')
@@ -92,15 +85,13 @@ def _parse_dimension_element(
                 'Dimension name not found (line %d)' % fcs_dim_el.sourceline
             )
 
-        dimension = Dimension(
+        return Dimension(
             dim_id,
             compensation_ref,
             transformation_ref,
             range_min=range_min,
-            range_max=range_max
+            range_max=range_max,
         )
-
-    return dimension
 
 
 def _parse_divider_element(divider_element, gating_namespace, data_type_namespace):
@@ -112,8 +103,8 @@ def _parse_divider_element(divider_element, gating_namespace, data_type_namespac
 
     # ID be here
     fcs_dim_el = divider_element.find(
-        '%s:fcs-dimension' % data_type_namespace,
-        namespaces=divider_element.nsmap
+        f'{data_type_namespace}:fcs-dimension',
+        namespaces=divider_element.nsmap,
     )
 
     dim_id = find_attribute_value(fcs_dim_el, data_type_namespace, 'name')
@@ -122,20 +113,15 @@ def _parse_divider_element(divider_element, gating_namespace, data_type_namespac
             'Divider dimension name not found (line %d)' % fcs_dim_el.sourceline
         )
 
-    values = []  # quad gate dims can have multiple values
-
     # values in gating namespace, ok if not present
     value_els = divider_element.findall(
-        '%s:value' % gating_namespace,
-        namespaces=divider_element.nsmap
+        f'{gating_namespace}:value', namespaces=divider_element.nsmap
     )
 
-    for value in value_els:
-        values.append(float(value.text))
-
-    divider = QuadrantDivider(divider_id, dim_id, compensation_ref, values, transformation_ref)
-
-    return divider
+    values = [float(value.text) for value in value_els]
+    return QuadrantDivider(
+        divider_id, dim_id, compensation_ref, values, transformation_ref
+    )
 
 
 def parse_vertex_element(vertex_element, gating_namespace, data_type_namespace):
@@ -148,8 +134,7 @@ def parse_vertex_element(vertex_element, gating_namespace, data_type_namespace):
     coordinates = []
 
     coord_els = vertex_element.findall(
-        '%s:coordinate' % gating_namespace,
-        namespaces=vertex_element.nsmap
+        f'{gating_namespace}:coordinate', namespaces=vertex_element.nsmap
     )
 
     if len(coord_els) != 2:
@@ -189,16 +174,14 @@ def parse_gate_element(
     # most gates specify dimensions in the 'dimension' tag,
     # but quad gates specify dimensions in the 'divider' tag
     div_els = gate_element.findall(
-        '%s:divider' % gating_namespace,
-        namespaces=gate_element.nsmap
+        f'{gating_namespace}:divider', namespaces=gate_element.nsmap
     )
 
     dimensions = []  # may actually be a list of dividers
 
     if len(div_els) == 0:
         dim_els = gate_element.findall(
-            '%s:dimension' % gating_namespace,
-            namespaces=gate_element.nsmap
+            f'{gating_namespace}:dimension', namespaces=gate_element.nsmap
         )
 
         dimensions = []
