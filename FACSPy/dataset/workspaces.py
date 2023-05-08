@@ -1,25 +1,22 @@
-from pkg_resources import resource_filename
-from lxml import etree
+
 import os
-import pandas as pd
 from typing import Optional, Union
+
+from lxml import etree
+import numpy as np
+import pandas as pd
+import itertools
+import copy
+import re
 
 from ..gates._gml_gates import GMLRectangleGate, GMLBooleanGate, GMLPolygonGate, GMLQuadrantGate
 from ..gates._gates import PolygonGate, RectangleGate
 from ..gates._wsp_gates import WSPEllipsoidGate
-
 from ..gates._gate_utils import find_attribute_value
+from ..gates.dimension import Dimension
 
 from ..transforms._matrix import Matrix
 from ..transforms import _transforms, _wsp_transforms
-
-import numpy as np
-
-import copy
-import re
-from ..gates.dimension import Dimension
-
-import itertools
 
 wsp_gate_constructor_lut = {
             'RectangleGate': GMLRectangleGate,
@@ -42,6 +39,13 @@ class FlowJoWorkspace:
         self.ignore_transforms = ignore_transforms
         self.wsp_dict = self.parse_workspace(input_directory, file_name)
 
+    def __repr__(self):
+        
+        return (
+            f"{self.__class__.__name__}(" +
+            f"{len(list(self.wsp_dict.keys()))} groups: {list(self.wsp_dict.keys())}, " +
+            f"{len(list(self.wsp_dict['All Samples'].keys()))} entries.)"
+        )
 
     def parse_workspace(self,
                         input_directory: str,
@@ -690,6 +694,14 @@ class DivaWorkspace:
 
         self.wsp_dict = self.create_workspace_dictionary(input_directory, file_name)
 
+    def __repr__(self):
+        
+        return (
+            f"{self.__class__.__name__}(" +
+            f"{len(list(self.wsp_dict.keys()))} groups: {list(self.wsp_dict.keys())}, " +
+            f"{len(list(self.wsp_dict['All Samples'].keys()))} entries.)"
+        )
+
     def parse_experiment(self,
                          raw_wsp: etree._ElementTree) -> etree._Element:
         root: etree._Element = raw_wsp.getroot()
@@ -846,6 +858,7 @@ class DivaWorkspace:
                                   gate: etree._Element,
                                   transform_lut: dict) -> np.ndarray:
         
+        
         gate_region = dict(gate.find("region").items())
         gate_type = gate_region["type"]
 
@@ -870,6 +883,7 @@ class DivaWorkspace:
         x_parameter_scale_value = float(gate.find("x_parameter_scale_value").text)
         y_parameter_scale_value = float(gate.find("y_parameter_scale_value").text)
 
+        # sourcery skip: extract-duplicate-method, merge-else-if-into-elif
         if is_x_scaled:
             gate_points[:,0] = gate_points[:,0] / 4096
             if gate.find("is_x_parameter_log").text == "true":
