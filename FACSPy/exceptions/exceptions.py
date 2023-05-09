@@ -1,4 +1,19 @@
 from typing import Any
+import warnings
+
+class PanelMatchWarning():
+    def __init__(self,
+                 channel: str,
+                 fcs_antigen: str,
+                 panel_antigen: str) -> None:
+        message = (
+                    f"Antigens do not match for channel {channel}. " + 
+                    f"FCS data documented {fcs_antigen} " +
+                    f"while the user supplied panel documented {panel_antigen}. " +
+                    f"The antigen will be referenced as described from the user supplied panel: {panel_antigen}"
+                )
+        warnings.warn(message, UserWarning)
+    
 
 class SupplementDataTypeError(Exception):
     

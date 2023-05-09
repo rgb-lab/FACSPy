@@ -1,0 +1,4 @@
+
+
+currently, no check for completely missing comps is in place!
+see dataset -> compensate samples

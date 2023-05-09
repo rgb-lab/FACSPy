@@ -771,8 +771,6 @@ class GatingStrategy(object):
         :return: GatingResults instance
         """
         results = {}
-        from ..data.sample import Sample
-        assert isinstance(sample, Sample), "NO NO NO !"
         # The goal here is to avoid re-analyzing any gates.
         # For every gate processed, the results will be cached.
         # Since the nodes are retrieved in hierarchy order,

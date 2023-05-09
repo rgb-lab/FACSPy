@@ -66,7 +66,7 @@ class Matrix(object):
             f'{self.id}, dims: {len(self.detectors)})'
         )
 
-    def apply(self, sample):
+    def apply(self, sample) -> np.ndarray:
         """
         Apply compensation matrix to given Sample instance.
 

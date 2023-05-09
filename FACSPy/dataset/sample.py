@@ -36,7 +36,7 @@ class FCSFile:
         
         self.original_events = self.parse_and_process_original_events(raw_data)
 
-        self.fcs_compensation = self.parse_compensation_matrix_from_fcs(raw_data)
+        self.fcs_compensation = self.parse_compensation_matrix_from_fcs()
 
 
     def __repr__(self) -> str:
@@ -50,6 +50,57 @@ class FCSFile:
             f'compensation status: {self.compensation_status}, ' + 
             f'transform status: {self.transform_status})'
         )
+
+    def get_events(self,
+                   source: str) -> np.ndarray:
+        if source == "raw":
+            return self._get_original_events()
+        elif source == "comp":
+            raise NotImplementedError("not yet implemented")
+            #self._get_compensated_events()
+        else:
+            raise NotImplementedError("Only Raw and comped events can be fetched.")
+
+    def _get_original_events(self):
+        return self.original_events
+    
+    def _get_compensated_events(self):
+        return self.compensated_events
+
+    # def get_channel_number_by_label(self, label):
+    #     """
+    #     Returns the channel number for the given PnN label. Note, this is the
+    #     channel number, as defined in the FCS data (not the channel index), so
+    #     the 1st channel's number is 1 (not 0).
+    #     :param label: PnN label of a channel
+    #     :return: Channel number (not index)
+    #     """
+    #     if label in self.pnn_labels:
+    #         return self.pnn_labels.index(label) + 1
+    #     else:
+    #         # as a last resort we can try the FJ labels and fail if no match
+    #         return self._flowjo_pnn_labels.index(label) + 1
+            
+    # def get_channel_index(self, channel_label_or_number):
+    #     """
+    #     Returns the channel index for the given PnN label. Note, this is
+    #     different from the channel number. The 1st channel's index is 0 (not 1).
+    #     :param channel_label_or_number: A channel's PnN label or number
+    #     :return: Channel index
+    #     """
+    #     if isinstance(channel_label_or_number, str):
+    #         index = self.get_channel_number_by_label(channel_label_or_number) - 1
+    #     elif isinstance(channel_label_or_number, int):
+    #         if channel_label_or_number < 1:
+    #             raise ValueError("Channel numbers are indexed at 1, got %d" % channel_label_or_number)
+    #         index = channel_label_or_number - 1
+    #     else:
+    #         raise ValueError("x_label_or_number must be a label string or channel number")
+
+    #     return index
+    def get_channel_index(self,
+                          channel_label):
+        return self.channels.loc[self.channels.index == channel_label, "channel_numbers"] - 1
 
     def parse_compensation_matrix_from_fcs(self) -> Matrix:
         
@@ -68,10 +119,10 @@ class FCSFile:
                         )
 
         return Matrix(matrix_id = "acquisition_defined",
-                          detectors = self.channels.index,
-                          fluorochromes = self.channels["pns"],
-                          spill_data_or_file = self.fcs_metadata["spill"]
-                          )
+                      detectors = self.channels.index,
+                      fluorochromes = self.channels["pns"],
+                      spill_data_or_file = self.fcs_metadata["spill"]
+                    )
 
     def parse_event_count(self,
                           fcs_data: FlowData):
@@ -91,8 +142,7 @@ class FCSFile:
         return tmp_orig_events
 
     def adjust_channel_gain(self,
-                            events: np.ndarray,
-                            channel_gains: np.ndarray) -> np.ndarray:
+                            events: np.ndarray) -> np.ndarray:
         channel_gains = self.channels.sort_values("channel_numbers")["png"].to_numpy()
         return np.divide(events, channel_gains)
     
@@ -229,3 +279,6 @@ class FCSFile:
                         f"ignore_offset_error set to {ignore_offset_error}. " +
                         "Parameter is set to True.")
             return FlowData(input_directory, ignore_offset_error = True)
+        
+    def compensate(self):
+        pass
