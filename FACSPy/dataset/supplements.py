@@ -25,9 +25,6 @@ class BaseSupplement:
                                                      file_name,
                                                      data,
                                                      from_fcs)
-        
-        if self.__class__.__name__ in ["Panel", "CofactorTable"]:
-            self.dataframe = self.strip_prefixes()
 
     def strip_prefixes(self,
                        dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -76,6 +73,20 @@ class BaseSupplement:
             return "read from fcs"
         else:
             raise SupplementCreationError(self.__class__.__name__)
+    
+    def validate_user_supplied_table(self,
+                                     dataframe: pd.DataFrame,
+                                     columns_to_check: list[str]) -> pd.DataFrame:
+        if not isinstance(dataframe, pd.DataFrame):
+            raise SupplementDataTypeError(data_type = type(dataframe),
+                                          class_name = self.__class__.__name__)
+        if any(k not in dataframe.columns for k in columns_to_check):
+            for column in columns_to_check:
+                if column not in dataframe.columns:
+                    raise SupplementColumnError(column,
+                                                self.__class__.__name__)
+
+        return dataframe
 
     def fetch_data_from_source(self,
                                input_directory: Optional[str],
@@ -98,6 +109,7 @@ class BaseSupplement:
 
 
 class Panel(BaseSupplement):
+    
     """
     Panel class to represent and unify flow cytometry panel representations.
     The structure has to be at least to columns: fcs_colname with the channels
@@ -117,8 +129,9 @@ class Panel(BaseSupplement):
                          data = panel,
                          from_fcs = from_fcs)
         
-        self.dataframe = self.validate_user_supplied_panel(self.dataframe)
-
+        self.dataframe = self.validate_user_supplied_table(self.dataframe,
+                                                           ["fcs_colname", "antigens"])
+        self.dataframe = self.strip_prefixes(self.dataframe)
 
     def __repr__(self):
         return (
@@ -126,20 +139,6 @@ class Panel(BaseSupplement):
             f"{len(self.dataframe)} channels, "+
             f"loaded as {self.source})"
         )  
-
-    def validate_user_supplied_panel(self,
-                                     panel: pd.DataFrame) -> pd.DataFrame:
-        if not isinstance(panel, pd.DataFrame):
-            raise SupplementDataTypeError(data_type = type(panel),
-                                          class_name = self.__class__.__name__)
-        if "fcs_colname" not in panel.columns:
-            raise SupplementColumnError("fcs_colname",
-                                        self.__class__.__name__)
-        if "antigens" not in panel.columns:
-            raise SupplementColumnError("antigens",
-                                        self.__class__.__name__)
-
-        return panel
 
 
 class Metadata(BaseSupplement):
@@ -160,7 +159,8 @@ class Metadata(BaseSupplement):
                          file_name = file_name,
                          data = metadata,
                          from_fcs = from_fcs)
-        self.dataframe = self.validate_user_supplied_metadata(self.dataframe)
+        self.dataframe = self.validate_user_supplied_table(self.dataframe,
+                                                           ["sample_ID", "file_name"])
         self.factors = self.extract_metadata_factors()
 
     def __repr__(self):
@@ -174,24 +174,9 @@ class Metadata(BaseSupplement):
         return [
             col
             for col in self.dataframe.columns
-            if all(k not in col for k in ["sample_ID", "sample_id", "file_name"])
+            if all(k not in col for k in ["sample_ID", "sample_id", "file_name", "staining"])
         ]
-    
-    def validate_user_supplied_metadata(self,
-                                        metadata: pd.DataFrame) -> pd.DataFrame:
-        
-        if not isinstance(metadata, pd.DataFrame):
-            raise SupplementDataTypeError(data_type = type(metadata),
-                                          class_name = self.__class__.__name__)
-        # sourcery skip: comprehension-to-generator, invert-any-all
-        if not any([colname in metadata.columns for colname in ["sample_id", "sample_ID"]]):
-            raise SupplementColumnError("sample_id or sample_ID",
-                                        self.__class__.__name__)
-        if "file_name" not in metadata.columns:
-            raise SupplementColumnError("file_name",
-                                        self.__class__.__name__)
-        
-        return metadata
+
 
 
 class CofactorTable(BaseSupplement):
@@ -207,16 +192,6 @@ class CofactorTable(BaseSupplement):
                          data = cofactors,
                          from_fcs = from_fcs)
         
-        self.dataframe = self.validate_user_supplied_cofactor_table(self.dataframe)
-    
-    def validate_user_supplied_cofactor_table(self,
-                                              dataframe: pd.DataFrame) -> pd.DataFrame:
-        if not isinstance(dataframe, pd.DataFrame):
-            raise SupplementDataTypeError(data_type = type(dataframe),
-                                          class_name = self.__class__.__name__)
-        if "fcs_colname" not in dataframe.columns:
-            raise SupplementColumnError("fcs_colname",
-                                        self.__class__.__name__)
-        if "cofactor" not in dataframe.columns:
-            raise SupplementColumnError("cofactor",
-                                        self.__class__.__name__)
+        self.dataframe = self.validate_user_supplied_table(self.dataframe,
+                                                           ["fcs_colname", "cofactors"])
+        self.dataframe = self.strip_prefixes(self.dataframe)

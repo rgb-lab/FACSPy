@@ -36,7 +36,7 @@ class SupplementColumnError(Exception):
                              "be named 'antigens'.")
         elif class_name == "Metadata":
             self.message += ("Please make sure that the columns sample_ID and " +
-                             "file_name are present. ")
+                             "file_name are present.")
         super().__init__(self.message)
 
 

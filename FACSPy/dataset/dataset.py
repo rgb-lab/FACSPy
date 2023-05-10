@@ -4,14 +4,16 @@ from typing import Union, Optional
 import anndata as ad
 import numpy as np
 import pandas as pd
+import anndata as ad
 
 from .supplements import Panel, Metadata, CofactorTable
 from .workspaces import FlowJoWorkspace, DivaWorkspace
 from .sample import FCSFile
+
 from ..transforms._matrix import Matrix
 from ..exceptions.exceptions import PanelMatchWarning
-
 from ..gates.gating_strategy import GatingStrategy
+
 
 class Transformer:
 
@@ -19,8 +21,96 @@ class Transformer:
                  dataset: ad.AnnData,
                  cofactor_table: Optional[CofactorTable]) -> None:
         
-        self.cofactor_table = cofactor_table
-        self.dataset = dataset
+        
+        if not cofactor_table:
+            cofactor_table = self.calculate_cofactors(dataset)
+            
+        self.dataset = self.transform_dataset(dataset, cofactor_table)
+        
+
+    def find_corresponding_control_samples(self,
+                                           dataset: ad.AnnData) -> dict[str, str]:
+        corresponding_controls = {}
+        metadata: Metadata = dataset.uns["metadata"]
+        metadata_frame = metadata.to_df()
+        indexed_metadata = self.reindex_metadata(metadata_frame,
+                                                 metadata.factors)
+        
+        stained_samples = self.get_stained_samples(metadata_frame)
+        control_samples = self.get_control_samples(metadata_frame)
+        
+        for sample in stained_samples:
+            sample_metadata = metadata_frame.loc[metadata_frame["file_name"] == sample, metadata.factors]
+            matching_control_samples = self.find_name_of_control_sample_by_metadata(sample,
+                                                                                    sample_metadata,
+                                                                                    indexed_metadata)
+            corresponding_controls[sample] = matching_control_samples or control_samples
+
+        return corresponding_controls
+    
+    def reindex_metadata(self,
+                         metadata: pd.DataFrame,
+                         indices: list[str]) -> pd.DataFrame:
+        return metadata.set_index(indices)
+
+
+    def find_name_of_control_sample_by_metadata(self,
+                                                sample,
+                                                metadata_to_compare: pd.DataFrame,
+                                                indexed_frame: pd.DataFrame) -> list[str]:
+        matching_metadata = indexed_frame.loc[tuple(metadata_to_compare.values[0])]
+        return matching_metadata.loc[matching_metadata["file_name"] != sample, "file_name"].to_list()
+
+    def get_control_samples(self,
+                            dataframe: pd.DataFrame) -> list[str]:
+        return dataframe.loc[dataframe["staining"] != "stained", "file_name"].to_list()
+
+    def get_stained_samples(self,
+                            dataframe: pd.DataFrame) -> list[str]:
+        return dataframe.loc[dataframe["staining"] == "stained", "file_name"].to_list()
+    
+    def calculate_cofactors(self,
+                            dataset: ad.AnnData) -> CofactorTable:
+        corresponding_control_samples = self.find_corresponding_control_samples(dataset)
+        cofactor_dataframe = pd.DataFrame()
+        return CofactorTable(cofactors = cofactor_dataframe)
+
+    def transform_dataset(self,
+                          dataset: ad.AnnData,
+                          cofactor_table: CofactorTable) -> ad.AnnData:
+        dataset.var = self.merge_cofactors_into_dataset_var(dataset, cofactor_table)
+        dataset.var = self.replace_missing_cofactors(dataset.var)
+        dataset.layers["transformed"] = self.transform_data(compensated_data = dataset.layers["compensated"],
+                                                                cofactors = dataset.var["cofactors"].values)
+        return dataset
+    
+    def get_dataset(self):
+        return self.dataset
+   
+    def transform_data(self,
+                       compensated_data: np.ndarray,
+                       cofactors: np.ndarray) -> np.ndarray:
+        return np.arcsinh(np.divide(compensated_data, cofactors))
+
+    def replace_missing_cofactors(self,
+                                  dataframe: pd.DataFrame) -> pd.DataFrame:
+        """ 
+        Missing cofactors can indicate Scatter-Channels and Time Channels
+        or not-measured channels. In any case, cofactor is set to 1 for now.
+        """
+        return dataframe.fillna(1)
+
+    def merge_cofactors_into_dataset_var(self,
+                                         dataset: ad.AnnData,
+                                         cofactor_table: CofactorTable):
+        
+        dataset_var = dataset.var.merge(cofactor_table.dataframe,
+                                        left_index = True,
+                                        right_on = "fcs_colname",
+                                        how = "left").set_index("fcs_colname")
+        dataset_var["cofactor"] = dataset_var["cofactor"].astype(np.float32)
+        return dataset_var
+
         
 
 class DatasetAssembler:
@@ -46,9 +136,20 @@ class DatasetAssembler:
         dataset_list = self.construct_dataset(file_list,
                                               metadata,
                                               panel)
-        self.dataset = self.concatenate_dataset(dataset_list)
+        dataset = self.concatenate_dataset(dataset_list)
+        self.dataset = self.append_supplements(dataset,
+                                               metadata,
+                                               panel)
 
         self.dataset.obs = self.dataset.obs.astype("category")
+
+    def append_supplements(self,
+                           dataset: ad.AnnData,
+                           metadata: Metadata,
+                           panel: Panel) -> ad.AnnData:
+        dataset.uns["metadata"] = metadata
+        dataset.uns["panel"] = panel
+        return dataset
 
     def get_dataset(self) -> ad.AnnData:
         return self.dataset
