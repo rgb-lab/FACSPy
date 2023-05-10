@@ -25,8 +25,23 @@ class BaseSupplement:
                                                      file_name,
                                                      data,
                                                      from_fcs)
+        
+        if self.__class__.__name__ in ["Panel", "CofactorTable"]:
+            self.dataframe = self.strip_prefixes()
 
+    def strip_prefixes(self,
+                       dataframe: pd.DataFrame) -> pd.DataFrame:
+        """
+        Channels from FlowJoWorkspaces get appended by "Comp-"
+        or "FJComp" in case of data export. Since this is incompatible with
+        the FCS naming, prefixes have to be stripped.
+        """
+        channel_list: list[str] = dataframe["fcs_colname"].to_list()
+        dataframe["fcs_colname"] = [channel.split("Comp-")[1] if "Comp-" in channel else channel for channel in channel_list]
+        return dataframe
+    
     def to_df(self):
+        """returns the dataframe of the object"""
         return self.dataframe
 
     def open_from_file(self,
@@ -78,6 +93,8 @@ class BaseSupplement:
                 return pd.DataFrame(columns = ["fcs_colname", "antigens"])
             elif self.__class__.__name__ == "Metadata":
                 return pd.DataFrame(columns = ["sample_ID", "file_name"])
+            elif self.__class__.__name__ == "CofactorTable":
+                return pd.DataFrame(columns = ["fcs_colname", "cofactors"])
 
 
 class Panel(BaseSupplement):
@@ -175,3 +192,31 @@ class Metadata(BaseSupplement):
                                         self.__class__.__name__)
         
         return metadata
+
+
+class CofactorTable(BaseSupplement):
+
+    def __init__(self,
+                 input_directory: str = '',
+                 file_name: str = '',
+                 cofactors: Optional[pd.DataFrame] = None,
+                 from_fcs: bool = False) -> None:
+        
+        super().__init__(input_directory = input_directory,
+                         file_name = file_name,
+                         data = cofactors,
+                         from_fcs = from_fcs)
+        
+        self.dataframe = self.validate_user_supplied_cofactor_table(self.dataframe)
+    
+    def validate_user_supplied_cofactor_table(self,
+                                              dataframe: pd.DataFrame) -> pd.DataFrame:
+        if not isinstance(dataframe, pd.DataFrame):
+            raise SupplementDataTypeError(data_type = type(dataframe),
+                                          class_name = self.__class__.__name__)
+        if "fcs_colname" not in dataframe.columns:
+            raise SupplementColumnError("fcs_colname",
+                                        self.__class__.__name__)
+        if "cofactor" not in dataframe.columns:
+            raise SupplementColumnError("cofactor",
+                                        self.__class__.__name__)

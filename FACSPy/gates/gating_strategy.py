@@ -583,8 +583,8 @@ class GatingStrategy(object):
 
     def _preprocess_sample_events(self, sample, gate, cache_events=False):
         # TODO: consider making method public, could be useful for users
-        pnn_labels = sample.pnn_labels
-        pns_labels = sample.pns_labels
+        pnn_labels = sample.channels.index.to_list()
+        pns_labels = sample.channels["pns"]
         # FlowJo replaces slashes with underscores, so make a set of labels with that replacement
         flowjo_pnn_labels = [label.replace('/', '_') for label in pnn_labels]
 

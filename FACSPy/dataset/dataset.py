@@ -5,11 +5,23 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 
-from .supplements import Panel, Metadata
+from .supplements import Panel, Metadata, CofactorTable
 from .workspaces import FlowJoWorkspace, DivaWorkspace
 from .sample import FCSFile
 from ..transforms._matrix import Matrix
 from ..exceptions.exceptions import PanelMatchWarning
+
+from ..gates.gating_strategy import GatingStrategy
+
+class Transformer:
+
+    def __init__(self,
+                 dataset: ad.AnnData,
+                 cofactor_table: Optional[CofactorTable]) -> None:
+        
+        self.cofactor_table = cofactor_table
+        self.dataset = dataset
+        
 
 class DatasetAssembler:
 
@@ -28,8 +40,8 @@ class DatasetAssembler:
                                                         metadata)
         file_list: list[FCSFile] = self.compensate_samples(file_list,
                                                            workspace)
-        file_list: list[FCSFile] = self.gate_samples(file_list,
-                                                     workspace)
+        self.gates = self.gate_samples(file_list,
+                                       workspace)
 
         dataset_list = self.construct_dataset(file_list,
                                               metadata,
@@ -38,10 +50,38 @@ class DatasetAssembler:
 
         self.dataset.obs = self.dataset.obs.astype("category")
 
+    def get_dataset(self) -> ad.AnnData:
+        return self.dataset
+
+    def create_gating_strategy(self,
+                               file: FCSFile,
+                               workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> GatingStrategy:
+        gating_strategy = GatingStrategy()
+        workspace_subset = workspace.wsp_dict["All Samples"][file.original_filename]
+        for gate_dict in workspace_subset["gates"]:
+            gating_strategy.add_gate(gate_dict["gate"], gate_path = gate_dict["gate_path"])
+        gating_strategy.add_comp_matrix(workspace_subset["compensation"])
+        gating_strategy.transformations = {xform.id: xform for xform in workspace_subset["transforms"]}
+
+        return gating_strategy
+
+    def gate_sample(self,
+                    file: FCSFile,
+                    workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> pd.DataFrame:
+        gating_strategy: GatingStrategy = self.create_gating_strategy(file, workspace)
+        gating_results = gating_strategy.gate_sample(file)
+        gate_table = pd.DataFrame(columns = ["/".join([path, gate]) for gate, path in gating_results._raw_results.keys()])
+        for gate, path in gating_results._raw_results.keys():
+            gate_table["/".join([path, gate])] = gating_results.get_gate_membership(gate_name = gate, gate_path = path)
+        gate_table.columns = gate_table.columns.str.replace(" ", "_")
+
+        return gate_table
+
     def gate_samples(self,
                      file_list: list[FCSFile],
-                     workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> list[FCSFile]:
-        return file_list
+                     workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> list[pd.DataFrame]:
+        
+        return [self.gate_sample(file, workspace) for file in file_list]
 
     def concatenate_dataset(self,
                             file_list: list[ad.AnnData]):
