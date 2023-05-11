@@ -7,3 +7,8 @@ write tests for cofactortable
 
 
 think about setting cofactors for scatter channels to 1...
+
+
+metadata: add function to rename sample_id to sampleID
+
+Transformer: Implement FMO controls

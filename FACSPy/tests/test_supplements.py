@@ -72,7 +72,6 @@ def mock_metadata_wrong_colnames():
         }
     )
     
-
 @pytest.fixture
 def mock_metadata_np_array_instead_of_dataframe():
     df = pd.DataFrame(
@@ -119,6 +118,8 @@ def mock_panel_wrong_colnames():
         }
     )
 
+
+
 def test_metadata_correct(mock_metadata_correct):
     x = Metadata(metadata = mock_metadata_correct)
     assert isinstance(x, Metadata)
@@ -130,6 +131,8 @@ def test_panel_correct(mock_panel_correct):
 def test_cofactor_correct(mock_cofactors_correct):
     x = CofactorTable(cofactors = mock_cofactors_correct)
     assert isinstance(x, CofactorTable)
+
+
 
 
 def test_metadata_from_fcs():
@@ -147,6 +150,8 @@ def test_cofactors_from_fcs():
     assert x.dataframe.shape == (0,2) # only two column names
     assert x.source == "read from fcs"
 
+
+
 def test_panel_input_parameters(mock_panel_nparray_instead_of_dataframe):
     with pytest.raises(SupplementDataTypeError):
         _ = Panel(panel = mock_panel_nparray_instead_of_dataframe)
@@ -158,6 +163,7 @@ def test_metadata_input_parameters(mock_metadata_np_array_instead_of_dataframe):
 def test_cofactor_input_parameters(mock_cofactors_np_array_instead_of_dataframe):
     with pytest.raises(SupplementDataTypeError):
         _ = CofactorTable(cofactors = mock_cofactors_np_array_instead_of_dataframe)
+
 
 
 def test_panel_wrong_colnames(mock_panel_wrong_colnames):

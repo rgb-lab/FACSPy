@@ -4,7 +4,9 @@ from typing import Union, Optional
 import anndata as ad
 import numpy as np
 import pandas as pd
-import anndata as ad
+import scipy.signal as scs
+
+from KDEpy import FFTKDE
 
 from .supplements import Panel, Metadata, CofactorTable
 from .workspaces import FlowJoWorkspace, DivaWorkspace
@@ -19,17 +21,207 @@ class Transformer:
 
     def __init__(self,
                  dataset: ad.AnnData,
-                 cofactor_table: Optional[CofactorTable]) -> None:
+                 cofactor_table: Optional[CofactorTable] = None) -> None:
         
         
         if not cofactor_table:
-            cofactor_table = self.calculate_cofactors(dataset)
-            
+            cofactor_table, raw_cofactor_table = self.calculate_cofactors(dataset)
+            dataset.uns["Raw_Cofactors"] = raw_cofactor_table
+        
+        dataset.uns["Cofactors"] = cofactor_table    
         self.dataset = self.transform_dataset(dataset, cofactor_table)
         
 
+
+    
+    def calculate_cofactors(self,
+                            dataset: ad.AnnData) -> tuple[CofactorTable, pd.DataFrame]:
+        ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
+        (stained_samples,
+         corresponding_control_samples) = self.find_corresponding_control_samples(dataset)
+        cofactors = {}
+        for sample in stained_samples:
+            
+            
+            start = time.time()
+            cofactors[sample] = {}
+            fluo_channels = self.fetch_fluo_channels(dataset)
+            sample_subset = self.create_sample_subset_with_controls(dataset,
+                                                                    sample,
+                                                                    corresponding_control_samples,
+                                                                    match_cell_number = True)
+            for channel in fluo_channels:
+                data_array = sample_subset[:, sample_subset.var.index == channel].layers["compensated"]
+                cofactor_stained_sample = self.estimate_cofactor_on_stained_sample(data_array,
+                                                                                   200)
+                if corresponding_control_samples[sample]:
+                    control_sample = sample_subset[sample_subset.obs["staining"] != "stained", sample_subset.var.index == channel]
+                    data_array = control_sample.layers["compensated"]
+                    cofactor_unstained_sample = self.estimate_cofactor_on_unstained_sample(data_array, 20)
+                    cofactor_by_percentile = self.estimate_cofactor_from_control_quantile(control_sample)
+                
+                    cofactors[sample][channel] = np.mean([cofactor_stained_sample,
+                                                        cofactor_unstained_sample,
+                                                        cofactor_by_percentile])
+                    
+                    continue
+                cofactors[sample][channel] = cofactor_stained_sample
+        return self.create_cofactor_tables(cofactors)
+
+    def create_cofactor_tables(self,
+                               cofactors: dict[str, list[float]],
+                               reduction_method: str = "mean") -> tuple[CofactorTable, pd.DataFrame]:
+        raw_table = pd.DataFrame(data = cofactors).T
+        if reduction_method == "mean":
+            reduced = pd.DataFrame(cofactors).mean(axis = 1)
+        elif reduction_method == "median":
+            reduced = pd.DataFrame(cofactors).median(axis = 1)
+
+        reduced_table = pd.DataFrame({"fcs_colname": reduced.index,
+                                      "cofactors": reduced.values})
+        return CofactorTable(cofactors = reduced_table), raw_table
+
+    def only_one_peak(self,
+                      peaks: np.ndarray) -> bool:
+        return peaks.shape[0] == 1
+
+    def two_peaks(self,
+                  peaks: np.ndarray) -> bool:
+        return peaks.shape[0] == 2
+
+    def estimate_cofactor_on_stained_sample(self,
+                                            data_array: np.ndarray,
+                                            cofactor: int) -> float:
+        x, curve = self.get_histogram_curve(data_array,
+                                            cofactor)
+        
+        peak_output = scs.find_peaks(curve, prominence = 0.001, height = 0.01)
+        peaks: np.ndarray = peak_output[0] ## array with the locs of found peaks
+        peak_characteristics: dict = peak_output[1]
+
+        if peaks.shape[0] >= 2: ## more than two peaks have been found it needs to be subset
+            peaks, peak_characteristics = self.subset_two_highest_peaks(peak_output)
+        
+        right_indents = self.find_curve_indent_right_side(curve, peak_output, x)
+        
+        if right_indents:
+            indent_idx = right_indents[0][0]
+            return abs(np.sinh(x[indent_idx]) * cofactor)
+        
+        if self.two_peaks(peaks): ## two peaks have been found
+            if np.argmax(peak_characteristics["peak_heights"]) == 0:
+                return abs(np.sinh(x[peak_characteristics["left_bases"][1]]) * cofactor)
+            
+            assert np.argmax(peak_characteristics["peak_heights"]) == 1
+            return abs(np.sinh(x[peak_characteristics["right_bases"][0]]) * cofactor)
+        
+        if self.only_one_peak(peaks): ## one peak has been found
+            return self.find_root_of_tangent_line_at_turning_point(x, curve)
+
+
+    def subset_two_highest_peaks(self,
+                                 peak_output: tuple[np.ndarray, dict]) -> tuple[np.ndarray, np.ndarray]:
+        peaks: np.ndarray = peak_output[0] ## array with the locs of found peaks
+        peak_characteristics: dict = peak_output[1]
+        
+        highest_peak_indices = self.find_index_of_two_highest_peaks(peak_characteristics)
+        
+        peaks: tuple = peaks[highest_peak_indices], peak_characteristics
+        for key, value in peak_characteristics.items():
+            peak_characteristics[key] = value[highest_peak_indices]
+        
+        return peaks[0], peaks[1]
+
+    def find_index_of_two_highest_peaks(self,
+                                        peak_characteristics: dict) -> np.ndarray:
+        return np.sort(np.argpartition(peak_characteristics["peak_heights"], -2)[-2:])
+    
+    def find_curve_indent_right_side(self,
+                                     curve: np.ndarray,
+                                     peaks: tuple[np.ndarray, dict],
+                                     x: np.ndarray) -> Optional[np.ndarray]:
+        try:
+            right_peak_index = peaks[0][1]
+        except IndexError:
+            right_peak_index = peaks[0][0]
+
+        curve = curve / np.max(curve)
+        first_derivative = np.gradient(curve)
+        second_derivative = np.gradient(first_derivative)
+
+        second_derivative = second_derivative / np.max(second_derivative)
+
+        indents = scs.find_peaks(second_derivative, prominence = 1, height = 1)
+
+        right_indents = indents[0][indents[0] > right_peak_index], indents[1]
+
+        for key, value in right_indents[1].items():
+            right_indents[1][key] = value[indents[0] > right_peak_index]
+
+        if right_indents[0].any() and curve[right_indents[0]] > 0.2 and x[right_indents[0]] < 4:
+            return right_indents
+
+        return None
+
+    def estimate_cofactor_on_unstained_sample(self,
+                                              data_array: np.ndarray,
+                                              cofactor: int) -> float:
+        x, curve = self.get_histogram_curve(data_array,
+                                            cofactor)
+        
+        root = self.find_root_of_tangent_line_at_turning_point(x, curve)
+
+        return abs(np.sinh(root) * cofactor)
+
+    def find_root_of_tangent_line_at_turning_point(self,
+                                                   x: np.ndarray,
+                                                   curve: np.ndarray) -> float:
+        first_derivative = np.gradient(curve)
+        turning_point_index = np.argmin(first_derivative),
+        ## y = mx+n
+        m = np.diff(curve)[turning_point_index] * 1/((np.max(x) - np.min(x)) * 0.01)
+        n = curve[turning_point_index] - m * x[turning_point_index]
+        return -n/m                 
+    
+    def get_histogram_curve(self,
+                            data_array: np.ndarray,
+                            cofactor: int) -> tuple[np.ndarray, np.ndarray]:
+        transformed = self.transform_data(data_array, cofactor)
+        _, x = np.histogram(transformed, bins = 100)
+        _, curve = FFTKDE(kernel = "gaussian",
+                          bw = "silverman"
+                          ).fit(transformed).evaluate(100)
+        return x, curve
+
+    def estimate_cofactor_from_control_quantile(self,
+                                                dataset: ad.AnnData) -> float:
+        return np.quantile(dataset[dataset.obs["staining"] != "stained"].layers["compensated"], 0.95)
+
+    def create_sample_subset_with_controls(self,
+                                           dataset: ad.AnnData,
+                                           sample: str,
+                                           corresponding_controls: dict,
+                                           match_cell_number: bool) -> ad.AnnData:
+        controls: list[str] = corresponding_controls[sample]
+        sample_list = [sample] + controls
+        if match_cell_number:
+            return self.match_cell_numbers(dataset[dataset.obs["file_name"].isin(sample_list)])
+        return dataset[dataset.obs["file_name"].isin(sample_list)]
+
+    def match_cell_numbers(self,
+                           dataset: ad.AnnData) -> ad.AnnData:
+        return dataset
+
+    def fetch_fluo_channels(self,
+                            dataset: ad.AnnData) -> list[str]:
+        return [
+            channel
+            for channel in dataset.var.index.to_list()
+            if all(k not in channel.lower() for k in ["fsc", "ssc", "time"])
+        ]
+
     def find_corresponding_control_samples(self,
-                                           dataset: ad.AnnData) -> dict[str, str]:
+                                           dataset: ad.AnnData) -> tuple[list[str], dict[str, str]]:
         corresponding_controls = {}
         metadata: Metadata = dataset.uns["metadata"]
         metadata_frame = metadata.to_df()
@@ -46,7 +238,7 @@ class Transformer:
                                                                                     indexed_metadata)
             corresponding_controls[sample] = matching_control_samples or control_samples
 
-        return corresponding_controls
+        return stained_samples, corresponding_controls
     
     def reindex_metadata(self,
                          metadata: pd.DataFrame,
@@ -68,12 +260,6 @@ class Transformer:
     def get_stained_samples(self,
                             dataframe: pd.DataFrame) -> list[str]:
         return dataframe.loc[dataframe["staining"] == "stained", "file_name"].to_list()
-    
-    def calculate_cofactors(self,
-                            dataset: ad.AnnData) -> CofactorTable:
-        corresponding_control_samples = self.find_corresponding_control_samples(dataset)
-        cofactor_dataframe = pd.DataFrame()
-        return CofactorTable(cofactors = cofactor_dataframe)
 
     def transform_dataset(self,
                           dataset: ad.AnnData,
@@ -89,7 +275,7 @@ class Transformer:
    
     def transform_data(self,
                        compensated_data: np.ndarray,
-                       cofactors: np.ndarray) -> np.ndarray:
+                       cofactors: Union[np.ndarray, int, float]) -> np.ndarray:
         return np.arcsinh(np.divide(compensated_data, cofactors))
 
     def replace_missing_cofactors(self,
@@ -108,7 +294,7 @@ class Transformer:
                                         left_index = True,
                                         right_on = "fcs_colname",
                                         how = "left").set_index("fcs_colname")
-        dataset_var["cofactor"] = dataset_var["cofactor"].astype(np.float32)
+        dataset_var["cofactors"] = dataset_var["cofactors"].astype(np.float32)
         return dataset_var
 
         

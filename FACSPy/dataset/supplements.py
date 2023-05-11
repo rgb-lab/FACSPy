@@ -159,6 +159,7 @@ class Metadata(BaseSupplement):
                          file_name = file_name,
                          data = metadata,
                          from_fcs = from_fcs)
+        
         self.dataframe = self.validate_user_supplied_table(self.dataframe,
                                                            ["sample_ID", "file_name"])
         self.factors = self.extract_metadata_factors()
@@ -195,3 +196,10 @@ class CofactorTable(BaseSupplement):
         self.dataframe = self.validate_user_supplied_table(self.dataframe,
                                                            ["fcs_colname", "cofactors"])
         self.dataframe = self.strip_prefixes(self.dataframe)
+    
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}(" +
+            f"{self.dataframe.shape[0]} channels, "+
+            f"loaded as {self.source})"
+        )  
