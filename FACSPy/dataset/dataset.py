@@ -5,6 +5,7 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import scipy.signal as scs
+from scipy.sparse import csr_matrix
 
 from KDEpy import FFTKDE
 
@@ -22,28 +23,21 @@ class Transformer:
     def __init__(self,
                  dataset: ad.AnnData,
                  cofactor_table: Optional[CofactorTable] = None) -> None:
-        
-        
+        ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
         if not cofactor_table:
             cofactor_table, raw_cofactor_table = self.calculate_cofactors(dataset)
-            dataset.uns["Raw_Cofactors"] = raw_cofactor_table
+            dataset.uns["raw_cofactors"] = raw_cofactor_table
         
-        dataset.uns["Cofactors"] = cofactor_table    
+        dataset.uns["cofactors"] = cofactor_table    
         self.dataset = self.transform_dataset(dataset, cofactor_table)
-        
 
-
-    
     def calculate_cofactors(self,
                             dataset: ad.AnnData) -> tuple[CofactorTable, pd.DataFrame]:
-        ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
+        
         (stained_samples,
          corresponding_control_samples) = self.find_corresponding_control_samples(dataset)
         cofactors = {}
         for sample in stained_samples:
-            
-            
-            start = time.time()
             cofactors[sample] = {}
             fluo_channels = self.fetch_fluo_channels(dataset)
             sample_subset = self.create_sample_subset_with_controls(dataset,
@@ -61,8 +55,8 @@ class Transformer:
                     cofactor_by_percentile = self.estimate_cofactor_from_control_quantile(control_sample)
                 
                     cofactors[sample][channel] = np.mean([cofactor_stained_sample,
-                                                        cofactor_unstained_sample,
-                                                        cofactor_by_percentile])
+                                                          cofactor_unstained_sample,
+                                                          cofactor_by_percentile])
                     
                     continue
                 cofactors[sample][channel] = cofactor_stained_sample
@@ -76,7 +70,6 @@ class Transformer:
             reduced = pd.DataFrame(cofactors).mean(axis = 1)
         elif reduction_method == "median":
             reduced = pd.DataFrame(cofactors).median(axis = 1)
-
         reduced_table = pd.DataFrame({"fcs_colname": reduced.index,
                                       "cofactors": reduced.values})
         return CofactorTable(cofactors = reduced_table), raw_table
@@ -298,7 +291,6 @@ class Transformer:
         return dataset_var
 
         
-
 class DatasetAssembler:
 
     """
@@ -316,18 +308,28 @@ class DatasetAssembler:
                                                         metadata)
         file_list: list[FCSFile] = self.compensate_samples(file_list,
                                                            workspace)
-        self.gates = self.gate_samples(file_list,
+        gates = self.gate_samples(file_list,
                                        workspace)
 
         dataset_list = self.construct_dataset(file_list,
                                               metadata,
                                               panel)
         dataset = self.concatenate_dataset(dataset_list)
-        self.dataset = self.append_supplements(dataset,
-                                               metadata,
-                                               panel)
+        dataset = self.append_supplements(dataset,
+                                          metadata,
+                                          panel)
+        self.dataset = self.append_gates(dataset,
+                                         gates)
 
         self.dataset.obs = self.dataset.obs.astype("category")
+
+    def append_gates(self,
+                     dataset: ad.AnnData,
+                     gates: list[pd.DataFrame]) -> ad.AnnData:
+        gatings = pd.concat(gates, axis = 0).fillna(0).astype("bool")
+        dataset.obsm["gating"] = csr_matrix(gatings.values)
+        dataset.uns["gating_cols"] = gatings.columns
+        return dataset
 
     def append_supplements(self,
                            dataset: ad.AnnData,
