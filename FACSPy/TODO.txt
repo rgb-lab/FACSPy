@@ -3,12 +3,18 @@
 currently, no check for completely missing comps is in place!
 see dataset -> compensate samples
 
-write tests for cofactortable
-
-
 think about setting cofactors for scatter channels to 1...
 
 
 metadata: add function to rename sample_id to sampleID
 
 Transformer: Implement FMO controls
+
+MFI: implement population parameter
+
+rename uns["gating_cols"] to uns["gates"]
+
+
+UNIT TESTS!!! especially for cases where inputs are missing
+
+write wrapper function to create supplements
