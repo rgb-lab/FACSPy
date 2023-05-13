@@ -438,6 +438,13 @@ class DatasetAssembler:
             
         fcs_panel_df = fcs_panel_df.drop("channel_numbers", axis = 1)
         fcs_panel_df.index = fcs_panel_df.index.astype("str")
+
+        scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
+        time_channel = ["time", "Time"]
+        fcs_panel_df["type"] = ["scatter" if any(k in channel for k in scatter_channels)
+                                else "time" if any(k in channel for k in time_channel) 
+                                else "fluo"
+                                for channel in fcs_panel_df.index]
         
         return fcs_panel_df
 

@@ -132,6 +132,7 @@ class Panel(BaseSupplement):
         self.dataframe = self.validate_user_supplied_table(self.dataframe,
                                                            ["fcs_colname", "antigens"])
         self.dataframe = self.strip_prefixes(self.dataframe)
+    
 
     def __repr__(self):
         return (

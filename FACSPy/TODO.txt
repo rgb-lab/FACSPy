@@ -18,3 +18,9 @@ rename uns["gating_cols"] to uns["gates"]
 UNIT TESTS!!! especially for cases where inputs are missing
 
 write wrapper function to create supplements
+
+
+read about flowsom... what about the input parameters?
+
+
+restrict_to_parameters
