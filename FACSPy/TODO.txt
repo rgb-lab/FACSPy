@@ -24,5 +24,3 @@ read about flowsom... what about the input parameters?
 
 
 restrict_to_parameters
-
-write tests for equalize groups

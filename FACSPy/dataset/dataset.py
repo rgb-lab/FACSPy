@@ -309,7 +309,7 @@ class DatasetAssembler:
         file_list: list[FCSFile] = self.compensate_samples(file_list,
                                                            workspace)
         gates = self.gate_samples(file_list,
-                                       workspace)
+                                  workspace)
 
         dataset_list = self.construct_dataset(file_list,
                                               metadata,

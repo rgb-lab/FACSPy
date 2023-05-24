@@ -1,4 +1,3 @@
-
 import os
 from typing import Optional, Union
 
@@ -174,6 +173,9 @@ class FlowJoWorkspace:
         group_sample_gate_names = []
         group_sample_gates = []
         
+        if group_dict["gates"] is None:
+            return [], []
+        
         for group_gate in group_dict['gates']:
             group_gate_name = group_gate['gate'].gate_name
 
@@ -202,6 +204,7 @@ class FlowJoWorkspace:
                     'gate_path': group_gate['gate_path']
                 }
             )
+        
         return group_sample_gates, group_sample_gate_names
 
 
@@ -531,7 +534,9 @@ class FlowJoWorkspace:
                     gating_namespace,
                     data_type_namespace
                 )
-
+            else:
+                group_gates = None
+            
             wsp_groups[group_name] = {
                 "gates": group_gates,
                 "samples": sample_ids
