@@ -306,22 +306,42 @@ class DatasetAssembler:
 
         file_list: list[FCSFile] = self.fetch_fcs_files(input_directory,
                                                         metadata)
+        
         file_list: list[FCSFile] = self.compensate_samples(file_list,
                                                            workspace)
+        
         gates = self.gate_samples(file_list,
                                   workspace)
+
+        gates, ungated_samples = self.fill_empty_gates(file_list, gates)
 
         dataset_list = self.construct_dataset(file_list,
                                               metadata,
                                               panel)
         dataset = self.concatenate_dataset(dataset_list)
+        
         dataset = self.append_supplements(dataset,
                                           metadata,
-                                          panel)
+                                          panel,
+                                          workspace)
+        
         self.dataset = self.append_gates(dataset,
                                          gates)
 
         self.dataset.obs = self.dataset.obs.astype("category")
+
+    def fill_empty_gates(self,
+                         file_list: list[FCSFile],
+                         gates: list[pd.DataFrame]) -> list[pd.DataFrame]:
+        """function that looks for ungated samples and appends DataFrames with pd.NA"""
+        ungated_samples = []
+        for i, (file, gate_table) in enumerate(zip(file_list, gates)):
+            if gate_table.shape[0] == 0:
+                ungated_samples.append(file.original_filename)
+                gates[i] = pd.DataFrame(index = range(file.event_count))
+
+        return gates, ungated_samples
+
 
     def append_gates(self,
                      dataset: ad.AnnData,
@@ -334,9 +354,11 @@ class DatasetAssembler:
     def append_supplements(self,
                            dataset: ad.AnnData,
                            metadata: Metadata,
-                           panel: Panel) -> ad.AnnData:
+                           panel: Panel,
+                           workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> ad.AnnData:
         dataset.uns["metadata"] = metadata
         dataset.uns["panel"] = panel
+        dataset.uns["workspace"] = workspace.wsp_dict
         return dataset
 
     def get_dataset(self) -> ad.AnnData:
