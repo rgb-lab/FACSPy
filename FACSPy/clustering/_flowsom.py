@@ -153,22 +153,18 @@ def flowsom(dataset: ad.AnnData,
                   )
     som.pca_weights_init(data)
     som.train_batch(data, batch_size, verbose = True)
-    
     weights = som.get_weights().reshape(x * y, data.shape[1])
 
     for meta_cluster in [] 
-    cluster = ConsensusCluster(cluster_class,
-                               min_n,
-                               max_n,
-                               iter_n,
+    cluster = ConsensusCluster(metaclustering_algorithm,
+                               meta_cluster,
+                               meta_cluster + 1,
+                               3,
                                resample_proportion = 0.5)
     
     cluster.fit(weights, verbose = True)
     map_class = cluster.predict_data(weights).reshape(x, y)
-
-    winner_list = [map_class[som.winner(data[row,:])] for row in range(data.shape[0])]
-
-    dataset.obs[key_added] = winner_list
+    dataset.obs[key_added] = [map_class[som.winner(data[row,:])] for row in range(data.shape[0])]
 
 
 

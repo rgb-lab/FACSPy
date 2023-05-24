@@ -24,9 +24,33 @@ def find_parents_recursively(gate: str, parent_list = None):
         return find_parents_recursively(parent, parent_list)
     return parent_list
     
-def subset_fluo_channels(dataset: ad.AnnData) -> ad.AnnData:
-    return dataset[:, dataset.var["type"] == "fluo"]
+def subset_fluo_channels(dataset: ad.AnnData,
+                         copy: bool = False) -> ad.AnnData:
+    dataset = dataset.copy() if copy else dataset
+    dataset._inplace_subset_var(dataset.var[dataset.var["type"] == "fluo"].index)
+    return dataset if copy else None
 
+def subset_gate(dataset: ad.AnnData,
+                gate: Optional[str] = None,
+                gate_path: Optional[str] = None,
+                copy: bool = False) -> ad.AnnData:
+    dataset = dataset.copy() if copy else dataset
+    
+    if gate is None and gate_path is None:
+        raise TypeError("Please provide either a gate name or a gate path.")
+    
+    gates: list[str] = dataset.uns["gating_cols"].to_list()
+    
+    if gate:
+        gate_path = [gate_path for gate_path in gates if gate_path.endswith(gate)][0]
+
+    gate_idx = gates.index(gate_path)
+
+    ### basically copying the individual steps from AnnData._inplace_subset_var
+    ### potentially PR?
+    subset = dataset[dataset.obsm["gating"][:,gate_idx] == True,:].copy()
+    dataset._init_as_actual(subset, dtype = None)
+    return dataset if copy else None
 
 import warnings
 import numpy as np
@@ -61,3 +85,5 @@ def equalize_groups(data: ad.AnnData,
     else:
         X = data
         return X[obs_indices], obs_indices
+    
+

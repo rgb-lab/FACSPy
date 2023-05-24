@@ -18,14 +18,18 @@ def mock_anndata():
         )
     )
 
+def test_fluo_channel_copy_function(mock_anndata):
+    subset_fluo_channels(mock_anndata,
+                         copy = False)
+    assert mock_anndata.shape[1] == 2
 
 def test_fluo_channel_subset(mock_anndata):
-    print(mock_anndata.shape)
-    dataset = subset_fluo_channels(mock_anndata)
+    dataset = subset_fluo_channels(mock_anndata,
+                                   copy = True)
     assert dataset.shape[1] == 2
 
 def test_fluo_channel_subset_2(mock_anndata):
-    dataset = subset_fluo_channels(mock_anndata)
+    dataset = subset_fluo_channels(mock_anndata, copy = True)
     assert "BUV 395-A" in dataset.var.index
     assert "APC-Cy7-A" in dataset.var.index
     assert "Time" not in dataset.var.index
