@@ -272,7 +272,7 @@ class FlowJoWorkspace:
                            data_type_namespace: str,
                            ns_map: dict) -> list[dict]:
         sample_root_subpopulation: etree._Element = sample_node.find("Subpopulations", ns_map)
-        print(sample_root_subpopulation.getchildren())
+        
         if sample_root_subpopulation is None:
             return []
         else:
