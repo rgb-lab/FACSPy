@@ -58,15 +58,15 @@ class FlowJoWorkspace:
         
         group_node_list: list[etree._Element] = self.parse_xml_group_nodes(wsp_root, ns_map)
         self.raw_wsp_groups = self.parse_wsp_groups(group_node_list,
-                                               ns_map,
-                                               gating_namespace,
-                                               data_type_namespace)
+                                                    ns_map,
+                                                    gating_namespace,
+                                                    data_type_namespace)
         
         sample_list: list[etree._Element] = self.parse_xml_samples(wsp_root, ns_map)
         self.raw_wsp_samples = self.parse_wsp_samples(sample_list, ns_map,
-                                                 gating_namespace,
-                                                 transform_namespace,
-                                                 data_type_namespace)
+                                                      gating_namespace,
+                                                      transform_namespace,
+                                                      data_type_namespace)
         
         return self.create_workspace_dictionary(self.raw_wsp_groups, self.raw_wsp_samples)
 
@@ -271,7 +271,8 @@ class FlowJoWorkspace:
                            gating_namespace: str,
                            data_type_namespace: str,
                            ns_map: dict) -> list[dict]:
-        sample_root_subpopulation = sample_node.find("Subpopulations", ns_map)
+        sample_root_subpopulation: etree._Element = sample_node.find("Subpopulations", ns_map)
+        print(sample_root_subpopulation.getchildren())
         if sample_root_subpopulation is None:
             return []
         else:
@@ -553,11 +554,11 @@ class FlowJoWorkspace:
         ns_map = subpopulation.nsmap
 
         gates = []
-        gate_path, parent_id = self.fetch_gate_path_and_parent(gate_path)
         
         populations: list[etree._Element] = subpopulation.findall("Population", ns_map)
         
         for population in populations:
+            gate_path, parent_id = self.fetch_gate_path_and_parent(gate_path)
             gates.append(self.fetch_gate_from_xml_population(population,
                                                              ns_map,
                                                              gating_ns,
@@ -566,13 +567,14 @@ class FlowJoWorkspace:
                                                              gate_path))
 
             subpopulations = population.findall("Subpopulations", ns_map)
-            child_gate_path = gate_path
+            child_gate_path = gate_path.copy()
             child_gate_path.append(population.attrib["name"])
             for el in subpopulations:
                 gates.extend(self.parse_wsp_subpopulations(el,
                                                            child_gate_path,
                                                            gating_ns,
                                                            data_type_ns))
+
 
         return gates
 
