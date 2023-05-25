@@ -1,3 +1,4 @@
+import contextlib
 import os
 from typing import Union, Optional
 
@@ -15,7 +16,7 @@ from .sample import FCSFile
 
 from ..transforms._matrix import Matrix
 from ..exceptions.exceptions import PanelMatchWarning
-from ..gates.gating_strategy import GatingStrategy
+from ..gates.gating_strategy import GatingStrategy, GateTreeError
 
 
 class Transformer:
@@ -290,7 +291,7 @@ class Transformer:
         dataset_var["cofactors"] = dataset_var["cofactors"].astype(np.float32)
         return dataset_var
 
-        
+
 class DatasetAssembler:
 
     """
@@ -313,11 +314,12 @@ class DatasetAssembler:
         gates = self.gate_samples(file_list,
                                   workspace)
 
-        gates, ungated_samples = self.fill_empty_gates(file_list, gates)
+        gates = self.fill_empty_gates(file_list, gates)
 
         dataset_list = self.construct_dataset(file_list,
                                               metadata,
                                               panel)
+        
         dataset = self.concatenate_dataset(dataset_list)
         
         dataset = self.append_supplements(dataset,
@@ -334,13 +336,11 @@ class DatasetAssembler:
                          file_list: list[FCSFile],
                          gates: list[pd.DataFrame]) -> list[pd.DataFrame]:
         """function that looks for ungated samples and appends DataFrames with pd.NA"""
-        ungated_samples = []
         for i, (file, gate_table) in enumerate(zip(file_list, gates)):
             if gate_table.shape[0] == 0:
-                ungated_samples.append(file.original_filename)
                 gates[i] = pd.DataFrame(index = range(file.event_count))
 
-        return gates, ungated_samples
+        return gates
 
 
     def append_gates(self,
@@ -368,11 +368,17 @@ class DatasetAssembler:
                                file: FCSFile,
                                workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> GatingStrategy:
         gating_strategy = GatingStrategy()
-        workspace_subset = workspace.wsp_dict["All Samples"][file.original_filename]
-        for gate_dict in workspace_subset["gates"]:
-            gating_strategy.add_gate(gate_dict["gate"], gate_path = gate_dict["gate_path"])
-        gating_strategy.add_comp_matrix(workspace_subset["compensation"])
-        gating_strategy.transformations = {xform.id: xform for xform in workspace_subset["transforms"]}
+        file_containing_workspace_groups = [group for group in workspace.wsp_dict.keys()
+                                            if file.original_filename in workspace.wsp_dict[group].keys()]
+
+        for group in file_containing_workspace_groups:
+            workspace_subset = workspace.wsp_dict[group][file.original_filename]
+            for gate_dict in workspace_subset["gates"]:
+                with contextlib.suppress(GateTreeError): ## if gate exists
+                    gating_strategy.add_gate(gate_dict["gate"], gate_path = gate_dict["gate_path"])
+            if group == "All Samples":
+                gating_strategy.add_comp_matrix(workspace_subset["compensation"])
+                gating_strategy.transformations = {xform.id: xform for xform in workspace_subset["transforms"]}
 
         return gating_strategy
 
@@ -544,4 +550,3 @@ class DatasetAssembler:
         available_fcs_files = [file for file in os.listdir(input_directory)
                                 if file.endswith(".fcs")]
         return self.convert_fcs_to_FCSFile(input_directory, available_fcs_files)
-        
