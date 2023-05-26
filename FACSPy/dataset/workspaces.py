@@ -248,9 +248,9 @@ class FlowJoWorkspace:
         (group_sample_gates,
          group_sample_gate_names) = self.parse_group_gates(group_dict, sample_dict)
         
-        group_sample_gates = self.parse_custom_gates(sample_dict, group_sample_gate_names, group_sample_gates)
+        custom_gates = self.parse_custom_gates(sample_dict, group_sample_gate_names, group_sample_gates)
 
-        return group_sample_gates
+        return group_sample_gates + custom_gates
 
     def assemble_sample_from_raw_sample(self,
                                         sample_dict: dict,
@@ -272,7 +272,7 @@ class FlowJoWorkspace:
                            data_type_namespace: str,
                            ns_map: dict) -> list[dict]:
         sample_root_subpopulation: etree._Element = sample_node.find("Subpopulations", ns_map)
-        
+
         if sample_root_subpopulation is None:
             return []
         else:
