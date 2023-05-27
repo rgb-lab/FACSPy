@@ -9,7 +9,12 @@ from ..exceptions.exceptions import ClassifierNotImplementedError
 from .classifiers import implemented_estimators
 from scipy.sparse import lil_matrix, csr_matrix
 
+"""
+TODO: testing of classifier
+append data to adata.uns["train_sets"]
+gating strategy plot
 
+"""
 
 class supervisedGating:
 
