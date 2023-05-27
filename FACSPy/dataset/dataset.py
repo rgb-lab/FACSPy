@@ -376,6 +376,7 @@ class DatasetAssembler:
             for gate_dict in workspace_subset["gates"]:
                 with contextlib.suppress(GateTreeError): ## if gate exists
                     gating_strategy.add_gate(gate_dict["gate"], gate_path = gate_dict["gate_path"])
+            ### potential bug: if comp matrices/transformations are different per group
             if group == "All Samples":
                 gating_strategy.add_comp_matrix(workspace_subset["compensation"])
                 gating_strategy.transformations = {xform.id: xform for xform in workspace_subset["transforms"]}
