@@ -1,6 +1,16 @@
 from typing import Any
 import warnings
 
+class ClassifierNotImplementedError(Exception):
+
+    def __init__(self,
+                 classifier: Any,
+                 implemented_classifiers: list[str]):
+        self.message = (
+            f"Classifier is not implemented. Please select one of {implemented_classifiers}, was {classifier}"
+        )
+        super().__init__(self.message)
+
 class PanelMatchWarning():
     def __init__(self,
                  channel: str,

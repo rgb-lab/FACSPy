@@ -24,3 +24,6 @@ read about flowsom... what about the input parameters?
 
 
 restrict_to_parameters
+
+
+test functions for subset stained and unstained
