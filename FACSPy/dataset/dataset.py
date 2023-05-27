@@ -3,6 +3,7 @@ import os
 from typing import Union, Optional
 
 import anndata as ad
+from anndata import AnnData
 import numpy as np
 import pandas as pd
 import scipy.signal as scs
@@ -22,7 +23,7 @@ from ..gates.gating_strategy import GatingStrategy, GateTreeError
 class Transformer:
 
     def __init__(self,
-                 dataset: ad.AnnData,
+                 dataset: AnnData,
                  cofactor_table: Optional[CofactorTable] = None) -> None:
         ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
         if not cofactor_table:
@@ -33,7 +34,7 @@ class Transformer:
         self.dataset = self.transform_dataset(dataset, cofactor_table)
 
     def calculate_cofactors(self,
-                            dataset: ad.AnnData) -> tuple[CofactorTable, pd.DataFrame]:
+                            dataset: AnnData) -> tuple[CofactorTable, pd.DataFrame]:
         
         (stained_samples,
          corresponding_control_samples) = self.find_corresponding_control_samples(dataset)
@@ -188,14 +189,14 @@ class Transformer:
         return x, curve
 
     def estimate_cofactor_from_control_quantile(self,
-                                                dataset: ad.AnnData) -> float:
+                                                dataset: AnnData) -> float:
         return np.quantile(dataset[dataset.obs["staining"] != "stained"].layers["compensated"], 0.95)
 
     def create_sample_subset_with_controls(self,
-                                           dataset: ad.AnnData,
+                                           dataset: AnnData,
                                            sample: str,
                                            corresponding_controls: dict,
-                                           match_cell_number: bool) -> ad.AnnData:
+                                           match_cell_number: bool) -> AnnData:
         controls: list[str] = corresponding_controls[sample]
         sample_list = [sample] + controls
         if match_cell_number:
@@ -203,11 +204,11 @@ class Transformer:
         return dataset[dataset.obs["file_name"].isin(sample_list)]
 
     def match_cell_numbers(self,
-                           dataset: ad.AnnData) -> ad.AnnData:
+                           dataset: AnnData) -> AnnData:
         return dataset
 
     def fetch_fluo_channels(self,
-                            dataset: ad.AnnData) -> list[str]:
+                            dataset: AnnData) -> list[str]:
         return [
             channel
             for channel in dataset.var.index.to_list()
@@ -215,7 +216,7 @@ class Transformer:
         ]
 
     def find_corresponding_control_samples(self,
-                                           dataset: ad.AnnData) -> tuple[list[str], dict[str, str]]:
+                                           dataset: AnnData) -> tuple[list[str], dict[str, str]]:
         corresponding_controls = {}
         metadata: Metadata = dataset.uns["metadata"]
         metadata_frame = metadata.to_df()
@@ -256,8 +257,8 @@ class Transformer:
         return dataframe.loc[dataframe["staining"] == "stained", "file_name"].to_list()
 
     def transform_dataset(self,
-                          dataset: ad.AnnData,
-                          cofactor_table: CofactorTable) -> ad.AnnData:
+                          dataset: AnnData,
+                          cofactor_table: CofactorTable) -> AnnData:
         dataset.var = self.merge_cofactors_into_dataset_var(dataset, cofactor_table)
         dataset.var = self.replace_missing_cofactors(dataset.var)
         dataset.layers["transformed"] = self.transform_data(compensated_data = dataset.layers["compensated"],
@@ -281,7 +282,7 @@ class Transformer:
         return dataframe.fillna(1)
 
     def merge_cofactors_into_dataset_var(self,
-                                         dataset: ad.AnnData,
+                                         dataset: AnnData,
                                          cofactor_table: CofactorTable):
         
         dataset_var = dataset.var.merge(cofactor_table.dataframe,
@@ -303,7 +304,7 @@ class DatasetAssembler:
                  input_directory: str,
                  metadata: Metadata,
                  panel: Panel,
-                 workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> ad.AnnData:
+                 workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> AnnData:
 
         file_list: list[FCSFile] = self.fetch_fcs_files(input_directory,
                                                         metadata)
@@ -344,24 +345,24 @@ class DatasetAssembler:
 
 
     def append_gates(self,
-                     dataset: ad.AnnData,
-                     gates: list[pd.DataFrame]) -> ad.AnnData:
+                     dataset: AnnData,
+                     gates: list[pd.DataFrame]) -> AnnData:
         gatings = pd.concat(gates, axis = 0).fillna(0).astype("bool")
         dataset.obsm["gating"] = csr_matrix(gatings.values)
         dataset.uns["gating_cols"] = gatings.columns
         return dataset
 
     def append_supplements(self,
-                           dataset: ad.AnnData,
+                           dataset: AnnData,
                            metadata: Metadata,
                            panel: Panel,
-                           workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> ad.AnnData:
+                           workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> AnnData:
         dataset.uns["metadata"] = metadata
         dataset.uns["panel"] = panel
         dataset.uns["workspace"] = workspace.wsp_dict
         return dataset
 
-    def get_dataset(self) -> ad.AnnData:
+    def get_dataset(self) -> AnnData:
         return self.dataset
 
     def create_gating_strategy(self,
@@ -402,9 +403,8 @@ class DatasetAssembler:
         return [self.gate_sample(file, workspace) for file in file_list]
 
     def concatenate_dataset(self,
-                            file_list: list[ad.AnnData]):
-        return file_list[0].concatenate(file_list[1:],
-                                        batch_key = None)
+                            file_list: list[AnnData]):
+        return ad.concat(file_list, index_unique = "-", keys = range(len(file_list)))
     
     def create_obs_from_metadata(self,
                                  file: FCSFile,
@@ -480,12 +480,12 @@ class DatasetAssembler:
     def create_anndata_representation(self,
                                       file: FCSFile,
                                       metadata: Metadata,
-                                      panel: Panel) -> ad.AnnData:
+                                      panel: Panel) -> AnnData:
         obs = self.create_obs_from_metadata(file,
                                             metadata)
         var = self.create_var_from_panel(file,
                                          panel)
-        return ad.AnnData(X = None,
+        return AnnData(X = None,
                           obs = obs,
                           var = var,
                           layers = {"raw": file.original_events.astype(np.float32),
@@ -494,14 +494,14 @@ class DatasetAssembler:
     def create_anndata_representations(self,
                                        file_list: list[FCSFile],
                                        metadata: Metadata,
-                                       panel: Panel) -> list[ad.AnnData]:
+                                       panel: Panel) -> list[AnnData]:
         return [self.create_anndata_representation(file, metadata, panel) for file in file_list]
         
 
     def construct_dataset(self,
                           file_list: list[FCSFile],
                           metadata: Metadata,
-                          panel: Panel) -> ad.AnnData:
+                          panel: Panel) -> AnnData:
         return self.create_anndata_representations(file_list, metadata, panel)
 
     def compensate_samples(self,
