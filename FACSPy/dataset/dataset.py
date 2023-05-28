@@ -404,7 +404,11 @@ class DatasetAssembler:
 
     def concatenate_dataset(self,
                             file_list: list[AnnData]):
-        return ad.concat(file_list, merge = "same", index_unique = "-", keys = range(len(file_list)))
+        return ad.concat(file_list,
+                         merge = "same",
+                         index_unique = "-",
+                         keys = range(len(file_list))
+                         )
     
     def create_obs_from_metadata(self,
                                  file: FCSFile,
