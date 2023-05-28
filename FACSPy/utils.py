@@ -1,4 +1,4 @@
-import anndata as ad
+from anndata import AnnData
 from typing import Optional, Union
 import warnings
 import numpy as np
@@ -18,14 +18,14 @@ def find_parents_recursively(gate: str, parent_list = None):
         return find_parents_recursively(parent, parent_list)
     return parent_list
     
-def subset_stained_samples(dataset: ad.AnnData,
-                           copy: bool = False) -> Optional[ad.AnnData]:
+def subset_stained_samples(dataset: AnnData,
+                           copy: bool = False) -> Optional[AnnData]:
     dataset = dataset.copy() if copy else dataset
     dataset._inplace_subset_obs(dataset.obs[dataset.obs["staining"] == "stained"].index)
     return dataset if copy else None
 
-def subset_unstained_samples(dataset: ad.AnnData,
-                             copy: bool = False) -> Optional[ad.AnnData]:
+def subset_unstained_samples(dataset: AnnData,
+                             copy: bool = False) -> Optional[AnnData]:
     dataset = dataset.copy() if copy else dataset
     dataset._inplace_subset_obs(dataset.obs[dataset.obs["staining"] != "stained"].index)
     return dataset if copy else None
@@ -69,16 +69,16 @@ def _remove_duplicates_from_gate_lut(gate_lut: dict) -> dict:
 
     return next(iter(gate_lut.values()))
 
-def subset_fluo_channels(dataset: ad.AnnData,
-                         copy: bool = False) -> ad.AnnData:
+def subset_fluo_channels(dataset: AnnData,
+                         copy: bool = False) -> AnnData:
     dataset = dataset.copy() if copy else dataset
     dataset._inplace_subset_var(dataset.var[dataset.var["type"] == "fluo"].index)
     return dataset if copy else None
 
-def subset_gate(dataset: ad.AnnData,
+def subset_gate(dataset: AnnData,
                 gate: Optional[str] = None,
                 gate_path: Optional[str] = None,
-                copy: bool = False) -> ad.AnnData:
+                copy: bool = False) -> AnnData:
     dataset = dataset.copy() if copy else dataset
     
     if gate is None and gate_path is None:
@@ -97,13 +97,13 @@ def subset_gate(dataset: ad.AnnData,
     dataset._init_as_actual(subset, dtype = None)
     return dataset if copy else None
 
-def equalize_groups(data: ad.AnnData,
+def equalize_groups(data: AnnData,
                     fraction: Optional[float] = None,
                     n_obs: Optional[int] = None,
                     on: Union[str, list[str]] = None, 
                     random_state:int = 0,
                     copy: bool = False
-                    ) -> Optional[ad.AnnData]:
+                    ) -> Optional[AnnData]:
     np.random.seed(random_state)
     if n_obs is not None:
         new_n_obs = n_obs
@@ -120,7 +120,7 @@ def equalize_groups(data: ad.AnnData,
 
     obs_indices = data.obs.groupby(on).sample(new_n_obs).index.to_numpy()
 
-    if isinstance(data, ad.AnnData):
+    if isinstance(data, AnnData):
         if copy:
             return data[obs_indices].copy()
         else:
@@ -129,11 +129,11 @@ def equalize_groups(data: ad.AnnData,
         X = data
         return X[obs_indices], obs_indices
     
-def annotate_metadata_samplewise(dataset: ad.AnnData,
+def annotate_metadata_samplewise(dataset: AnnData,
                                  sample_ID: Union[str, int],
                                  annotation: Union[str, int],
                                  factor_name: str,
-                                 copy: bool = False) -> Optional[ad.AnnData]:
+                                 copy: bool = False) -> Optional[AnnData]:
     
     dataset = dataset.copy() if copy else dataset
     dataset.obs.loc[dataset.obs["sample_ID"] == sample_ID, factor_name] = annotation
@@ -141,3 +141,5 @@ def annotate_metadata_samplewise(dataset: ad.AnnData,
 
     return dataset if copy else None
 
+def contains_only_fluo(dataset: AnnData) -> bool:
+    return all(dataset.var["type"] == "fluo")
