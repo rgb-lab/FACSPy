@@ -1,14 +1,8 @@
-import anndata as ad
-import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
-from scipy.sparse import csr_matrix
-from sklearn.model_selection import train_test_split
-import contextlib
 from typing import Optional, Union, Literal
-from ..utils import create_gate_lut, find_parents_recursively
 
 implemented_estimators = ["DecisionTree", "RandomForest"]
 
@@ -46,18 +40,18 @@ class RandomForest(BaseFACSPyClassifier, BaseEstimator):
                  *,
                  base_estimator = RandomForestClassifier(),
                  criterion: str = "gini",
-                 max_depth: str|int = None,
+                 max_depth: Union[str, int] = None,
                  min_samples_split: int = 2,
                  min_samples_leaf: int = 1,
                  min_weight_fraction_leaf: float = 0.0,
-                 max_features: str|None|int = "sqrt",
+                 max_features: Optional[Union[str, int]] = "sqrt",
                  max_leaf_nodes = None,
                  min_impurity_decrease: float = 0.0,
                  bootstrap: bool = True,
                  oob_score: bool = False,
                  n_jobs: int = None,
                  random_state: int = None,
-                 verbose: int|bool = 0,
+                 verbose: Union[bool, int] = 0,
                  warm_start: bool = False,
                  class_weight = None,
                  ccp_alpha: float = 0.0,
