@@ -6,7 +6,7 @@ from .classifiers import DecisionTree, RandomForest
 from sklearn.model_selection import train_test_split
 import contextlib
 from ..utils import create_gate_lut, find_parents_recursively
-from ..exceptions.exceptions import ClassifierNotImplementedError, ParentGateNotFoundError
+from ..exceptions.exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
 from .classifiers import implemented_estimators
 from scipy.sparse import lil_matrix, csr_matrix, hstack
 import scanpy as sc
@@ -27,7 +27,7 @@ class BaseGating:
     def find_gate_indices(self,
                           gate_columns):
         if not isinstance(gate_columns, list):
-            gate_columns = [gate_columns]
+             gate_columns = [gate_columns]
         return [self.adata.uns["gating_cols"].get_loc(gate) for gate in gate_columns]
 
     def get_dataset(self):
@@ -35,7 +35,7 @@ class BaseGating:
 
     def subset_anndata_by_sample(self,
                                  samples,
-                                 adata: Optional[AnnData],
+                                 adata: Optional[AnnData] = None,
                                  copy: bool = False):
         if not isinstance(samples, list):
             samples = [samples]
@@ -52,22 +52,20 @@ class BaseGating:
     def add_gating_to_input_dataset(self,
                                     subset: AnnData,
                                     predictions: np.ndarray,
-                                    gate_indices: list) -> None:
-
+                                    gate_indices: list[int]) -> None:
         sample_indices = get_idx_loc(dataset = self.adata,
                                      idx_to_loc = subset.obs_names)
-        print(sample_indices.shape, " (sample indices)")
-        print(predictions.shape, " (predictions)")
-        print(self.adata.obsm["gating"][
-            sample_indices,
-            gate_indices,
-        ].shape, " (gating data)")
-        self.adata.obsm["gating"][
-            sample_indices,
-            gate_indices,
-        ] = lil_matrix(predictions,
-                       shape = (predictions.shape[0], 1),
-                       dtype=bool)
+        ### otherwise, broadcast error if multiple columns are indexed and sample_indices
+        for i, gate_index in enumerate(gate_indices): 
+            # self.adata.obsm["gating"][
+            #     sample_indices,
+            #     gate_index,
+            # ] = lil_matrix(predictions[:, i],
+            #             dtype=bool)
+            self.adata.obsm["gating"][
+                sample_indices,
+                gate_index,
+            ] = predictions[:, i]
 
 class supervisedGating(BaseGating):
 
@@ -75,7 +73,8 @@ class supervisedGating(BaseGating):
                  adata: AnnData,
                  wsp_group: str,
                  estimator = Literal["DecisionTree", "RandomForest"]):
-        
+        if "train_sets" not in adata.uns:
+            raise AnnDataSetupError()
         self.train_sets = adata.uns["train_sets"][wsp_group]
         self._estimator = estimator
         self.adata = adata
@@ -93,43 +92,44 @@ class supervisedGating(BaseGating):
               **kwargs):
         
         for gate_to_train in self.train_sets:
+            print(f"Gating gate {gate_to_train}")
+            print("Preparing training data")
             X_train, X_test, y_train, y_test = self.prepare_training_data(samples = self.train_sets[gate_to_train]["samples"],
                                                                           gate_columns = self.train_sets[gate_to_train]["training_columns"],
                                                                           **kwargs)
-
+            print("Fitting classifier...")
             self.classifiers[gate_to_train].fit(X_train, y_train)
             # TODO: print some logging message... maybe even progressbar
             # TODO: update stats, accuracy and such.
 
-    def gate_dataset(self):
+
+    def gate_dataset(self) -> None:
+        #self.adata.obsm["gating"] = self.adata.obsm["gating"].tolil()
+        self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
         for gate_to_train in self.train_sets:
-            gate_indices = self.find_gate_indices(self.train_sets[gate_to_train]["training_columns"])
-            self.fill_gates(gate_to_train,
-                            gate_indices)
-
-
-
-    def fill_gates(self) -> None:
-        self.adata.obsm["gating"] = self.adata.obsm["gating"].tolil()
-        for gate_to_train in self.train_sets:
+            print(f"Gating {gate_to_train}")
             non_gated_samples = [sample for sample in self.adata.obs["file_name"].unique()
                                 if sample not in self.train_sets[gate_to_train]]
             gate_indices = self.find_gate_indices(gate_columns = self.train_sets[gate_to_train]["training_columns"])
             for sample in non_gated_samples:
-                sample_view = self.subset_anndata(samples = sample, copy = False)
+                print(f"Gating sample {sample}...")
+                sample_view = self.subset_anndata_by_sample(samples = sample, copy = False)
                 predictions: np.ndarray = self.classifiers[gate_to_train].predict(sample_view.layers["compensated"])
                 self.add_gating_to_input_dataset(sample_view,
                                                  predictions,
                                                  gate_indices)
 
-        self.adata.obsm["gating"] = self.adata.obsm["gating"].tocsr()
+        self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
 
 
 
     def prepare_training_data(self,
                               samples: list[str],
                               gate_columns: list[str],
-                              test_size: float = 0.1) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                              test_size: float = 0.1) -> tuple[np.ndarray,
+                                                               np.ndarray,
+                                                               np.ndarray,
+                                                               np.ndarray]:
              
         adata_subset = self.subset_anndata_by_sample(samples)
         assert adata_subset.is_view ##TODO: delete later
@@ -199,9 +199,9 @@ class supervisedGating(BaseGating):
             gate_name = gate.split("/")[-1]
             parents = [parent for parent in find_parents_recursively(gate) if parent != "root"]
             reverse_lut[gate] = {"dimensions": training_gate_paths[gate],
-                                    "samples": [sample for sample in gate_lut.keys() if gate_name in gate_lut[sample].keys()],
-                                    "training_columns": parents + [gate],
-                                    "parents": parents}
+                                 "samples": [sample for sample in gate_lut.keys() if gate_name in gate_lut[sample].keys()],
+                                 "training_columns": parents + [gate],
+                                 "parents": parents}
 
         for gate in list(reverse_lut.keys()):
             with contextlib.suppress(KeyError): ## key errors are expected since we remove keys along the way
@@ -228,7 +228,7 @@ class supervisedGating(BaseGating):
                         reverse_lut.pop(other_gate)
 
         for gate in list(reverse_lut.keys()):
-            reverse_lut[gate]["samples"] = set(reverse_lut[gate]["samples"])
+            reverse_lut[gate]["samples"] = list(set(reverse_lut[gate]["samples"]))
 
         if "train_sets" not in dataset.uns.keys():
             dataset.uns["train_sets"] = {}
@@ -285,6 +285,7 @@ class unsupervisedGating(BaseGating):
         parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
                             if gate_path.endswith(parent_population)][0]
         population_gate_path = "/".join([parent_gate_path, population])
+        
         if not self.population_is_already_a_gate(population):
             self.append_gate_column_to_adata(population_gate_path)
 
@@ -292,12 +293,12 @@ class unsupervisedGating(BaseGating):
         
         if parent_population != "root":
             dataset = subset_gate(self.adata,
-                                gate = parent_population,
-                                copy = True)
+                                  gate = parent_population,
+                                  as_view = True)
+            assert dataset.is_view
         else:
             dataset = self.adata.copy()
-
-        dataset.X = dataset.layers["transformed"]
+        
         
         for sample in dataset.obs["file_name"].unique():
             print(f"Analyzing sample {sample}")
@@ -317,15 +318,18 @@ class unsupervisedGating(BaseGating):
                                                         population)
 
             predictions = self.convert_cell_types_to_bool(cell_types)
-            print(predictions.shape)
+    
             self.add_gating_to_input_dataset(subset,
                                              predictions,
                                              gate_indices) 
     
     def identify_populations(self):
+        self.adata.X = self.adata.layers["transformed"]
+        self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
         for population in self.gating_strategy:
             print(f"Population: {population}")
             self.identify_population(population)
+        self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
 
     def convert_cell_types_to_bool(self,
                                    cell_types: list[str]) -> np.ndarray:
@@ -344,14 +348,12 @@ class unsupervisedGating(BaseGating):
     def append_gate_column_to_adata(self,
                                     gate_path) -> None:
         self.adata.uns["gating_cols"] = self.adata.uns["gating_cols"].append(pd.Index([gate_path]))
-        empty_column = csr_matrix(
-            np.zeros(
+        empty_column = np.zeros(
                 shape = (self.adata.obsm["gating"].shape[0],
                          1),
                 dtype = bool
             )
-        )
-        self.adata.obsm["gating"] = hstack([self.adata.obsm["gating"], empty_column])
+        self.adata.obsm["gating"] = np.hstack([self.adata.obsm["gating"], empty_column])
         return
         
     def convert_markers_to_query_string(self,

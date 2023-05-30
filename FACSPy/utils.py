@@ -79,6 +79,7 @@ def subset_fluo_channels(dataset: AnnData,
 def subset_gate(dataset: AnnData,
                 gate: Optional[str] = None,
                 gate_path: Optional[str] = None,
+                as_view: bool = False,
                 copy: bool = False) -> AnnData:
     dataset = dataset.copy() if copy else dataset
     
@@ -92,11 +93,31 @@ def subset_gate(dataset: AnnData,
 
     gate_idx = gates.index(gate_path)
 
+    if as_view:
+        return  dataset[dataset.obsm["gating"][:,gate_idx] == True,:]
     ### basically copying the individual steps from AnnData._inplace_subset_var
     ### potentially PR?
     subset = dataset[dataset.obsm["gating"][:,gate_idx] == True,:].copy()
     dataset._init_as_actual(subset, dtype = None)
     return dataset if copy else None
+
+def subset_gate_as_view(dataset: AnnData,
+                        gate: Optional[str] = None,
+                        gate_path: Optional[str] = None,
+                        copy: bool = False) -> AnnData:
+    dataset = dataset.copy() if copy else dataset
+    
+    if gate is None and gate_path is None:
+        raise TypeError("Please provide either a gate name or a gate path.")
+    
+    gates: list[str] = dataset.uns["gating_cols"].to_list()
+    
+    if gate:
+        gate_path = [gate_path for gate_path in gates if gate_path.endswith(gate)][0]
+
+    gate_idx = gates.index(gate_path)
+
+    return dataset[dataset.obsm["gating"][:,gate_idx] == True,:]
 
 def equalize_groups(data: AnnData,
                     fraction: Optional[float] = None,

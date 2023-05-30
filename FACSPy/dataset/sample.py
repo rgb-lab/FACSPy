@@ -67,37 +67,7 @@ class FCSFile:
     def _get_compensated_events(self):
         return self.compensated_events
 
-    # def get_channel_number_by_label(self, label):
-    #     """
-    #     Returns the channel number for the given PnN label. Note, this is the
-    #     channel number, as defined in the FCS data (not the channel index), so
-    #     the 1st channel's number is 1 (not 0).
-    #     :param label: PnN label of a channel
-    #     :return: Channel number (not index)
-    #     """
-    #     if label in self.pnn_labels:
-    #         return self.pnn_labels.index(label) + 1
-    #     else:
-    #         # as a last resort we can try the FJ labels and fail if no match
-    #         return self._flowjo_pnn_labels.index(label) + 1
-            
-    # def get_channel_index(self, channel_label_or_number):
-    #     """
-    #     Returns the channel index for the given PnN label. Note, this is
-    #     different from the channel number. The 1st channel's index is 0 (not 1).
-    #     :param channel_label_or_number: A channel's PnN label or number
-    #     :return: Channel index
-    #     """
-    #     if isinstance(channel_label_or_number, str):
-    #         index = self.get_channel_number_by_label(channel_label_or_number) - 1
-    #     elif isinstance(channel_label_or_number, int):
-    #         if channel_label_or_number < 1:
-    #             raise ValueError("Channel numbers are indexed at 1, got %d" % channel_label_or_number)
-    #         index = channel_label_or_number - 1
-    #     else:
-    #         raise ValueError("x_label_or_number must be a label string or channel number")
 
-    #     return index
     def get_channel_index(self,
                           channel_label):
         return self.channels.loc[self.channels.index == channel_label, "channel_numbers"] - 1
@@ -182,7 +152,13 @@ class FCSFile:
             dtype=np.float64
         ).reshape(-1, fcs_data.channel_count)
 
-
+    def remove_disallowed_characters_from_string(self,
+                                  input_string: str) -> str:
+        for char in [" ", "/", "-"]:
+            if char in input_string:
+                input_string = input_string.replace(char, "_")
+        return input_string
+    
     def parse_channel_information(self,
                                   fcs_data: FlowData) -> pd.DataFrame:
         
@@ -226,7 +202,7 @@ class FCSFile:
                         channels: dict,
                         channel_number: str) -> str:
         try:
-            return channels[channel_number]["PnS"] 
+            return self.remove_disallowed_characters_from_string(channels[channel_number]["PnS"]) 
         except KeyError:
             return "" 
 

@@ -1,6 +1,13 @@
 from typing import Any
 import warnings
 
+class AnnDataSetupError(Exception):
+    
+    def __init__(self):
+        self.message = (
+            "This AnnData object has not been setup yet. Please call .setup_anndata() first."
+        )
+        super().__init__(self.message)
 
 class ParentGateNotFoundError(Exception):
 
@@ -15,7 +22,7 @@ class ParentGateNotFoundError(Exception):
         )
         super().__init__(self.message)
 
-        
+
 class ClassifierNotImplementedError(Exception):
 
     def __init__(self,

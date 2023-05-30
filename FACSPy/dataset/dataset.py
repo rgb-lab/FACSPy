@@ -478,7 +478,8 @@ class DatasetAssembler:
                                 else "time" if any(k in channel for k in time_channel) 
                                 else "fluo"
                                 for channel in fcs_panel_df.index]
-        
+        fcs_panel_df["pnn"] = fcs_panel_df.index.to_list()
+        fcs_panel_df.index = fcs_panel_df["pns"].to_list()
         return fcs_panel_df
 
     def create_anndata_representation(self,

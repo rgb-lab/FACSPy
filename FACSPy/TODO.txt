@@ -25,5 +25,7 @@ read about flowsom... what about the input parameters?
 
 restrict_to_parameters
 
+write test for contains_fluo_only
+
 
 test functions for subset stained and unstained
