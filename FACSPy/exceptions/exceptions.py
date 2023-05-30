@@ -1,6 +1,21 @@
 from typing import Any
 import warnings
 
+
+class ParentGateNotFoundError(Exception):
+
+    def __init__(self,
+                 parent_population):
+        self.message = (
+            f"The population {parent_population} was neither " +
+             "found in the gating strategy provided by a workspace " +
+             "or in the user-provided gating strategy. To avoid that, " +
+             "make sure that all populations that are referred to are either " +
+             "in the gating strategy provided or pregated in a workspace."
+        )
+        super().__init__(self.message)
+
+        
 class ClassifierNotImplementedError(Exception):
 
     def __init__(self,
