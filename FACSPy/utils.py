@@ -2,6 +2,7 @@ from anndata import AnnData
 from typing import Optional, Union
 import warnings
 import numpy as np
+import pandas as pd
 
 def find_parent_gate(gate: str) -> str:
     return "/".join(gate.split("/")[:-1])
@@ -143,3 +144,7 @@ def annotate_metadata_samplewise(dataset: AnnData,
 
 def contains_only_fluo(dataset: AnnData) -> bool:
     return all(dataset.var["type"] == "fluo")
+
+def get_idx_loc(dataset: AnnData,
+                idx_to_loc: Union[list[str], pd.Index]) -> np.ndarray:
+    return np.array([dataset.obs_names.get_loc(idx) for idx in idx_to_loc])
