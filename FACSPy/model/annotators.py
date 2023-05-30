@@ -1,13 +1,17 @@
 from anndata import AnnData
 import numpy as np
+import pandas as pd
 from typing import Optional, Union, Literal
 from .classifiers import DecisionTree, RandomForest
 from sklearn.model_selection import train_test_split
 import contextlib
 from ..utils import create_gate_lut, find_parents_recursively
-from ..exceptions.exceptions import ClassifierNotImplementedError
+from ..exceptions.exceptions import ClassifierNotImplementedError, ParentGateNotFoundError
 from .classifiers import implemented_estimators
-from scipy.sparse import lil_matrix, csr_matrix
+from scipy.sparse import lil_matrix, csr_matrix, hstack
+import scanpy as sc
+import numpy as np
+from ..utils import contains_only_fluo, subset_gate, get_idx_loc
 
 """
 TODO: testing of classifier
@@ -16,7 +20,56 @@ gating strategy plot
 
 """
 
-class supervisedGating:
+class BaseGating:
+    def __init__(self):
+        pass
+
+    def find_gate_indices(self,
+                          gate_columns):
+        if not isinstance(gate_columns, list):
+            gate_columns = [gate_columns]
+        return [self.adata.uns["gating_cols"].get_loc(gate) for gate in gate_columns]
+
+    def get_dataset(self):
+        return self.adata
+
+    def subset_anndata_by_sample(self,
+                                 samples,
+                                 adata: Optional[AnnData],
+                                 copy: bool = False):
+        if not isinstance(samples, list):
+            samples = [samples]
+        if adata is not None:
+            if copy:
+                return adata[adata.obs["file_name"].isin(samples),:].copy()
+            else:
+                return adata[adata.obs["file_name"].isin(samples),:]
+        if copy:
+            return self.adata[self.adata.obs["file_name"].isin(samples),:].copy()
+        else:
+            return self.adata[self.adata.obs["file_name"].isin(samples),:]
+
+    def add_gating_to_input_dataset(self,
+                                    subset: AnnData,
+                                    predictions: np.ndarray,
+                                    gate_indices: list) -> None:
+
+        sample_indices = get_idx_loc(dataset = self.adata,
+                                     idx_to_loc = subset.obs_names)
+        print(sample_indices.shape, " (sample indices)")
+        print(predictions.shape, " (predictions)")
+        print(self.adata.obsm["gating"][
+            sample_indices,
+            gate_indices,
+        ].shape, " (gating data)")
+        self.adata.obsm["gating"][
+            sample_indices,
+            gate_indices,
+        ] = lil_matrix(predictions,
+                       shape = (predictions.shape[0], 1),
+                       dtype=bool)
+
+class supervisedGating(BaseGating):
 
     def __init__(self,
                  adata: AnnData,
@@ -34,7 +87,6 @@ class supervisedGating:
         }
 
     def tune_hyperparameters(self):
-
         raise NotImplementedError("Hyperparameter tuning is currently not supported. :(")
 
     def train(self,
@@ -55,9 +107,7 @@ class supervisedGating:
             self.fill_gates(gate_to_train,
                             gate_indices)
 
-    def find_gate_indices(self,
-                          gate_columns):
-        return [self.adata.uns["gating_cols"].get_loc(gate) for gate in gate_columns]
+
 
     def fill_gates(self) -> None:
         self.adata.obsm["gating"] = self.adata.obsm["gating"].tolil()
@@ -66,32 +116,22 @@ class supervisedGating:
                                 if sample not in self.train_sets[gate_to_train]]
             gate_indices = self.find_gate_indices(gate_columns = self.train_sets[gate_to_train]["training_columns"])
             for sample in non_gated_samples:
-                sample_view = self.adata[self.adata.obs["file_name"] == sample,:]
-                first_sample_index = self.adata.obs_names.get_loc(sample_view.obs_names[0])
-                sample_shape = sample_view.shape[0]
+                sample_view = self.subset_anndata(samples = sample, copy = False)
                 predictions: np.ndarray = self.classifiers[gate_to_train].predict(sample_view.layers["compensated"])
-                self.adata.obsm["gating"][
-                    first_sample_index : first_sample_index + sample_shape,
-                    gate_indices,
-                ] = lil_matrix(predictions,
-                               dtype=bool)
+                self.add_gating_to_input_dataset(sample_view,
+                                                 predictions,
+                                                 gate_indices)
 
         self.adata.obsm["gating"] = self.adata.obsm["gating"].tocsr()
 
-    def get_dataset(self):
-        return self.adata
 
-    def subset_anndata(self,
-                       samples):
-        return self.adata[self.adata.obs["file_name"].isin(samples),:]
-    
 
     def prepare_training_data(self,
                               samples: list[str],
                               gate_columns: list[str],
                               test_size: float = 0.1) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
              
-        adata_subset = self.subset_anndata(samples)
+        adata_subset = self.subset_anndata_by_sample(samples)
         assert adata_subset.is_view ##TODO: delete later
         gate_indices = self.find_gate_indices(gate_columns)
         X = adata_subset.layers["compensated"]
@@ -195,3 +235,160 @@ class supervisedGating:
         dataset.uns["train_sets"][wsp_group] = reverse_lut
         
         return
+    
+
+class unsupervisedGating(BaseGating):
+
+    def __init__(self,
+                 adata: AnnData,
+                 gating_strategy: dict,
+                 clustering_algorithm: Literal["leiden", "FlowSOM"]) -> None:
+        self.gating_strategy = gating_strategy
+        self.clustering_algorithm = clustering_algorithm
+        self.adata = adata
+        assert contains_only_fluo(self.adata)
+
+    def population_is_already_a_gate(self,
+                                     parent_population) -> bool:
+        return parent_population in [gate.split("/")[-1] for gate in self.adata.uns["gating_cols"]]
+
+    def process_markers(self,
+                        population: str) -> dict[str, list[Optional[str]]]:
+        markers = self.gating_strategy[population][1]
+        if not isinstance(markers, list):
+            markers = [markers]
+        marker_dict = {"up": [],
+                       "down": []}
+        for marker in markers:
+            if "+" in marker:
+                marker_dict["up"].append(marker.split("+")[0])
+            elif "-" in marker:
+                marker_dict["down"].append(marker.split("-")[0])
+            else:
+                marker_dict["up"].append(marker)
+        return marker_dict
+
+    def identify_population(self,
+                            population: str) -> None:
+        
+        parent_population = self.gating_strategy[population][0]
+        if not self.population_is_already_a_gate(parent_population):
+            if parent_population in self.gating_strategy:
+                self.identify_population(parent_population)
+            else:
+                raise ParentGateNotFoundError(parent_population)
+        
+        markers_of_interest = self.process_markers(population)
+        
+        ## this handles a weird case where this population already exists...
+        ## should potentially throw an error?
+        parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
+                            if gate_path.endswith(parent_population)][0]
+        population_gate_path = "/".join([parent_gate_path, population])
+        if not self.population_is_already_a_gate(population):
+            self.append_gate_column_to_adata(population_gate_path)
+
+        gate_indices = self.find_gate_indices(population_gate_path)
+        
+        if parent_population != "root":
+            dataset = subset_gate(self.adata,
+                                gate = parent_population,
+                                copy = True)
+        else:
+            dataset = self.adata.copy()
+
+        dataset.X = dataset.layers["transformed"]
+        
+        for sample in dataset.obs["file_name"].unique():
+            print(f"Analyzing sample {sample}")
+            subset = self.subset_anndata_by_sample(adata = dataset,
+                                                   samples = sample,
+                                                   copy = False)
+            print("... preprocessing")
+            subset = self.preprocess_dataset(subset)
+            print("... clustering")
+            subset = self.cluster_dataset(subset)
+            
+            cluster_vector = self.identify_clusters_of_interest(subset,
+                                                                markers_of_interest)
+            
+            cell_types = self.map_cell_types_to_cluster(subset,
+                                                        cluster_vector,
+                                                        population)
+
+            predictions = self.convert_cell_types_to_bool(cell_types)
+            print(predictions.shape)
+            self.add_gating_to_input_dataset(subset,
+                                             predictions,
+                                             gate_indices) 
+    
+    def identify_populations(self):
+        for population in self.gating_strategy:
+            print(f"Population: {population}")
+            self.identify_population(population)
+
+    def convert_cell_types_to_bool(self,
+                                   cell_types: list[str]) -> np.ndarray:
+        return np.array(
+            list(map(lambda x: x != "other", cell_types)),
+            dtype=bool
+        ).reshape((len(cell_types), 1))
+        
+    def map_cell_types_to_cluster(self,
+                                  subset: AnnData,
+                                  cluster_vector: pd.Index,
+                                  population: str) -> list[str]:
+        # TODO: map function...
+        return [population if cluster in cluster_vector else "other" for cluster in subset.obs["clusters"].to_list()]
+
+    def append_gate_column_to_adata(self,
+                                    gate_path) -> None:
+        self.adata.uns["gating_cols"] = self.adata.uns["gating_cols"].append(pd.Index([gate_path]))
+        empty_column = csr_matrix(
+            np.zeros(
+                shape = (self.adata.obsm["gating"].shape[0],
+                         1),
+                dtype = bool
+            )
+        )
+        self.adata.obsm["gating"] = hstack([self.adata.obsm["gating"], empty_column])
+        return
+        
+    def convert_markers_to_query_string(self,
+                                        markers_of_interest: dict[str: list[Optional[str]]]) -> str:
+        cutoff = str(np.arcsinh(1) * 0.5)
+        up_markers = markers_of_interest["up"]
+        down_markers = markers_of_interest["down"]
+        query_strings = (
+            [f"{marker} > {cutoff}" for marker in up_markers] +
+            [f"{marker} < {cutoff}" for marker in down_markers]
+        )
+        return " & ".join(query_strings)
+    
+    
+    def identify_clusters_of_interest(self,
+                                      dataset: AnnData,
+                                      markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
+        df = dataset.to_df(layer = "transformed")
+        df["clusters"] = dataset.obs["clusters"].to_list()
+        medians = df.groupby("clusters").median()
+        cells_of_interest: pd.DataFrame = medians.query(self.convert_markers_to_query_string(markers_of_interest))
+        return cells_of_interest.index
+
+    def cluster_dataset(self,
+                        dataset: AnnData) -> AnnData:
+        if self.clustering_algorithm != "leiden":
+            raise NotImplementedError("Please select 'leiden' :D")
+        sc.tl.leiden(dataset, key_added = "clusters")
+        return dataset
+
+    def preprocess_dataset(self,
+                           subset: AnnData) -> AnnData:
+        sc.pp.pca(subset)
+        sc.pp.neighbors(subset)
+        return subset
+    
+    @classmethod
+    def setup_anndata(cls):
+        pass
+
