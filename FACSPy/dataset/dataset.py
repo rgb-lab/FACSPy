@@ -9,16 +9,18 @@ import pandas as pd
 import scipy.signal as scs
 from scipy.sparse import csr_matrix
 
-from KDEpy import FFTKDE
-
 from .supplements import Panel, Metadata, CofactorTable
 from .workspaces import FlowJoWorkspace, DivaWorkspace
 from .sample import FCSFile
+from .utils import (find_corresponding_control_samples,
+                    get_histogram_curve,
+                    transform_data_array,
+                    create_sample_subset_with_controls)
 
 from ..transforms._matrix import Matrix
 from ..exceptions.exceptions import PanelMatchWarning
 from ..gates.gating_strategy import GatingStrategy, GateTreeError
-
+from ..utils import fetch_fluo_channels
 
 class Transformer:
 
@@ -37,15 +39,16 @@ class Transformer:
                             dataset: AnnData) -> tuple[CofactorTable, pd.DataFrame]:
         
         (stained_samples,
-         corresponding_control_samples) = self.find_corresponding_control_samples(dataset)
+         corresponding_control_samples) = find_corresponding_control_samples(dataset,
+                                                                             by = "file_name")
         cofactors = {}
         for sample in stained_samples:
             cofactors[sample] = {}
-            fluo_channels = self.fetch_fluo_channels(dataset)
-            sample_subset = self.create_sample_subset_with_controls(dataset,
-                                                                    sample,
-                                                                    corresponding_control_samples,
-                                                                    match_cell_number = True)
+            fluo_channels = fetch_fluo_channels(dataset)
+            sample_subset = create_sample_subset_with_controls(dataset,
+                                                               sample,
+                                                               corresponding_control_samples,
+                                                               match_cell_number = True)
             for channel in fluo_channels:
                 data_array = sample_subset[:, sample_subset.var.index == channel].layers["compensated"]
                 cofactor_stained_sample = self.estimate_cofactor_on_stained_sample(data_array,
@@ -87,8 +90,8 @@ class Transformer:
     def estimate_cofactor_on_stained_sample(self,
                                             data_array: np.ndarray,
                                             cofactor: int) -> float:
-        x, curve = self.get_histogram_curve(data_array,
-                                            cofactor)
+        data_array = transform_data_array(data_array, cofactor)
+        x, curve = get_histogram_curve(data_array)
         
         peak_output = scs.find_peaks(curve, prominence = 0.001, height = 0.01)
         peaks: np.ndarray = peak_output[0] ## array with the locs of found peaks
@@ -161,8 +164,8 @@ class Transformer:
     def estimate_cofactor_on_unstained_sample(self,
                                               data_array: np.ndarray,
                                               cofactor: int) -> float:
-        x, curve = self.get_histogram_curve(data_array,
-                                            cofactor)
+        data_array = transform_data_array(data_array, cofactor)
+        x, curve = get_histogram_curve(data_array)
         
         root = self.find_root_of_tangent_line_at_turning_point(x, curve)
 
@@ -177,101 +180,22 @@ class Transformer:
         m = np.diff(curve)[turning_point_index] * 1/((np.max(x) - np.min(x)) * 0.01)
         n = curve[turning_point_index] - m * x[turning_point_index]
         return -n/m                 
-    
-    def get_histogram_curve(self,
-                            data_array: np.ndarray,
-                            cofactor: int) -> tuple[np.ndarray, np.ndarray]:
-        transformed = self.transform_data(data_array, cofactor)
-        _, x = np.histogram(transformed, bins = 100)
-        _, curve = FFTKDE(kernel = "gaussian",
-                          bw = "silverman"
-                          ).fit(transformed).evaluate(100)
-        return x, curve
 
     def estimate_cofactor_from_control_quantile(self,
                                                 dataset: AnnData) -> float:
         return np.quantile(dataset[dataset.obs["staining"] != "stained"].layers["compensated"], 0.95)
-
-    def create_sample_subset_with_controls(self,
-                                           dataset: AnnData,
-                                           sample: str,
-                                           corresponding_controls: dict,
-                                           match_cell_number: bool) -> AnnData:
-        controls: list[str] = corresponding_controls[sample]
-        sample_list = [sample] + controls
-        if match_cell_number:
-            return self.match_cell_numbers(dataset[dataset.obs["file_name"].isin(sample_list)])
-        return dataset[dataset.obs["file_name"].isin(sample_list)]
-
-    def match_cell_numbers(self,
-                           dataset: AnnData) -> AnnData:
-        return dataset
-
-    def fetch_fluo_channels(self,
-                            dataset: AnnData) -> list[str]:
-        return [
-            channel
-            for channel in dataset.var.index.to_list()
-            if all(k not in channel.lower() for k in ["fsc", "ssc", "time"])
-        ]
-
-    def find_corresponding_control_samples(self,
-                                           dataset: AnnData) -> tuple[list[str], dict[str, str]]:
-        corresponding_controls = {}
-        metadata: Metadata = dataset.uns["metadata"]
-        metadata_frame = metadata.to_df()
-        indexed_metadata = self.reindex_metadata(metadata_frame,
-                                                 metadata.factors)
-        
-        stained_samples = self.get_stained_samples(metadata_frame)
-        control_samples = self.get_control_samples(metadata_frame)
-        
-        for sample in stained_samples:
-            sample_metadata = metadata_frame.loc[metadata_frame["file_name"] == sample, metadata.factors]
-            matching_control_samples = self.find_name_of_control_sample_by_metadata(sample,
-                                                                                    sample_metadata,
-                                                                                    indexed_metadata)
-            corresponding_controls[sample] = matching_control_samples or control_samples
-
-        return stained_samples, corresponding_controls
-    
-    def reindex_metadata(self,
-                         metadata: pd.DataFrame,
-                         indices: list[str]) -> pd.DataFrame:
-        return metadata.set_index(indices)
-
-
-    def find_name_of_control_sample_by_metadata(self,
-                                                sample,
-                                                metadata_to_compare: pd.DataFrame,
-                                                indexed_frame: pd.DataFrame) -> list[str]:
-        matching_metadata = indexed_frame.loc[tuple(metadata_to_compare.values[0])]
-        return matching_metadata.loc[matching_metadata["file_name"] != sample, "file_name"].to_list()
-
-    def get_control_samples(self,
-                            dataframe: pd.DataFrame) -> list[str]:
-        return dataframe.loc[dataframe["staining"] != "stained", "file_name"].to_list()
-
-    def get_stained_samples(self,
-                            dataframe: pd.DataFrame) -> list[str]:
-        return dataframe.loc[dataframe["staining"] == "stained", "file_name"].to_list()
 
     def transform_dataset(self,
                           dataset: AnnData,
                           cofactor_table: CofactorTable) -> AnnData:
         dataset.var = self.merge_cofactors_into_dataset_var(dataset, cofactor_table)
         dataset.var = self.replace_missing_cofactors(dataset.var)
-        dataset.layers["transformed"] = self.transform_data(compensated_data = dataset.layers["compensated"],
-                                                                cofactors = dataset.var["cofactors"].values)
+        dataset.layers["transformed"] = transform_data_array(compensated_data = dataset.layers["compensated"],
+                                                             cofactors = dataset.var["cofactors"].values)
         return dataset
     
     def get_dataset(self):
         return self.dataset
-   
-    def transform_data(self,
-                       compensated_data: np.ndarray,
-                       cofactors: Union[np.ndarray, int, float]) -> np.ndarray:
-        return np.arcsinh(np.divide(compensated_data, cofactors))
 
     def replace_missing_cofactors(self,
                                   dataframe: pd.DataFrame) -> pd.DataFrame:
