@@ -1,18 +1,18 @@
 from anndata import AnnData
 import numpy as np
 import pandas as pd
-from typing import Optional, Union, Literal
-from .classifiers import DecisionTree, RandomForest
+import scanpy as sc
+from scipy.sparse import csr_matrix
 from sklearn.model_selection import train_test_split
 import contextlib
-from ..utils import create_gate_lut, find_parents_recursively
-from ..exceptions.exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
-from .classifiers import implemented_estimators
-from scipy.sparse import lil_matrix, csr_matrix, hstack
-import scanpy as sc
-import numpy as np
-from ..utils import contains_only_fluo, subset_gate, get_idx_loc
 
+from typing import Optional, Union, Literal
+
+from .classifiers import DecisionTree, RandomForest, implemented_estimators
+from ..utils import create_gate_lut, find_parents_recursively
+
+from ..utils import contains_only_fluo, subset_gate, get_idx_loc
+from ..exceptions.exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
 """
 TODO: testing of classifier
 append data to adata.uns["train_sets"]
