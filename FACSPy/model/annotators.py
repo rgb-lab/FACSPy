@@ -21,6 +21,7 @@ gating strategy plot
 """
 
 class BaseGating:
+    
     def __init__(self):
         pass
 
@@ -56,12 +57,7 @@ class BaseGating:
         sample_indices = get_idx_loc(dataset = self.adata,
                                      idx_to_loc = subset.obs_names)
         ### otherwise, broadcast error if multiple columns are indexed and sample_indices
-        for i, gate_index in enumerate(gate_indices): 
-            # self.adata.obsm["gating"][
-            #     sample_indices,
-            #     gate_index,
-            # ] = lil_matrix(predictions[:, i],
-            #             dtype=bool)
+        for i, gate_index in enumerate(gate_indices):
             self.adata.obsm["gating"][
                 sample_indices,
                 gate_index,
@@ -366,7 +362,6 @@ class unsupervisedGating(BaseGating):
             [f"{marker} < {cutoff}" for marker in down_markers]
         )
         return " & ".join(query_strings)
-    
     
     def identify_clusters_of_interest(self,
                                       dataset: AnnData,
