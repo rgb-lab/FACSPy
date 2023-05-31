@@ -203,4 +203,13 @@ class CofactorTable(BaseSupplement):
             f"{self.__class__.__name__}(" +
             f"{self.dataframe.shape[0]} channels, "+
             f"loaded as {self.source})"
-        )  
+        ) 
+    
+    def get_cofactor(self,
+                     channel_name) -> float:
+        return self.dataframe.loc[self.dataframe["fcs_colname"] == channel_name, "cofactors"].iloc[0]
+    
+    def set_cofactor(self,
+                     channel_name,
+                     cofactor) -> None:
+        pass

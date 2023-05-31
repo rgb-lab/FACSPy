@@ -30,11 +30,13 @@ def get_histogram_curve(data_array: np.ndarray) -> tuple[np.ndarray, np.ndarray]
                         ).fit(data_array).evaluate(100)
     return x, curve
 
-def get_control_samples(dataframe: pd.DataFrame) -> list[str]:
-    return dataframe.loc[dataframe["staining"] != "stained", "file_name"].to_list()
+def get_control_samples(dataframe: pd.DataFrame,
+                        by: Literal["sample_ID", "file_name"]) -> list[str]:
+    return dataframe.loc[dataframe["staining"] != "stained", by].to_list()
 
-def get_stained_samples(dataframe: pd.DataFrame) -> list[str]:
-    return dataframe.loc[dataframe["staining"] == "stained", "file_name"].to_list()
+def get_stained_samples(dataframe: pd.DataFrame,
+                        by: Literal["sample_ID", "file_name"]) -> list[str]:
+    return dataframe.loc[dataframe["staining"] == "stained", by].to_list()
 
 def reindex_metadata(metadata: pd.DataFrame,
                      indices: list[str]) -> pd.DataFrame:
@@ -42,9 +44,10 @@ def reindex_metadata(metadata: pd.DataFrame,
 
 def find_name_of_control_sample_by_metadata(sample,
                                             metadata_to_compare: pd.DataFrame,
-                                            indexed_frame: pd.DataFrame) -> list[str]:
+                                            indexed_frame: pd.DataFrame,
+                                            by = Literal["sample_ID", "file_name"]) -> list[str]:
     matching_metadata = indexed_frame.loc[tuple(metadata_to_compare.values[0])]
-    return matching_metadata.loc[matching_metadata["file_name"] != sample, "file_name"].to_list()
+    return matching_metadata.loc[matching_metadata[by] != sample, by].to_list()
 
 def find_corresponding_control_samples(adata: AnnData,
                                        by: Literal["file_name", "sample_ID"]) -> tuple[list[str], dict[str, str]]:
@@ -54,14 +57,15 @@ def find_corresponding_control_samples(adata: AnnData,
     indexed_metadata = reindex_metadata(metadata_frame,
                                                 metadata.factors)
     
-    stained_samples = get_stained_samples(metadata_frame)
-    control_samples = get_control_samples(metadata_frame)
-    
+    stained_samples = get_stained_samples(metadata_frame,
+                                          by = by)
+    control_samples = get_control_samples(metadata_frame,
+                                          by = by)
     for sample in stained_samples:
         sample_metadata = metadata_frame.loc[metadata_frame[by] == sample, metadata.factors]
         matching_control_samples = find_name_of_control_sample_by_metadata(sample,
                                                                            sample_metadata,
-                                                                           indexed_metadata)
+                                                                           indexed_metadata,
+                                                                           by = by)
         corresponding_controls[sample] = matching_control_samples or control_samples
-
     return stained_samples, corresponding_controls
