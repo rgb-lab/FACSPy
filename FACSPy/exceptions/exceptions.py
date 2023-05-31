@@ -1,6 +1,15 @@
 from typing import Any
 import warnings
 
+class CofactorsNotCalculatedError(Exception):
+
+    def __init__(self):
+        self.message = (
+            "raw_cofactors has not been found in adata.uns. If you supplied a table of " +
+            "cofactors, this is expected. No Distributions can be plotted. "
+        )
+        super().__init__(self.message)
+
 class AnnDataSetupError(Exception):
     
     def __init__(self):
