@@ -161,7 +161,9 @@ def transformation_plot(adata: AnnData,
                         pregated_population: Optional[str] = None,
                         markers: Optional[Union[str, list[str]]] = None,
                         scatter: str = "SSC-A",
-                        sample_size: Optional[int] = 5_000
+                        sample_size: Optional[int] = 5_000,
+                        return_fig: bool = False,
+                        show: bool = True
                         ):
 
     if not isinstance(markers, list):
@@ -232,7 +234,11 @@ def transformation_plot(adata: AnnData,
                                  loc = "center left",
                                  bbox_to_anchor = (1.1, 0.5))
 
-    ax = np.reshape(ax, (ncols, nrows))
+    if return_fig:
+        return fig
+    
+    if not show:
+        return ax
     
     plt.tight_layout()
     plt.show()
