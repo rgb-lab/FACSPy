@@ -15,7 +15,7 @@ from scanpy.plotting._utils import savefig_or_show
 
 from typing import Optional, Union, Literal
 
-from ..dataset.utils import find_corresponding_control_samples, create_sample_subset_with_controls
+from ..dataset.utils import find_corresponding_control_samples, create_sample_subset_with_controls, get_histogram_curve
 from ..utils import subset_gate
 
 
@@ -41,23 +41,50 @@ def prepare_data_subsets(adata: AnnData,
         sc.pp.subsample(control_samples, n_obs = sample_size)
     return stained_sample, control_samples
 
-def calculate_plot_limits(stained_data: pd.DataFrame,
+def combine_data_if_control_is_present(df1: pd.DataFrame,
+                                       df2: pd.DataFrame) -> pd.DataFrame:
+    return pd.concat([df1, df2], axis = 0) if df2.shape[0] > 0 else df1
+
+def calculate_y_plot_limits(stained_data: pd.DataFrame,
                           control_data: pd.DataFrame,
                           y_channel: str) -> tuple[int, int]:
 
-    if control_data.shape[0] > 0:
-        combined = pd.concat([stained_data, control_data], axis = 0)
-    else:
-        combined = stained_data
-    return (0, combined[y_channel].max() * 1.1)
+    combined = combine_data_if_control_is_present(stained_data, control_data)
+    return (combined[y_channel].quantile(0.001), combined[y_channel].max())
 
+def calculate_x_plot_limits(stained_data: pd.DataFrame,
+                            control_data: pd.DataFrame,
+                            x_channel: str) -> tuple[int, int]:
+    combined = combine_data_if_control_is_present(stained_data, control_data)
+    return (combined[x_channel].quantile(0.001), combined[x_channel].max())
+
+def normalize_histogram_curve(curve: np.ndarray) -> np.ndarray:
+    curve *= (1/np.max(curve))
+    return curve    
+
+def calculate_histogram_data(data: pd.DataFrame,
+                             plot_params: dict) -> tuple[np.ndarray, np.ndarray]:
+    x, curve = get_histogram_curve(data[plot_params["x"]].values)
+    curve = normalize_histogram_curve(curve)
+    return x[:100], curve
+
+def append_cofactor_label(ax: Axes,
+                          x: float,
+                          y: float) -> Axes:
+    ax.text(x = x,
+            y = y,
+            s = "Cofactor",
+            fontdict = {
+                "size": 10,
+                "weight": "bold"
+            })
+    return ax
 
 def transformation_scatter_plot(type: Literal["compensated", "transformed"],
                                 ax: Axes,
                                 stained_data,
                                 control_data,
                                 cofactor,
-                                scatter,
                                 plot_params: dict) -> Axes:
     control_is_present = control_data.shape[0] > 0
     ax = sns.scatterplot(data = stained_data,
@@ -73,27 +100,72 @@ def transformation_scatter_plot(type: Literal["compensated", "transformed"],
     if type == "compensated":
         ax.set_xscale("symlog", linthresh = cofactor)
 
-    ymin, ymax = calculate_plot_limits(stained_data,
-                                       control_data,
-                                       scatter)
-    
+    ymin, ymax = calculate_y_plot_limits(stained_data,
+                                         control_data,
+                                         plot_params["y"])
+    xmin, xmax = calculate_x_plot_limits(stained_data,
+                                         control_data,
+                                         plot_params["x"])
     ax.axvline(x = cofactor if type == "compensated" else np.arcsinh(1),
-               ymin = ymin,
-               ymax = ymax,
                color = "green")
+    ax = append_cofactor_label(ax = ax,
+                               x = cofactor * 1.05 if type == "compensated" else 1,
+                               y = ymin + (ymax - ymin) * 0.9)
     ax.set_ylim(ymin, ymax)
+    ax.set_xlim(xmin, xmax)
+    ax.set_title(f"Compensated Values\nScatter Plot - {plot_params['x']}"
+                 if type == "compensated"
+                 else f"Transformed Values\nScatter Plot - {plot_params['x']}")
     
+    return ax
+#
+def transformation_histogram_plot(type: Literal["compensated", "transformed"],
+                                  ax: Axes,
+                                  stained_data: pd.DataFrame,
+                                  control_data: pd.DataFrame,
+                                  plot_params: dict) -> Axes:
+    control_is_present = control_data.shape[0] > 0
+    
+    stained_x, stained_curve = calculate_histogram_data(stained_data,
+                                                        plot_params)
+
+    ax = sns.lineplot(x = stained_x,
+                      y = stained_curve,
+                      color = "red",
+                      label = "stained",
+                      ax = ax)
+    if control_is_present:
+        control_x, control_curve = calculate_histogram_data(control_data,
+                                                            plot_params)
+        ax = sns.lineplot(x = control_x,
+                          y = control_curve,
+                          color = "blue",
+                          label = "control",
+                          ax = ax)
+    xmin, xmax = calculate_x_plot_limits(stained_data,
+                                         control_data,
+                                         plot_params["x"])
+    ax.set_ylim(-0.02, 1.02)
+    ax.axvline(x = np.arcsinh(1),
+               color = "green")
+    ax = append_cofactor_label(ax = ax,
+                               x = 1,
+                               y = 0.9)
+    ax.set_xlim(xmin, xmax)
+    ax.set_title(f"Transformed Values\nHistogram - {plot_params['x']}")
     return ax
 
 def transformation_plot(adata: AnnData,
                         sample_ID: Optional[str] = None,
                         file_name: Optional[str] = None,
                         pregated_population: Optional[str] = None,
-                        marker: Optional[str] = None,
+                        markers: Optional[Union[str, list[str]]] = None,
                         scatter: str = "SSC-A",
                         sample_size: Optional[int] = 5_000
                         ):
 
+    if not isinstance(markers, list):
+        markers = [markers]
     
     if sample_ID and file_name:
         raise TypeError("Please provide one of sample_ID or file_name but not both.")
@@ -103,49 +175,66 @@ def transformation_plot(adata: AnnData,
         adata = subset_gate(adata,
                             gate = pregated_population,
                             as_view = True)
-    
-    stained_sample, control_samples = prepare_data_subsets(adata,
-                                                           by = "sample_ID" if sample_ID else "file_name",
-                                                           sample_identifier = sample_ID or file_name,
-                                                           marker = marker,
-                                                           scatter = scatter,
-                                                           sample_size = sample_size)
-
-    cofactor = adata.uns["cofactors"].get_cofactor(marker)
-    
     fig: Figure
     ax: list[Axes]
-    fig, ax = plt.subplots(ncols = 3, nrows = 1, figsize = (15,5))
+    ncols = 3
+    nrows = len(markers)
+    figsize = (10, 3 * len(markers))
+    fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
+    ax = ax.flatten()
     
-    plot_params = {
-        "x": marker,
-        "y": scatter,
-        "s": 1,
-        "linewidth": 0
-    }
-    ### first plot: raw fluorescence values
-    
-    stained_data = stained_sample.to_df(layer = "compensated")
-    control_data = control_samples.to_df(layer = "compensated")
-    ax[0] = transformation_scatter_plot(type = "compensated",
-                                        ax = ax[0],
-                                        stained_data = stained_data,
-                                        control_data = control_data,
-                                        cofactor = cofactor,
-                                        scatter = scatter,
-                                        plot_params = plot_params)
-    
-    stained_data = stained_sample.to_df(layer = "transformed")
-    control_data = control_samples.to_df(layer = "transformed")
-    ax[1] = transformation_scatter_plot(type = "transformed",
-                                        ax = ax[1],
-                                        stained_data = stained_data,
-                                        control_data = control_data,
-                                        cofactor = cofactor,
-                                        scatter = scatter,
-                                        plot_params = plot_params)
-    
+    for i, marker in enumerate(markers):
+        
+        stained_sample, control_samples = prepare_data_subsets(adata,
+                                                               by = "sample_ID" if sample_ID else "file_name",
+                                                               sample_identifier = sample_ID or file_name,
+                                                               marker = marker,
+                                                               scatter = scatter,
+                                                               sample_size = sample_size)
 
+        cofactor = adata.uns["cofactors"].get_cofactor(marker)
+
+        plot_params = {
+            "x": marker,
+            "y": scatter,
+            "s": 3,
+            "linewidth": 0.1
+        }
+        ### first plot: raw fluorescence values
+        
+        stained_data = stained_sample.to_df(layer = "compensated")
+        control_data = control_samples.to_df(layer = "compensated")
+        ax[ncols * i + 0] = transformation_scatter_plot(type = "compensated",
+                                                        ax = ax[ncols * i + 0],
+                                                        stained_data = stained_data,
+                                                        control_data = control_data,
+                                                        cofactor = cofactor,
+                                                        plot_params = plot_params)
+        
+        stained_data = stained_sample.to_df(layer = "transformed")
+        control_data = control_samples.to_df(layer = "transformed")
+        ax[ncols * i + 1] = transformation_scatter_plot(type = "transformed",
+                                                        ax = ax[ncols * i + 1],
+                                                        stained_data = stained_data,
+                                                        control_data = control_data,
+                                                        cofactor = cofactor,
+                                                        plot_params = plot_params)
+        
+        ax[ncols * i + 2] = transformation_histogram_plot(type = "transformed",
+                                                          ax = ax[ncols * i + 2],
+                                                          stained_data = stained_data,
+                                                          control_data = control_data,
+                                                          plot_params = plot_params)
+        
+        handles, labels = ax[ncols * i + 2].get_legend_handles_labels()
+        ax[ncols * i + 2].legend(handles,
+                                 labels,
+                                 loc = "center left",
+                                 bbox_to_anchor = (1.1, 0.5))
+
+    ax = np.reshape(ax, (ncols, nrows))
+    
+    plt.tight_layout()
     plt.show()
     
 
