@@ -247,7 +247,7 @@ def transformation_plot(adata: AnnData,
 
 def cofactor_distribution(adata: AnnData,
                           groupby: Optional[str] = None,
-                          channel: Optional[str] = None,
+                          channels: Optional[str] = None,
                           return_fig: Optional[bool] = False,
                           ax: Optional[Axes] = None,
                           ncols: int = 4,
@@ -255,6 +255,10 @@ def cofactor_distribution(adata: AnnData,
     
     assert "raw_cofactors" in adata.uns, "raw cofactors not found..."
     cofactors = adata.uns["raw_cofactors"]
+    if channels:
+        if not isinstance(channels, list):
+            channels = [channels]
+        cofactors = cofactors.loc[:, cofactors.columns.isin(channels)]
     metadata = adata.uns["metadata"].to_df()
     data = cofactors.merge(metadata, left_index = True, right_on = "file_name")
     
