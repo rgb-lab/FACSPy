@@ -59,22 +59,34 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
 
     return _gate_lut
 
-def _remove_duplicates_from_gate_lut(gate_lut: dict) -> dict:
-    """Removes duplicates from the gate lookup table"""
-    
-    gate_lut = {key: value for (key, value) in gate_lut.items() if value} # removes files that have no gating
-    assert all(
-        value == next(iter(gate_lut.values()))
-        for (_, value) in gate_lut.items()
-    )
 
-    return next(iter(gate_lut.values()))
+
+# def _remove_duplicates_from_gate_lut(gate_lut: dict) -> dict:
+#     """Removes duplicates from the gate lookup table"""
+    
+#     gate_lut = {key: value for (key, value) in gate_lut.items() if value} # removes files that have no gating
+#     assert all(
+#         value == next(iter(gate_lut.values()))
+#         for (_, value) in gate_lut.items()
+#     )
+
+#     return next(iter(gate_lut.values()))
+
+def fetch_fluo_channels(dataset: AnnData) -> list[str]:
+    return [
+        channel
+        for channel in dataset.var.index.to_list()
+        if all(k not in channel.lower() for k in ["fsc", "ssc", "time"])
+    ]
 
 def subset_fluo_channels(dataset: AnnData,
                          copy: bool = False) -> AnnData:
     dataset = dataset.copy() if copy else dataset
     dataset._inplace_subset_var(dataset.var[dataset.var["type"] == "fluo"].index)
     return dataset if copy else None
+
+def subset_channels(adata: AnnData, copy: bool = False) -> Optional[AnnData]:
+    pass
 
 def subset_gate(dataset: AnnData,
                 gate: Optional[str] = None,
