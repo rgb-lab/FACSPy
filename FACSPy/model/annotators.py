@@ -11,7 +11,10 @@ from typing import Optional, Union, Literal
 from .classifiers import DecisionTree, RandomForest, implemented_estimators
 from ..utils import create_gate_lut, find_parents_recursively
 
-from ..utils import contains_only_fluo, subset_gate, get_idx_loc
+from ..utils import (contains_only_fluo,
+                     subset_gate,
+                     get_idx_loc,
+                     find_gate_indices)
 from ..exceptions.exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
 """
 TODO: testing of classifier
@@ -24,12 +27,6 @@ class BaseGating:
     
     def __init__(self):
         pass
-
-    def find_gate_indices(self,
-                          gate_columns):
-        if not isinstance(gate_columns, list):
-             gate_columns = [gate_columns]
-        return [self.adata.uns["gating_cols"].get_loc(gate) for gate in gate_columns]
 
     def get_dataset(self):
         return self.adata
