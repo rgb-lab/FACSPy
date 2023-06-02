@@ -9,13 +9,17 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import ScalarFormatter
 from ..exceptions.exceptions import CofactorsNotCalculatedError
 
-from .utils import calculate_fig_size, turn_off_missing_plots, calculate_nrows
+from .utils import (calculate_fig_size,
+                    turn_off_missing_plots,
+                    calculate_nrows)
 
 from scanpy.plotting._utils import savefig_or_show
 
 from typing import Optional, Union, Literal
 
-from ..dataset.utils import find_corresponding_control_samples, create_sample_subset_with_controls, get_histogram_curve
+from ..dataset.utils import (find_corresponding_control_samples,
+                             create_sample_subset_with_controls,
+                             get_histogram_curve)
 from ..utils import subset_gate
 
 
@@ -118,7 +122,8 @@ def transformation_scatter_plot(type: Literal["compensated", "transformed"],
                  else f"Transformed Values\nScatter Plot - {plot_params['x']}")
     
     return ax
-#
+
+
 def transformation_histogram_plot(type: Literal["compensated", "transformed"],
                                   ax: Axes,
                                   stained_data: pd.DataFrame,
@@ -184,7 +189,6 @@ def transformation_plot(adata: AnnData,
     figsize = (10, 3 * len(markers))
     fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
     ax = ax.flatten()
-    
     for i, marker in enumerate(markers):
         
         stained_sample, control_samples = prepare_data_subsets(adata,

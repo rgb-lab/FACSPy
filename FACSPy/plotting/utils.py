@@ -19,8 +19,12 @@ def calculate_fig_size(ncols: int,
     y_dimension = 1.5 * nrows if groupby_list is None else 1.8 * nrows
     return (x_dimension, y_dimension)
 
+def turn_off_missing_plot(ax: Axes) -> Axes:
+    ax.axis("off")
+    return ax
+
 def turn_off_missing_plots(ax: Axes) -> Axes:
     for axs in ax:
         if not axs.lines:
-            axs.axis("off")
+            turn_off_missing_plot(axs)
     return ax
