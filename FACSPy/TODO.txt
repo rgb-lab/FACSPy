@@ -27,5 +27,7 @@ restrict_to_parameters
 
 write test for contains_fluo_only
 
-
 test functions for subset stained and unstained
+
+Transformer Class: implement cell number matching
+Transformer Class: refactor so that calculation logic becomes somewhat different
