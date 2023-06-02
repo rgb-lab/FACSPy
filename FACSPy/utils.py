@@ -4,11 +4,37 @@ import warnings
 import numpy as np
 import pandas as pd
 
+GATE_SEPARATOR = "/"
+
+def find_current_population(gate: str) -> str:
+    return gate.split(GATE_SEPARATOR)[-1]
+
+def find_gate_path_of_gate(adata: AnnData,
+                           gate: str) -> str:
+    return [gate_path for gate_path in adata.uns["gating_cols"]
+            if gate_path.endswith(gate)][0]
+
+def find_gate_indices(adata: AnnData,
+                      gate_columns):
+    if not isinstance(gate_columns, list):
+        gate_columns = [gate_columns]
+    return [adata.uns["gating_cols"].get_loc(gate) for gate in gate_columns]
+
 def find_parent_gate(gate: str) -> str:
-    return "/".join(gate.split("/")[:-1])
+    """returns the parent gate path"""
+    """Example: gate = 'root/singlets/T_cells' -> 'root/singlets' """
+    return GATE_SEPARATOR.join(gate.split(GATE_SEPARATOR)[:-1])
+
+def find_parent_population(gate: str) -> str:
+    """returns the parent population"""
+    """Example: gate = 'root/singlets/T_cells' -> 'singlets'"""
+    return gate.split(GATE_SEPARATOR)[:-1][::-1][0]
 
 def find_grandparent_gate(gate: str) -> str:
     return find_parent_gate(find_parent_gate(gate))
+
+def find_grandparent_population(gate: str) -> str:
+    return find_parent_population(find_parent_population(gate))
 
 def find_parents_recursively(gate: str, parent_list = None):
     if parent_list is None:
@@ -47,30 +73,22 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
             gate_name = wsp_dict[file]["gates"][i]["gate"].gate_name.replace(" ", "_")
             _gate_lut[file][gate_name] = {}
 
-            gate_path = "/".join(list(wsp_dict[file]["gates"][i]["gate_path"])).replace(" ", "_")
-            gate_channels = [dim.id for dim in
-                             wsp_dict[file]["gates"][i]["gate"].dimensions]
+            gate_path = GATE_SEPARATOR.join(list(wsp_dict[file]["gates"][i]["gate_path"])).replace(" ", "_")
+            gate_channels = [dim.id
+                             for dim in wsp_dict[file]["gates"][i]["gate"].dimensions]
+
+            vertices = np.array([(dim.min, dim.max)
+                                 for dim in wsp_dict[file]["gates"][i]["gate"].dimensions],
+                                 dtype = np.float32)
 
             _gate_lut[file][gate_name]["parent_path"] = gate_path
             _gate_lut[file][gate_name]["dimensions"] = gate_channels
-            _gate_lut[file][gate_name]["full_gate_path"] = "/".join([gate_path, gate_name])
+            _gate_lut[file][gate_name]["full_gate_path"] = GATE_SEPARATOR.join([gate_path, gate_name])
             _gate_lut[file][gate_name]["gate_type"] = wsp_dict[file]["gates"][i]["gate"].__class__.__name__
+            _gate_lut[file][gate_name]["vertices"] = vertices
     #_gate_lut = _remove_duplicates_from_gate_lut(_gate_lut)
 
     return _gate_lut
-
-
-
-# def _remove_duplicates_from_gate_lut(gate_lut: dict) -> dict:
-#     """Removes duplicates from the gate lookup table"""
-    
-#     gate_lut = {key: value for (key, value) in gate_lut.items() if value} # removes files that have no gating
-#     assert all(
-#         value == next(iter(gate_lut.values()))
-#         for (_, value) in gate_lut.items()
-#     )
-
-#     return next(iter(gate_lut.values()))
 
 def fetch_fluo_channels(dataset: AnnData) -> list[str]:
     return [
@@ -101,7 +119,7 @@ def subset_gate(dataset: AnnData,
     gates: list[str] = dataset.uns["gating_cols"].to_list()
     
     if gate:
-        gate_path = [gate_path for gate_path in gates if gate_path.endswith(gate)][0]
+        gate_path = find_gate_path_of_gate(dataset, gate)
 
     gate_idx = gates.index(gate_path)
 
@@ -113,23 +131,23 @@ def subset_gate(dataset: AnnData,
     dataset._init_as_actual(subset, dtype = None)
     return dataset if copy else None
 
-def subset_gate_as_view(dataset: AnnData,
-                        gate: Optional[str] = None,
-                        gate_path: Optional[str] = None,
-                        copy: bool = False) -> AnnData:
-    dataset = dataset.copy() if copy else dataset
+# def subset_gate_as_view(dataset: AnnData,
+#                         gate: Optional[str] = None,
+#                         gate_path: Optional[str] = None,
+#                         copy: bool = False) -> AnnData:
+#     dataset = dataset.copy() if copy else dataset
     
-    if gate is None and gate_path is None:
-        raise TypeError("Please provide either a gate name or a gate path.")
+#     if gate is None and gate_path is None:
+#         raise TypeError("Please provide either a gate name or a gate path.")
     
-    gates: list[str] = dataset.uns["gating_cols"].to_list()
+#     gates: list[str] = dataset.uns["gating_cols"].to_list()
     
-    if gate:
-        gate_path = [gate_path for gate_path in gates if gate_path.endswith(gate)][0]
+#     if gate:
+#         gate_path = [gate_path for gate_path in gates if gate_path.endswith(gate)][0]
 
-    gate_idx = gates.index(gate_path)
+#     gate_idx = gates.index(gate_path)
 
-    return dataset[dataset.obsm["gating"][:,gate_idx] == True,:]
+#     return dataset[dataset.obsm["gating"][:,gate_idx] == True,:]
 
 def equalize_groups(data: AnnData,
                     fraction: Optional[float] = None,
