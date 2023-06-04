@@ -1,10 +1,16 @@
 import pandas as pd
 import numpy as np
 from anndata import AnnData
-from .supplements import Metadata
-from typing import Union, Literal
+from .supplements import Metadata, Panel
+from typing import Union, Literal, Optional
 from KDEpy import FFTKDE
 
+def create_supplements(input_directory: str,
+                       save_to_disk: bool = True) -> Optional[tuple[pd.DataFrame]]:
+    metadata = Metadata(input_directory, from_fcs = True)
+    panel = Panel(input_directory, from_fcs = True)
+
+        
 
 def match_cell_numbers(adata: AnnData) -> AnnData:
     return adata
