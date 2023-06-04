@@ -213,3 +213,4 @@ class CofactorTable(BaseSupplement):
                      channel_name,
                      cofactor) -> None:
         pass
+
