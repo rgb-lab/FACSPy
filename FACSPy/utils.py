@@ -77,14 +77,20 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
             gate_channels = [dim.id
                              for dim in wsp_dict[file]["gates"][i]["gate"].dimensions]
 
-            vertices = np.array([(dim.min, dim.max)
-                                 for dim in wsp_dict[file]["gates"][i]["gate"].dimensions],
-                                 dtype = np.float32)
+            gate_dimensions = np.array([(dim.min, dim.max)
+                                         for dim in wsp_dict[file]["gates"][i]["gate"].dimensions],
+                                         dtype = np.float32)
+            
+            try:
+                vertices = np.array(wsp_dict[file]["gates"][i]["gate"].vertices)
+            except AttributeError:
+                vertices = gate_dimensions
 
             _gate_lut[file][gate_name]["parent_path"] = gate_path
             _gate_lut[file][gate_name]["dimensions"] = gate_channels
             _gate_lut[file][gate_name]["full_gate_path"] = GATE_SEPARATOR.join([gate_path, gate_name])
             _gate_lut[file][gate_name]["gate_type"] = wsp_dict[file]["gates"][i]["gate"].__class__.__name__
+            _gate_lut[file][gate_name]["gate_dimensions"] = gate_dimensions
             _gate_lut[file][gate_name]["vertices"] = vertices
     #_gate_lut = _remove_duplicates_from_gate_lut(_gate_lut)
 
