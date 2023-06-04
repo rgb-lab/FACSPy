@@ -112,7 +112,7 @@ class GatingStrategyGrid:
         # remove duplicate entries
         for key, value in _gate_group_map.items():
             if value not in gate_group_map.values():
-                gate_group_map[key] = value
+                gate_group_map[str(key)] = value
 
         return gate_group_map
 
@@ -131,11 +131,12 @@ class GatingStrategyGrid:
         self.gate_group_map = self._map_gating_groups()
 
         idx_map = self._initialize_grid(hierarchy_map)
-
-        if idx_map.shape[1] == 1:
+        print(idx_map.shape)
+        if idx_map.shape[0] == 1:
+            
             # meaning that we have a one-dimensional gating strategy that
             # can be plotted in one single row
-            return
+            return idx_map
         
         idx_map = self._replace_group_gates_with_groups(idx_map = idx_map,
                                                         gate_group_map = self.gate_group_map)
@@ -143,11 +144,13 @@ class GatingStrategyGrid:
         
         idx_map = self._merge_groups_to_single_index(idx_map)
         
-        #self.idx_map = self._concatenate_single_indices(idx_map)
+        #idx_map = self._concatenate_single_indices(idx_map)
         
-        self.idx_map = self._center_indices_in_map(idx_map)
+        idx_map = self._center_indices_in_map(idx_map)
 
         idx_map = idx_map.reset_index(drop = True).T.reset_index(drop = True)
+
+        idx_map = idx_map.fillna("NaN")
 
         return idx_map
 
@@ -203,13 +206,13 @@ class GatingStrategyGrid:
 
         return idx_map.sort_values(idx_map.columns.to_list())
 
-def get_quadrant(gate_lut: dict,
+def get_rectangle_quadrant(gate_lut: dict,
                  gate: str) -> int:
     # quadrant naming similar to flowjo:
     #[1,2]
     #[4,3]
     
-    vertices = gate_lut[gate]["vertices"]
+    vertices = gate_lut[gate]["gate_dimensions"]
     if vertices[0,0] is None: # x dimension is from None (-inf)
         if vertices[0,1] is None:
             raise ValueError()
@@ -242,7 +245,6 @@ def prepare_plot_data(adata: AnnData,
                                         parent_gating_path)
     if adata_subset.shape[0] > sample_size:
         sc.pp.subsample(adata_subset, n_obs = sample_size)
-
     gate_list = [find_gate_path_of_gate(adata, gate) for gate in gate_list]
     
     return prepare_plot_dataframe(adata_subset,
@@ -266,10 +268,18 @@ def gate_parent_in_adata(adata: AnnData,
                        gate_path = parent_gating_path,
                        as_view = True)
 
-def extract_channels_for_gate(gate_lut: dict,
+def extract_channels_for_gate(adata: AnnData,
+                              gate_lut: dict,
                               gate: str) -> tuple[str, str]:
-    return (gate_lut[gate]["dimensions"][0],
-            gate_lut[gate]["dimensions"][1])
+    x_channel = gate_lut[gate]["dimensions"][0]
+    x_channel_idx = adata.var.loc[adata.var["pnn"] == x_channel, "pns"].iloc[0]
+    try:
+        y_channel = gate_lut[gate]["dimensions"][1]
+    except IndexError:
+        y_channel = "SSC-A"
+    y_channel_idx = adata.var.loc[adata.var["pnn"] == y_channel, "pns"].iloc[0]
+
+    return (x_channel_idx, y_channel_idx)
 
 def group_plot(adata: AnnData,
                idx_map: pd.DataFrame,
@@ -284,8 +294,7 @@ def group_plot(adata: AnnData,
     group_index = group.split("-")[1]
     gate_list = gate_group_map[group_index]
     reference_gate = gate_list[0] # just to have one single gate to do lookups
-    x_channel, y_channel = extract_channels_for_gate(gate_lut, reference_gate)
-    
+    x_channel, y_channel = extract_channels_for_gate(adata, gate_lut, reference_gate)
     parent_gating_path = gate_lut[reference_gate]["parent_path"]
 
     plot_data = prepare_plot_data(adata,
@@ -294,8 +303,8 @@ def group_plot(adata: AnnData,
                                   x_channel,
                                   y_channel,
                                   sample_size)
-    
-    quadrant_map = {gate: get_quadrant(gate_lut, gate) for gate in gate_list}
+    #if gate_lut[reference_gate]["gate_type"] == "GMLRectangleGate":
+    #   quadrant_map = {gate: get_rectangle_quadrant(gate_lut, gate) for gate in gate_list}
 
     plot_params = {
         "x": x_channel,
@@ -307,15 +316,13 @@ def group_plot(adata: AnnData,
     }
 
     for i, gate in enumerate(gate_list):
-        gate_specific_data = plot_data[plot_data[gate] == True]
+        gate_specific_data = plot_data[plot_data[find_gate_path_of_gate(adata, gate)] == True]
         ax = sns.scatterplot(data = gate_specific_data,
                              color = sns.color_palette("Set1")[i],
                              **plot_params)
     
 
     return ax
-
-
 
 def single_plot(adata: AnnData,
                 idx_map: pd.DataFrame,
@@ -327,7 +334,7 @@ def single_plot(adata: AnnData,
                 ax: Axes
                 ) -> Axes:
     parent_gating_path = gate_lut[gate]["parent_path"]
-    x_channel, y_channel = extract_channels_for_gate(gate_lut, gate)
+    x_channel, y_channel = extract_channels_for_gate(adata, gate_lut, gate)
     
     parent_gating_path = gate_lut[gate]["parent_path"]
 
@@ -352,6 +359,31 @@ def single_plot(adata: AnnData,
 
     return ax
 
+def fetch_vertices(gate_lut: dict,
+                   gate: Union[str, list[str]]) -> np.ndarray:
+    pass
+
+def draw_gates(adata: AnnData,
+               ax: Axes,
+               gate_lut: dict,
+               gates: Union[str, list[str]],
+               ) -> Axes:
+    if not isinstance(gates, list):
+        gates = [gates]
+    for gate in gates:
+        vertices = fetch_vertices(gate_lut, gate)
+        ax.plot(vertices[:,0],
+                vertices[:,1],
+                linestyle = "-",
+                markersize = 0,
+                linewidth = 1)
+        
+    return ax
+
+def draw_gate_connections(adata: AnnData,
+                          ax: Axes) -> Axes:
+    pass
+
 def gating_strategy(adata: AnnData,
                     wsp_group: str,
                     sample_ID: Optional[str] = None,
@@ -361,11 +393,13 @@ def gating_strategy(adata: AnnData,
                     show: bool = True):
     if sample_ID and not file_name:
         file_name = map_sample_ID_to_filename(adata, sample_ID)
+    
     adata = adata[adata.obs["file_name"] == file_name,:]
+    
     gate_lut = extract_gate_lut(adata, wsp_group, file_name)
     gating_strategy_grid = GatingStrategyGrid(gate_lut)
     
-    gate_map = gating_strategy_grid.idx_map
+    gate_map = gating_strategy_grid.gating_grid
     gate_group_map = gating_strategy_grid.gate_group_map
     gate_lut = gating_strategy_grid.gate_lut
     
@@ -380,9 +414,13 @@ def gating_strategy(adata: AnnData,
                            figsize = figsize)
     ax = ax.flatten()
     for i, gate in enumerate(gates_to_plot):
-        if gate is np.nan:
+        ## TODO: think of a better way...
+        adata = adata[adata.obs["file_name"] == file_name,:]
+        if gate == "NaN":
             ax[i] = turn_off_missing_plot(ax[i])
-        if "group-" in gate:
+            continue
+
+        elif "group-" in gate:
              ax[i] = group_plot(adata = adata,
                                 idx_map = gate_map,
                                 gate_group_map = gate_group_map,
@@ -402,6 +440,11 @@ def gating_strategy(adata: AnnData,
                                 fig = fig,
                                 ax = ax[i]
                                 )
+        
+        ax[i] = draw_gates(adata = adata,
+                           gate_lut = gate_lut,
+                           gate = gate)
+        ax[i] = draw_gate_connections(adata = adata)
 
     ax = np.reshape(ax, (ncols, nrows))
 
