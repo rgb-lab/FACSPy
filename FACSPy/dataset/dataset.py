@@ -479,4 +479,13 @@ class DatasetAssembler:
         
         available_fcs_files = [file for file in os.listdir(input_directory)
                                 if file.endswith(".fcs")]
+        metadata = self.append_empty_metadata(metadata,
+                                              available_fcs_files)
         return self.convert_fcs_to_FCSFile(input_directory, available_fcs_files)
+    
+    def append_empty_metadata(self,
+                              metadata: Metadata,
+                              fcs_files: list[str]) -> Metadata:
+        metadata.dataframe["file_name"] = fcs_files
+        metadata.dataframe["sample_ID"] = range(1, len(fcs_files) + 1)
+        return metadata
