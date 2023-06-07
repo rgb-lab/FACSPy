@@ -25,6 +25,19 @@ class BaseSupplement:
                                                      file_name,
                                                      data,
                                                      from_fcs)
+        
+        self.input_directory = input_directory
+
+    def save(self,
+             output_directory: Optional[str] = None):
+        if output_directory is None:
+            output_directory = self.input_directory
+        if self.__class__.__name__ == "Panel":
+            self.dataframe.to_csv(os.path.join(output_directory, "panel.csv"))
+        elif self.__class__.__name__ == "Metadata":
+            self.dataframe.to_csv(os.path.join(output_directory, "metadata.csv"))
+        elif self.__class__.__name__ == "CofactorTable":
+            self.dataframe.to_csv(os.path.join(output_directory, "cofactors.csv"))    
 
     def strip_prefixes(self,
                        dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -163,6 +176,10 @@ class Metadata(BaseSupplement):
         
         self.dataframe = self.validate_user_supplied_table(self.dataframe,
                                                            ["sample_ID", "file_name"])
+        
+        if from_fcs:
+            self.append_metadata_from_folder(input_directory)
+
         self.factors = self.extract_metadata_factors()
 
     def __repr__(self):
@@ -172,6 +189,13 @@ class Metadata(BaseSupplement):
             f"{self.factors})"
         )
     
+    def append_metadata_from_folder(self,
+                                    input_directory):
+        files: list[str] = os.listdir(input_directory)
+        fcs_files = [file for file in files if file.endswith(".fcs")]
+        self.dataframe["file_name"] = fcs_files
+        self.dataframe["sample_ID"] = range(1,len(fcs_files)+1)
+
     def extract_metadata_factors(self):
         return [
             col
