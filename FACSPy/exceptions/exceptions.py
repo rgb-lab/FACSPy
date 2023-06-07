@@ -93,6 +93,13 @@ class SupplementCreationError(Exception):
 
     def __init__(self,
                  class_name):
-        self.message = f"{class_name} could not be created because neither a file or a table was supplied and no flag to infer from data was created"
+        keyword_map = {
+            "Panel": "panel = ",
+            "Metadata": "metadata = ",
+            "CofactorTable": "cofactors = "
+        }
+        self.message = f"{class_name} could not be created because neither a file or a table "
+        self.message += "was supplied and no flag to infer from data was created. "
+        self.message += f"If you provided a dataframe, please use the appropriate keyword '{keyword_map[class_name]}'"
         super().__init__(self.message)
 
