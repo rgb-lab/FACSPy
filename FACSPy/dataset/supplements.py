@@ -212,5 +212,5 @@ class CofactorTable(BaseSupplement):
     def set_cofactor(self,
                      channel_name,
                      cofactor) -> None:
-        pass
+        self.dataframe.loc[self.dataframe["fcs_colname"] == channel_name, "cofactors"] = cofactor
 
