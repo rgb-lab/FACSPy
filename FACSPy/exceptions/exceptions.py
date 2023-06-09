@@ -1,6 +1,16 @@
 from typing import Any
 import warnings
 
+class HierarchyError(Exception):
+
+    def __init__(self):
+        self.message = (
+            "The specified parent gate is lower or equal in the gating hierarchy than the gate to display. " +
+            "Please make sure that the parent is actually a parent."
+        )
+        super().__init__(self.message)
+
+
 class CofactorsNotCalculatedError(Exception):
 
     def __init__(self):
