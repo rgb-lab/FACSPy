@@ -20,6 +20,7 @@ class FCSFile:
                  ) -> None:
         
         self.original_filename = file_name
+
         raw_data = self.load_fcs_file_from_disk(input_directory,
                                                 file_name,
                                                 ignore_offset_error = False)
