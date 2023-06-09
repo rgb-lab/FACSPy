@@ -45,17 +45,17 @@ def find_parents_recursively(gate: str, parent_list = None):
         return find_parents_recursively(parent, parent_list)
     return parent_list
     
-def subset_stained_samples(dataset: AnnData,
+def subset_stained_samples(adata: AnnData,
                            copy: bool = False) -> Optional[AnnData]:
-    dataset = dataset.copy() if copy else dataset
-    dataset._inplace_subset_obs(dataset.obs[dataset.obs["staining"] == "stained"].index)
-    return dataset if copy else None
+    adata = adata.copy() if copy else adata
+    adata._inplace_subset_obs(adata.obs[adata.obs["staining"] == "stained"].index)
+    return adata if copy else None
 
-def subset_unstained_samples(dataset: AnnData,
+def subset_unstained_samples(adata: AnnData,
                              copy: bool = False) -> Optional[AnnData]:
-    dataset = dataset.copy() if copy else dataset
-    dataset._inplace_subset_obs(dataset.obs[dataset.obs["staining"] != "stained"].index)
-    return dataset if copy else None
+    adata = adata.copy() if copy else adata
+    adata._inplace_subset_obs(adata.obs[adata.obs["staining"] != "stained"].index)
+    return adata if copy else None
 
 def transform_gates_according_to_gate_transform(vertices: np.ndarray,
                                                 transforms: dict,
@@ -120,64 +120,64 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
 
     return _gate_lut
 
-def fetch_fluo_channels(dataset: AnnData) -> list[str]:
+def fetch_fluo_channels(adata: AnnData) -> list[str]:
     return [
         channel
-        for channel in dataset.var.index.to_list()
+        for channel in adata.var.index.to_list()
         if all(k not in channel.lower() for k in ["fsc", "ssc", "time"])
     ]
 
-def subset_fluo_channels(dataset: AnnData,
+def subset_fluo_channels(adata: AnnData,
                          copy: bool = False) -> AnnData:
-    dataset = dataset.copy() if copy else dataset
-    dataset._inplace_subset_var(dataset.var[dataset.var["type"] == "fluo"].index)
-    return dataset if copy else None
+    adata = adata.copy() if copy else adata
+    adata._inplace_subset_var(adata.var[adata.var["type"] == "fluo"].index)
+    return adata if copy else None
 
 def subset_channels(adata: AnnData, copy: bool = False) -> Optional[AnnData]:
     pass
 
-def subset_gate(dataset: AnnData,
+def subset_gate(adata: AnnData,
                 gate: Optional[str] = None,
                 gate_path: Optional[str] = None,
                 as_view: bool = False,
                 copy: bool = False) -> AnnData:
-    dataset = dataset.copy() if copy else dataset
+    adata = adata.copy() if copy else adata
     
     if gate is None and gate_path is None:
         raise TypeError("Please provide either a gate name or a gate path.")
     
-    gates: list[str] = dataset.uns["gating_cols"].to_list()
+    gates: list[str] = adata.uns["gating_cols"].to_list()
     
     if gate:
-        gate_path = find_gate_path_of_gate(dataset, gate)
+        gate_path = find_gate_path_of_gate(adata, gate)
 
     gate_idx = gates.index(gate_path)
 
     if as_view:
-        return  dataset[dataset.obsm["gating"][:,gate_idx] == True,:]
+        return  adata[adata.obsm["gating"][:,gate_idx] == True,:]
     ### basically copying the individual steps from AnnData._inplace_subset_var
     ### potentially PR?
-    subset = dataset[dataset.obsm["gating"][:,gate_idx] == True,:].copy()
-    dataset._init_as_actual(subset, dtype = None)
-    return dataset if copy else None
+    subset = adata[adata.obsm["gating"][:,gate_idx] == True,:].copy()
+    adata._init_as_actual(subset, dtype = None)
+    return adata if copy else None
 
-# def subset_gate_as_view(dataset: AnnData,
+# def subset_gate_as_view(adata: AnnData,
 #                         gate: Optional[str] = None,
 #                         gate_path: Optional[str] = None,
 #                         copy: bool = False) -> AnnData:
-#     dataset = dataset.copy() if copy else dataset
+#     adata = adata.copy() if copy else adata
     
 #     if gate is None and gate_path is None:
 #         raise TypeError("Please provide either a gate name or a gate path.")
     
-#     gates: list[str] = dataset.uns["gating_cols"].to_list()
+#     gates: list[str] = adata.uns["gating_cols"].to_list()
     
 #     if gate:
 #         gate_path = [gate_path for gate_path in gates if gate_path.endswith(gate)][0]
 
 #     gate_idx = gates.index(gate_path)
 
-#     return dataset[dataset.obsm["gating"][:,gate_idx] == True,:]
+#     return adata[adata.obsm["gating"][:,gate_idx] == True,:]
 
 def equalize_groups(data: AnnData,
                     fraction: Optional[float] = None,
@@ -211,21 +211,22 @@ def equalize_groups(data: AnnData,
         X = data
         return X[obs_indices], obs_indices
     
-def annotate_metadata_samplewise(dataset: AnnData,
+def annotate_metadata_samplewise(adata: AnnData,
                                  sample_ID: Union[str, int],
                                  annotation: Union[str, int],
                                  factor_name: str,
                                  copy: bool = False) -> Optional[AnnData]:
     
-    dataset = dataset.copy() if copy else dataset
-    dataset.obs.loc[dataset.obs["sample_ID"] == sample_ID, factor_name] = annotation
-    dataset.obs[factor_name] = dataset.obs[factor_name].astype("category")
+    adata = adata.copy() if copy else adata
+    adata.obs.loc[adata.obs["sample_ID"] == sample_ID, factor_name] = annotation
+    adata.obs[factor_name] = adata.obs[factor_name].astype("category")
 
-    return dataset if copy else None
+    return adata if copy else None
 
-def contains_only_fluo(dataset: AnnData) -> bool:
-    return all(dataset.var["type"] == "fluo")
+def contains_only_fluo(adata: AnnData) -> bool:
+    return all(adata.var["type"] == "fluo")
 
-def get_idx_loc(dataset: AnnData,
+def get_idx_loc(adata: AnnData,
                 idx_to_loc: Union[list[str], pd.Index]) -> np.ndarray:
-    return np.array([dataset.obs_names.get_loc(idx) for idx in idx_to_loc])
+    return np.array([adata.obs_names.get_loc(idx) for idx in idx_to_loc])
+
