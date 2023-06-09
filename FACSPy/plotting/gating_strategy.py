@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.patches import ConnectionPatch
+import matplotlib.patches as patches
 
 from typing import Union, Optional
 
@@ -276,7 +277,12 @@ def extract_channels_for_gate(adata: AnnData,
     try:
         y_channel = gate_lut[gate]["dimensions"][1]
     except IndexError:
+        print("crucial...")
         y_channel = "SSC-A"
+        print(gate_lut[gate]["vertices"])
+        gate_lut[gate]["vertices"] = np.hstack([[gate_lut[gate]["vertices"],
+                                                 np.array([[np.nan, np.nan]])]]).reshape(2,2).T
+        print(gate_lut[gate]["vertices"])
     y_channel_idx = adata.var.loc[adata.var["pnn"] == y_channel, "pns"].iloc[0]
 
     return (x_channel_idx, y_channel_idx)
@@ -359,30 +365,77 @@ def single_plot(adata: AnnData,
 
     return ax
 
-def fetch_vertices(gate_lut: dict,
-                   gate: Union[str, list[str]]) -> np.ndarray:
-    pass
+# def draw_gates(adata: AnnData,
+#                ax: Axes,
+#                gate_lut: dict,
+#                gates: Union[str, list[str]],
+#                ) -> Axes:
+#     if not isinstance(gates, list):
+#         gates = [gates]
+#     for gate in gates:
+#         vertices = fetch_vertices(gate_lut, gate)
+#         ax.plot(vertices[:,0],
+#                 vertices[:,1],
+#                 linestyle = "-",
+#                 markersize = 0,
+#                 linewidth = 1)
+        
+#     return ax
+
 
 def draw_gates(adata: AnnData,
                ax: Axes,
                gate_lut: dict,
-               gates: Union[str, list[str]],
-               ) -> Axes:
+               gates: Union[str, list[str]]) -> Axes:
+    gate_line_params = {
+        "marker": ".",
+        "markersize": 2,
+        "color": "black",
+        "linestyle": "-"
+    }
+    hvline_params = {
+        "color": "black",
+        "linestyle": "-"
+    }
     if not isinstance(gates, list):
         gates = [gates]
     for gate in gates:
-        vertices = fetch_vertices(gate_lut, gate)
-        ax.plot(vertices[:,0],
-                vertices[:,1],
-                linestyle = "-",
-                markersize = 0,
-                linewidth = 1)
-        
-    return ax
+        gate_dict = gate_lut[gate]
+        vertices = gate_dict["vertices"]
+        if gate_dict["gate_type"] == "PolygonGate":
+            ax.plot(vertices[:,0],
+                    vertices[:,1],
+                    **gate_line_params)
+        elif gate_dict["gate_type"] == "GMLRectangleGate":
+            if any(np.isnan(vertices[:,0])):
+                if all(np.isnan(vertices[:,0])):
+                    ax.axvline(x = np.nan,
+                               **hvline_params)
+                else:
+                    ax.axvline(x = vertices[0][~np.isnan(vertices[0])],
+                            **hvline_params)
+            if any(np.isnan(vertices[:,1])):
+                if all(np.isnan(vertices[:,1])):
+                    ax.axhline(y = np.nan,
+                               **hvline_params)
+                else:
+                    ax.axhline(y = vertices[1][~np.isnan(vertices[1])],
+                           **hvline_params)
+                continue
+            ax.add_patch(
+                patches.Rectangle(
+                    xy = (vertices[0,0], vertices[0,0]),
+                    width = np.diff(vertices[:,0]),
+                    height = np.diff(vertices[:,1]),
+                    facecolor = "none",
+                    edgecolor = "black",
+                    linestyle = "-",
+                    linewidth = 3
+                )
+            )
 
-def draw_gate_connections(adata: AnnData,
-                          ax: Axes) -> Axes:
-    pass
+    return ax
+            
 
 def gating_strategy(adata: AnnData,
                     wsp_group: str,
@@ -421,15 +474,23 @@ def gating_strategy(adata: AnnData,
             continue
 
         elif "group-" in gate:
-             ax[i] = group_plot(adata = adata,
-                                idx_map = gate_map,
-                                gate_group_map = gate_group_map,
-                                gate_lut = gate_lut,
-                                group = gate,
-                                sample_size = sample_size,
-                                fig = fig,
-                                ax = ax[i]
-                                )
+            ax[i] = group_plot(adata = adata,
+                               idx_map = gate_map,
+                               gate_group_map = gate_group_map,
+                               gate_lut = gate_lut,
+                               group = gate,
+                               sample_size = sample_size,
+                               fig = fig,
+                               ax = ax[i]
+                               )
+            group_index = gate.split("-")[1]
+            gate_list = gate_group_map[group_index]
+            for gate in gate_list:
+                ax[i] = draw_gates(adata = adata,
+                                   ax = ax[i],
+                                   gate_lut = gate_lut,
+                                   gates = gate
+                                    )
         else:
             ax[i] = single_plot(adata = adata,
                                 idx_map = gate_map,
@@ -440,13 +501,15 @@ def gating_strategy(adata: AnnData,
                                 fig = fig,
                                 ax = ax[i]
                                 )
-        
-        ax[i] = draw_gates(adata = adata,
-                           gate_lut = gate_lut,
-                           gate = gate)
-        ax[i] = draw_gate_connections(adata = adata)
+            ax[i] = draw_gates(adata = adata,
+                               ax = ax[i],
+                               gate_lut = gate_lut,
+                               gates = gate)        
 
-    ax = np.reshape(ax, (ncols, nrows))
+        # ax[i] = draw_gate_connections(adata = adata,
+        #                               ax = ax[i])
+    print(ax.shape)
+    #ax = np.reshape(ax, (ncols, nrows))
 
     if return_fig:
         return fig
