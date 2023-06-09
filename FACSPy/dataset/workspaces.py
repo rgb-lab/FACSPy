@@ -46,6 +46,19 @@ class FlowJoWorkspace:
             f"{len(list(self.wsp_dict['All Samples'].keys()))} entries.)"
         )
 
+    def add_external_compensation(self,
+                                  matrix: pd.DataFrame) -> None:
+        comp_matrix = Matrix(matrix_id = "user_supplied",
+                             spill_data_or_file = matrix.values,
+                             detectors = matrix.columns)
+        for group in self.wsp_dict.keys():
+            if group == "Compensation":
+                continue
+            for sample in self.wsp_dict[group].keys():
+                self.wsp_dict[group][sample]["compensation"] = comp_matrix
+        
+        return
+
     def parse_workspace(self,
                         input_directory: str,
                         file_name: str) -> dict[dict]:
