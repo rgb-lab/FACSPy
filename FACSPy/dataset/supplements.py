@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 import os
@@ -190,11 +190,20 @@ class Metadata(BaseSupplement):
         )
     
     def append_metadata_from_folder(self,
-                                    input_directory):
+                                    input_directory) -> None:
         files: list[str] = os.listdir(input_directory)
         fcs_files = [file for file in files if file.endswith(".fcs")]
         self.dataframe["file_name"] = fcs_files
         self.dataframe["sample_ID"] = range(1,len(fcs_files)+1)
+
+    def annotate(self,
+                 file_names: Union[str, list[str]],
+                 column: str,
+                 value: str) -> None:
+        if not isinstance(file_names, list):
+            file_names = [file_names]
+        self.dataframe.loc[self.dataframe["file_name"].isin(file_names), column] = value
+
 
     def extract_metadata_factors(self):
         return [
