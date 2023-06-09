@@ -144,13 +144,13 @@ def flowsom(dataset: ad.AnnData,
     data = subset_fluo_channels(dataset)
 
     som = MiniSom(x = x,
-                  y = y,
-                  input_len = data.shape[1],
-                  sigma = sigma,
-                  learning_rate = learning_rate,
-                  neighborhood_function = neighborhood_function,
-                  random_seed = random_state
-                  )
+                    y = y,
+                    input_len = data.shape[1],
+                    sigma = sigma,
+                    learning_rate = learning_rate,
+                    neighborhood_function = neighborhood_function,
+                    random_seed = random_state
+                    )
     som.pca_weights_init(data)
     som.train_batch(data, batch_size, verbose = True)
     weights = som.get_weights().reshape(x * y, data.shape[1])
