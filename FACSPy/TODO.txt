@@ -31,3 +31,6 @@ test functions for subset stained and unstained
 
 Transformer Class: implement cell number matching
 Transformer Class: refactor so that calculation logic becomes somewhat different
+
+
+BUG: return compensation matrix if none was provided by dataframe
