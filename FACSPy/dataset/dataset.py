@@ -233,8 +233,9 @@ class DatasetAssembler:
         file_list: list[FCSFile] = self.fetch_fcs_files(input_directory,
                                                         metadata)
         
+
         file_list: list[FCSFile] = self.compensate_samples(file_list,
-                                                           workspace)
+                                                            workspace)
         
         gates = self.gate_samples(file_list,
                                   workspace)
@@ -442,6 +443,7 @@ class DatasetAssembler:
                           sample: FCSFile,
                           workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> FCSFile:
         """Function finds compensation matrix and applies it to raw data"""
+        print(f"... compensating sample {sample.original_filename}")
         comp_matrix = self.find_comp_matrix(sample, workspace)
         sample.compensated_events = comp_matrix.apply(sample)
         sample.compensation_status = "compensated"
@@ -453,10 +455,9 @@ class DatasetAssembler:
         """Returns compensation matrix. If matrix is within the workspace,
         this matrix is used preferentially. Otherwise use the compensation matrix
         from the FCS file"""
-        if self.comp_matrix_within_workspace(file, workspace):
-            return workspace.wsp_dict["All Samples"][file.original_filename]["compensation"]
-        else:
-            return file.fcs_compensation    
+        if self.comp_matrix_within_workspace(file, workspace) is None:
+            workspace.wsp_dict["All Samples"][file.original_filename]["compensation"] = file.fcs_compensation
+        return workspace.wsp_dict["All Samples"][file.original_filename]["compensation"]
 
     def comp_matrix_within_workspace(self,
                                      file: FCSFile,
