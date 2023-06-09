@@ -1,10 +1,25 @@
 from anndata import AnnData
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 import warnings
 import numpy as np
 import pandas as pd
 
+from .exceptions.exceptions import ChannelSubsetError
+
 GATE_SEPARATOR = "/"
+
+cytof_technical_channels = ["event_length", "Event_length",
+                            "width", "Width",
+                            "height", "Height",
+                            "center", "Center",
+                            "residual", "Residual",
+                            "offset", "Offset",
+                            "amplitude", "Amplitude",
+                            "dna1", "DNA1",
+                            "dna2", "DNA2"]
+
+scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
+time_channels = ["time", "Time"]
 
 def find_current_population(gate: str) -> str:
     return gate.split(GATE_SEPARATOR)[-1]
@@ -121,11 +136,8 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
     return _gate_lut
 
 def fetch_fluo_channels(adata: AnnData) -> list[str]:
-    return [
-        channel
-        for channel in adata.var.index.to_list()
-        if all(k not in channel.lower() for k in ["fsc", "ssc", "time"])
-    ]
+    """compares channel names to a predefined list of common FACS and CyTOF channels"""
+    return adata.var.loc[adata.var["type"] == "fluo"].index.to_list()
 
 def subset_fluo_channels(adata: AnnData,
                          copy: bool = False) -> AnnData:
@@ -133,8 +145,25 @@ def subset_fluo_channels(adata: AnnData,
     adata._inplace_subset_var(adata.var[adata.var["type"] == "fluo"].index)
     return adata if copy else None
 
-def subset_channels(adata: AnnData, copy: bool = False) -> Optional[AnnData]:
-    pass
+def subset_channels(adata: AnnData,
+                    channels: Optional[list[str]] = None,
+                    use_panel: bool = False,
+                    keep_state_channels: bool = True,
+                    copy: bool = False) -> Optional[AnnData]:
+    if not use_panel and channels is None:
+        raise ChannelSubsetError
+    
+    if use_panel: ## overrides channels input.
+        channels = adata.uns["panel"].dataframe["antigens"].to_list()
+    
+    if keep_state_channels:
+        state_channels = [channel for channel in adata.var_names if any(k in channel.lower()
+                                                                        for k in scatter_channels + time_channels + cytof_technical_channels)]
+        channels += state_channels
+
+    adata = adata.copy() if copy else adata
+    adata._inplace_subset_var(adata.var.loc[adata.var["pns"].isin(channels)].index.to_list())
+    return adata if copy else None
 
 def subset_gate(adata: AnnData,
                 gate: Optional[str] = None,
