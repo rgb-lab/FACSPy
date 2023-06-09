@@ -1,6 +1,29 @@
 from typing import Any
 import warnings
 
+class FileSaveError(Exception):
+
+    def __init__(self):
+        self.message = (
+            "File has some entries that cannot be written."
+        )
+
+class FileIdentityError(Exception):
+
+    def __init__(self):
+        self.message = (
+            "Identifiers are mismatched. The anndata and the uns were not saved at the same time."
+        )
+
+class ChannelSubsetError(Exception):
+
+    def __init__(self):
+        self.message = (
+            "No channels for subsetting have been given. Please provide either a channel list or use the 'use_panel' parameter."
+        )
+        super().__init__(self.message)
+
+
 class HierarchyError(Exception):
 
     def __init__(self):
