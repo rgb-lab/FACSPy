@@ -20,7 +20,10 @@ from .utils import (find_corresponding_control_samples,
 from ..transforms._matrix import Matrix
 from ..exceptions.exceptions import PanelMatchWarning
 from ..gates.gating_strategy import GatingStrategy, GateTreeError
-from ..utils import fetch_fluo_channels
+from ..utils import (fetch_fluo_channels,
+                    scatter_channels,
+                    time_channels,
+                    cytof_technical_channels)
 
 class Transformer:
 
@@ -342,8 +345,8 @@ class DatasetAssembler:
         file_row = metadata_df.loc[metadata_df["file_name"] == file.original_filename]
         cell_number = file.original_events.shape[0]
         metadata_frame = pd.DataFrame(np.repeat(file_row.values,
-                                      cell_number,
-                                      axis = 0),
+                                                cell_number,
+                                                axis = 0),
                                       columns = file_row.columns)
         metadata_frame.index = metadata_frame.index.astype("str")
         return metadata_frame
@@ -397,10 +400,10 @@ class DatasetAssembler:
         fcs_panel_df = fcs_panel_df.drop("channel_numbers", axis = 1)
         fcs_panel_df.index = fcs_panel_df.index.astype("str")
 
-        scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
-        time_channel = ["time", "Time"]
+        
         fcs_panel_df["type"] = ["scatter" if any(k in channel for k in scatter_channels)
-                                else "time" if any(k in channel for k in time_channel) 
+                                else "time" if any(k in channel for k in time_channels)
+                                else "technical" if any(k in channel for k in cytof_technical_channels)
                                 else "fluo"
                                 for channel in fcs_panel_df.index]
         fcs_panel_df["pnn"] = fcs_panel_df.index.to_list()
