@@ -2,6 +2,31 @@ from matplotlib.axes import Axes
 import numpy as np
 import pandas as pd
 
+import seaborn as sns
+
+
+from matplotlib.axis import Axis
+
+def create_boxplot(ax: Axis,
+                grouping: str,
+                plot_params: dict) -> Axis:
+    
+    if grouping is None or grouping == "sample_ID":
+        sns.barplot(**plot_params)
+    
+    else:
+        sns.stripplot(**plot_params,
+                        dodge = True,
+                        jitter = True,
+                        linewidth = 1,
+                        ax = ax)
+        sns.boxplot(**plot_params,
+                    boxprops = dict(facecolor = "white"),
+                    whis = (0,100),
+                    ax = ax)
+    
+    return ax
+
 def calculate_nrows(ncols: int, 
                     dataset: pd.DataFrame):
     return int(

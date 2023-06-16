@@ -132,7 +132,6 @@ class GatingStrategyGrid:
         self.gate_group_map = self._map_gating_groups()
 
         idx_map = self._initialize_grid(hierarchy_map)
-        print(idx_map.shape)
         if idx_map.shape[0] == 1:
             
             # meaning that we have a one-dimensional gating strategy that
@@ -224,7 +223,6 @@ def get_rectangle_quadrant(gate_lut: dict,
 def extract_gate_lut(adata: AnnData,
                      wsp_group: str,
                      file_name: str) -> dict[str: dict[str: Union[list[str], str]]]:
-    
     return create_gate_lut(adata.uns["workspace"][wsp_group])[file_name]
 
 def map_sample_ID_to_filename(adata:AnnData,
@@ -257,7 +255,11 @@ def prepare_plot_dataframe(adata: AnnData,
                            gates: Union[str, list[str]],
                            x_channel: str,
                            y_channel: str) -> pd.DataFrame:
-    df = adata.to_df(layer = "compensated")[[x_channel, y_channel]]
+
+    if x_channel == y_channel:
+        df = adata.to_df(layer = "compensated")[[x_channel]]
+    else:
+        df = adata.to_df(layer = "compensated")[[x_channel, y_channel]]
     df[gates] = adata.obsm["gating"][:, find_gate_indices(adata, gates)].toarray()
     return df
 
@@ -277,14 +279,13 @@ def extract_channels_for_gate(adata: AnnData,
     try:
         y_channel = gate_lut[gate]["dimensions"][1]
     except IndexError:
-        print("crucial...")
         y_channel = "SSC-A"
-        print(gate_lut[gate]["vertices"])
-        gate_lut[gate]["vertices"] = np.hstack([[gate_lut[gate]["vertices"],
-                                                 np.array([[np.nan, np.nan]])]]).reshape(2,2).T
-        print(gate_lut[gate]["vertices"])
+        gate_lut[gate]["vertices"] = np.hstack(
+            [np.array(gate_lut[gate]["vertices"]).reshape(2,1),
+             np.array([[250_000, 250_000]]).reshape(2,1)]
+                                                 ).reshape(2,2).T
+        gate_lut[gate]["dimensions"] += ["SSC-A"]
     y_channel_idx = adata.var.loc[adata.var["pnn"] == y_channel, "pns"].iloc[0]
-
     return (x_channel_idx, y_channel_idx)
 
 def group_plot(adata: AnnData,
@@ -407,35 +408,63 @@ def draw_gates(adata: AnnData,
                     vertices[:,1],
                     **gate_line_params)
         elif gate_dict["gate_type"] == "GMLRectangleGate":
-            if any(np.isnan(vertices[:,0])):
-                if all(np.isnan(vertices[:,0])):
-                    ax.axvline(x = np.nan,
-                               **hvline_params)
-                else:
-                    ax.axvline(x = vertices[0][~np.isnan(vertices[0])],
-                            **hvline_params)
-            if any(np.isnan(vertices[:,1])):
-                if all(np.isnan(vertices[:,1])):
-                    ax.axhline(y = np.nan,
-                               **hvline_params)
-                else:
-                    ax.axhline(y = vertices[1][~np.isnan(vertices[1])],
-                           **hvline_params)
+            if np.isnan(vertices).any():
+                if any(np.isnan(vertices[:,0])):
+                    if all(np.isnan(vertices[:,0])):
+                        ax.axvline(x = np.nan,
+                                **hvline_params)
+                    else:
+                        #TODO incredibly messy...
+                        ax.axvline(x = int(vertices[0][~np.isnan(vertices[0])][0]),
+                                **hvline_params)
+                if any(np.isnan(vertices[:,1])):
+                    if all(np.isnan(vertices[:,1])):
+                        ax.axhline(y = np.nan,
+                                **hvline_params)
+                    else:
+                        #TODO incredibly messy...
+                        ax.axhline(y = int(vertices[1][~np.isnan(vertices[1])][0]),
+                            **hvline_params)              
                 continue
+            
             ax.add_patch(
                 patches.Rectangle(
-                    xy = (vertices[0,0], vertices[0,0]),
-                    width = np.diff(vertices[:,0]),
-                    height = np.diff(vertices[:,1]),
+                    xy = (vertices[0,0], vertices[1,0]),
+                    width = abs(int(np.diff(vertices[0]))),
+                    height = abs(int(np.diff(vertices[1]))),
                     facecolor = "none",
                     edgecolor = "black",
                     linestyle = "-",
-                    linewidth = 3
+                    linewidth = 1
                 )
             )
 
     return ax
             
+
+def manage_axis_scale(adata: AnnData,
+                      ax: Axes,
+                      gate_lut: dict,
+                      gates: Union[str, list[str]]) -> Axes:
+
+    x_channel, y_channel = extract_channels_for_gate(adata, gate_lut, gates)
+
+    if adata.var.loc[adata.var["pns"] == x_channel, "type"].iloc[0] == "fluo":
+        try:
+            cofactor = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == x_channel, "pnn"].iloc[0])
+        except IndexError:
+            cofactor = 5
+        ax.set_xscale("symlog", linthresh = cofactor)
+        ax.set_xlim(-1e3, 1e5)
+    if adata.var.loc[adata.var["pns"] == y_channel, "type"].iloc[0] == "fluo":
+        try:
+            cofactor = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == y_channel, "pnn"].iloc[0])
+        except IndexError:
+            cofactor = 5
+        ax.set_yscale("symlog", linthresh = cofactor)
+        ax.set_ylim(-1e3, 1e5)
+    return ax
+
 
 def gating_strategy(adata: AnnData,
                     wsp_group: str,
@@ -444,6 +473,7 @@ def gating_strategy(adata: AnnData,
                     sample_size: Optional[int] = 5_000,
                     return_fig: bool = False,
                     show: bool = True):
+    np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning) 
     if sample_ID and not file_name:
         file_name = map_sample_ID_to_filename(adata, sample_ID)
     
@@ -460,8 +490,8 @@ def gating_strategy(adata: AnnData,
     
     ncols = gate_map.shape[1]
     nrows = gate_map.shape[0]
-    figsize = (2 * ncols,
-               2 * nrows)
+    figsize = (3 * ncols,
+               3 * nrows)
     fig, ax = plt.subplots(ncols = ncols,
                            nrows = nrows,
                            figsize = figsize)
@@ -490,7 +520,11 @@ def gating_strategy(adata: AnnData,
                                    ax = ax[i],
                                    gate_lut = gate_lut,
                                    gates = gate
-                                    )
+                                )
+            ax[i] = manage_axis_scale(adata = adata,
+                                        ax = ax[i],
+                                        gate_lut = gate_lut,
+                                        gates = gate)
         else:
             ax[i] = single_plot(adata = adata,
                                 idx_map = gate_map,
@@ -505,10 +539,14 @@ def gating_strategy(adata: AnnData,
                                ax = ax[i],
                                gate_lut = gate_lut,
                                gates = gate)        
-
+            ax[i] = manage_axis_scale(adata = adata,
+                                        ax = ax[i],
+                                        gate_lut = gate_lut,
+                                        gates = gate)
+        ax[i].set_title(gate)
         # ax[i] = draw_gate_connections(adata = adata,
         #                               ax = ax[i])
-    print(ax.shape)
+
     #ax = np.reshape(ax, (ncols, nrows))
 
     if return_fig:

@@ -12,6 +12,8 @@ from matplotlib.axis import Axis
 
 from ..exceptions.exceptions import HierarchyError
 
+from .utils import create_boxplot
+
 from ..utils import GATE_SEPARATOR, find_gate_path_of_gate, find_parent_gate, subset_gate, find_parent_population
 
 def prepare_dataframe_cell_counts(adata: AnnData,
@@ -42,8 +44,6 @@ def prepare_dataframe_gate_frequency(adata: AnnData,
         freq_of = "root"
     elif GATE_SEPARATOR not in freq_of:
         freq_of = find_gate_path_of_gate(adata, freq_of)
-
-    print(gate, freq_of)
 
     df = df.loc[(df["gate"] == gate) & (df["freq_of"] == freq_of)]
     
@@ -80,17 +80,17 @@ def gate_frequency(adata: AnnData,
         }
 
         if len(groupby) > 1:
-            ax[i] = create_plot(ax[i],
-                                grouping,
-                                plot_params)
+            ax[i] = create_boxplot(ax[i],
+                                   grouping,
+                                   plot_params)
             ax[i] = label_frequency_plot(ax[i],
                                          grouping,
                                          gate,
                                          freq_of if freq_of != "parent"else find_parent_population(find_gate_path_of_gate(adata, gate)))
         else:
-            ax = create_plot(ax,
-                             grouping,
-                             plot_params)
+            ax = create_boxplot(ax,
+                                grouping,
+                                plot_params)
             ax = label_frequency_plot(ax,
                                       grouping,
                                       gate,
@@ -103,7 +103,7 @@ def label_cell_count_plot(ax: Axis,
                           grouping: str,
                           population: str) -> Axis:
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
-    ax.set_title(f"cell counts per {grouping}\npopulation: {population or 'All cells'}")
+    ax.set_title(f"cell counts per {grouping or 'sample_ID'}\npopulation: {population or 'All cells'}")
     ax.set_ylabel("counts per sample")
     ax.set_xlabel("")
     return ax
@@ -145,16 +145,16 @@ def cell_counts(adata: AnnData,
         }
         
         if len(groupby) > 1:
-            ax[i] = create_plot(ax[i],
-                                grouping,
-                                plot_params)
+            ax[i] = create_boxplot(ax[i],
+                                   grouping,
+                                   plot_params)
             ax[i] = label_cell_count_plot(ax = ax[i],
                                           grouping = grouping,
                                           population = population)
         else:
-            ax = create_plot(ax,
-                             grouping,
-                             plot_params)
+            ax = create_boxplot(ax,
+                                grouping,
+                                plot_params)
             ax = label_cell_count_plot(ax = ax,
                                        grouping = grouping,
                                        population = population)
@@ -163,22 +163,3 @@ def cell_counts(adata: AnnData,
     plt.tight_layout()
     plt.show()
         
-def create_plot(ax: Axis,
-                grouping: str,
-                plot_params: dict) -> Axis:
-    
-    if grouping is None or grouping == "sample_ID":
-        sns.barplot(**plot_params)
-    
-    else:
-        sns.stripplot(**plot_params,
-                        dodge = True,
-                        jitter = True,
-                        linewidth = 1,
-                        ax = ax)
-        sns.boxplot(**plot_params,
-                    boxprops = dict(facecolor = "white"),
-                    whis = (0,100),
-                    ax = ax)
-    
-    return ax
