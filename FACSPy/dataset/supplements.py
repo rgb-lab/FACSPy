@@ -152,7 +152,13 @@ class Panel(BaseSupplement):
             f"{self.__class__.__name__}(" +
             f"{len(self.dataframe)} channels, "+
             f"loaded as {self.source})"
-        )  
+        ) 
+
+    def get_antigens(self):
+        return self.dataframe["antigens"].to_list()
+    
+    def get_channels(self):
+        return self.dataframe["fcs_colname"].to_list()
 
 
 class Metadata(BaseSupplement):
