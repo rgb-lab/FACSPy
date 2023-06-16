@@ -51,7 +51,7 @@ class BaseGating:
                                     subset: AnnData,
                                     predictions: np.ndarray,
                                     gate_indices: list[int]) -> None:
-        sample_indices = get_idx_loc(dataset = self.adata,
+        sample_indices = get_idx_loc(adata = self.adata,
                                      idx_to_loc = subset.obs_names)
         ### otherwise, broadcast error if multiple columns are indexed and sample_indices
         for i, gate_index in enumerate(gate_indices):
@@ -235,10 +235,12 @@ class unsupervisedGating(BaseGating):
     def __init__(self,
                  adata: AnnData,
                  gating_strategy: dict,
-                 clustering_algorithm: Literal["leiden", "FlowSOM"]) -> None:
+                 clustering_algorithm: Literal["leiden", "FlowSOM"],
+                 cluster_key: str = None) -> None:
         self.gating_strategy = gating_strategy
         self.clustering_algorithm = clustering_algorithm
         self.adata = adata
+        self.cluster_key = cluster_key or "clusters"
         assert contains_only_fluo(self.adata)
 
     def population_is_already_a_gate(self,
@@ -282,7 +284,7 @@ class unsupervisedGating(BaseGating):
         if not self.population_is_already_a_gate(population):
             self.append_gate_column_to_adata(population_gate_path)
 
-        gate_indices = self.find_gate_indices(population_gate_path)
+        gate_indices = find_gate_indices(self.adata, population_gate_path)
         
         if parent_population != "root":
             dataset = subset_gate(self.adata,
@@ -301,7 +303,8 @@ class unsupervisedGating(BaseGating):
             print("... preprocessing")
             subset = self.preprocess_dataset(subset)
             print("... clustering")
-            subset = self.cluster_dataset(subset)
+            if self.cluster_key not in subset.obs:
+                subset = self.cluster_dataset(subset)
             
             cluster_vector = self.identify_clusters_of_interest(subset,
                                                                 markers_of_interest)
@@ -336,7 +339,7 @@ class unsupervisedGating(BaseGating):
                                   cluster_vector: pd.Index,
                                   population: str) -> list[str]:
         # TODO: map function...
-        return [population if cluster in cluster_vector else "other" for cluster in subset.obs["clusters"].to_list()]
+        return [population if cluster in cluster_vector else "other" for cluster in subset.obs[self.cluster_key].to_list()]
 
     def append_gate_column_to_adata(self,
                                     gate_path) -> None:
@@ -351,7 +354,7 @@ class unsupervisedGating(BaseGating):
         
     def convert_markers_to_query_string(self,
                                         markers_of_interest: dict[str: list[Optional[str]]]) -> str:
-        cutoff = str(np.arcsinh(1) * 0.5)
+        cutoff = str(np.arcsinh(1))
         up_markers = markers_of_interest["up"]
         down_markers = markers_of_interest["down"]
         query_strings = (
@@ -364,8 +367,8 @@ class unsupervisedGating(BaseGating):
                                       dataset: AnnData,
                                       markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
         df = dataset.to_df(layer = "transformed")
-        df["clusters"] = dataset.obs["clusters"].to_list()
-        medians = df.groupby("clusters").median()
+        df[self.cluster_key] = dataset.obs[self.cluster_key].to_list()
+        medians = df.groupby(self.cluster_key).median()
         cells_of_interest: pd.DataFrame = medians.query(self.convert_markers_to_query_string(markers_of_interest))
         return cells_of_interest.index
 
@@ -373,7 +376,7 @@ class unsupervisedGating(BaseGating):
                         dataset: AnnData) -> AnnData:
         if self.clustering_algorithm != "leiden":
             raise NotImplementedError("Please select 'leiden' :D")
-        sc.tl.leiden(dataset, key_added = "clusters")
+        sc.tl.leiden(dataset, key_added = self.cluster_key)
         return dataset
 
     def preprocess_dataset(self,
