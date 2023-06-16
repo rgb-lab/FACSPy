@@ -1,12 +1,25 @@
 from typing import Any
 import warnings
 
+
+class AnalysisNotPerformedError(Exception):
+
+    def __init__(self,
+                 analysis):
+        self.message = (
+            f"You tried to access analysis values for {analysis}. Data were not found. " +
+            "Please run {analysis}() first."
+        )
+        super().__init__(self.message)
+
+
 class FileSaveError(Exception):
 
     def __init__(self):
         self.message = (
             "File has some entries that cannot be written."
         )
+        super().__init__(self.message)
 
 class FileIdentityError(Exception):
 
@@ -14,6 +27,7 @@ class FileIdentityError(Exception):
         self.message = (
             "Identifiers are mismatched. The anndata and the uns were not saved at the same time."
         )
+        super().__init__(self.message)
 
 class ChannelSubsetError(Exception):
 
