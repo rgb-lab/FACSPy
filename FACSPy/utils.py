@@ -6,6 +6,10 @@ import pandas as pd
 
 from .exceptions.exceptions import ChannelSubsetError
 
+reduction_names = {
+    reduction: [f"{reduction}{i}" for i in range(1,4)] for reduction in ["PCA", "MDS", "UMAP", "TSNE"]
+}
+
 GATE_SEPARATOR = "/"
 
 cytof_technical_channels = ["event_length", "Event_length",
@@ -81,6 +85,18 @@ def transform_gates_according_to_gate_transform(vertices: np.ndarray,
             transform = [transform for transform in channel_transforms if "Comp-" in transform.id][0]
         else:
             transform = channel_transforms[0]
+        vertices[i] = transform.inverse(vertices[i])
+    return vertices
+
+def transform_vertices_according_to_gate_transform(vertices: np.ndarray,
+                                                transforms: dict,
+                                                gate_channels: list[str]) -> np.ndarray:
+    for i, gate_channel in enumerate(gate_channels):
+        channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
+        if len(channel_transforms) > 1:
+            transform = [transform for transform in channel_transforms if "Comp-" in transform.id][0]
+        else:
+            transform = channel_transforms[0]
         vertices[:,i] = transform.inverse(vertices[:,i])
     return vertices
 
@@ -101,6 +117,7 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
             gated_files.append(file)
 
         for i, _ in enumerate(gate_list):
+            
             gate_name = wsp_dict[file]["gates"][i]["gate"].gate_name.replace(" ", "_")
             _gate_lut[file][gate_name] = {}
 
@@ -118,11 +135,12 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
             try:
                 vertices = np.array(wsp_dict[file]["gates"][i]["gate"].vertices)
                 vertices = close_polygon_gate_coordinates(vertices)
+                vertices = transform_vertices_according_to_gate_transform(vertices,
+                                                                       wsp_dict[file]["transforms"],
+                                                                       gate_channels)
             except AttributeError:
                 vertices = gate_dimensions
-            vertices = transform_gates_according_to_gate_transform(vertices,
-                                                                   wsp_dict[file]["transforms"],
-                                                                   gate_channels)
+
             
             
             _gate_lut[file][gate_name]["parent_path"] = gate_path
@@ -215,6 +233,7 @@ def equalize_groups(data: AnnData,
                     random_state:int = 0,
                     copy: bool = False
                     ) -> Optional[AnnData]:
+    #TODO: add "min" as a parameter
     np.random.seed(random_state)
     if n_obs is not None:
         new_n_obs = n_obs
@@ -259,3 +278,17 @@ def get_idx_loc(adata: AnnData,
                 idx_to_loc: Union[list[str], pd.Index]) -> np.ndarray:
     return np.array([adata.obs_names.get_loc(idx) for idx in idx_to_loc])
 
+def remove_unnamed_channels(adata: AnnData,
+                            copy: bool = False) -> Optional[AnnData]:
+    
+    unnamed_channels = [channel for channel in adata.var.index if
+                        channel not in adata.uns["panel"].dataframe["antigens"].to_list() and
+                        adata.var.loc[adata.var["pns"] == channel, "type"].iloc[0] == "fluo"]
+    named_channels = [channel for channel in adata.var.index if
+                      channel not in unnamed_channels]
+    non_fluo_channels = adata.var[adata.var["type"] != "fluo"].index.to_list()
+
+    adata = adata.copy() if copy else adata
+    adata._inplace_subset_var(list(set(named_channels + non_fluo_channels)))
+    
+    return adata if copy else None
