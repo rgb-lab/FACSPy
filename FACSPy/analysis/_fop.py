@@ -14,13 +14,13 @@ def fop(dataset: ad.AnnData,
         copy: bool = False):
     
     gates = dataset.uns["gating_cols"]
-    cofactors = dataset.var["cofactors"].values
+    cofactors = dataset.var["cofactors"].to_numpy(dtype = np.float64)
 
     fops = {}
     for sample_id in dataset.obs["sample_ID"].unique():
         tmp = dataset[dataset.obs["sample_ID"] == sample_id, :]
         fops[str(sample_id)] = {
-                                    gate: calculate_positives(tmp[tmp.obsm["gating"][:,i] == 1,:].layers[on],
+                                    gate: calculate_positives(np.array(tmp[tmp.obsm["gating"][:,i] == 1,:].layers[on]),
                                                               cofactors)
                                     for i, gate in enumerate(gates)
                                 }
