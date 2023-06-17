@@ -192,6 +192,7 @@ class Transformer:
                           dataset: AnnData,
                           cofactor_table: CofactorTable) -> AnnData:
         dataset.var = self.merge_cofactors_into_dataset_var(dataset, cofactor_table)
+        print(dataset.var)
         dataset.var = self.replace_missing_cofactors(dataset.var)
         dataset.layers["transformed"] = transform_data_array(compensated_data = dataset.layers["compensated"],
                                                              cofactors = dataset.var["cofactors"].values)
