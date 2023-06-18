@@ -188,12 +188,17 @@ class Metadata(BaseSupplement):
 
         self.factors = self.extract_metadata_factors()
 
+        self.make_dataframe_categorical()
+
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(" +
             f"{len(self.dataframe)} entries with factors " +
             f"{self.factors})"
         )
+    
+    def make_dataframe_categorical(self):
+        self.dataframe[self.dataframe.columns] = self.dataframe[self.dataframe.columns].astype("category")
     
     def append_metadata_from_folder(self,
                                     input_directory) -> None:
