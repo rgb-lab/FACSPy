@@ -19,7 +19,7 @@ from .utils import create_boxplot, append_metadata, turn_off_missing_plots, prep
 
 
 def fop(adata: AnnData,
-        markers: Union[str, list[str]],
+        color: Union[str, list[str]],
         groupby: Union[str, list[str]],
         order: list[str] = None,
         gate: str = None,
@@ -33,7 +33,7 @@ def fop(adata: AnnData,
     
     mfi_fop_baseplot(adata = adata,
                      dataframe = fop_data,
-                     markers = markers,
+                     color = color,
                      groupby = groupby,
                      gate = gate,
                      assay = "fop",
@@ -41,7 +41,7 @@ def fop(adata: AnnData,
                      order = order)
 
 def mfi(adata: AnnData,
-        markers: Union[str, list[str]],
+        color: Union[str, list[str]],
         order: list[str] = None,
         groupby: Union[str, list[str]] = None,
         gate: str = None,
@@ -55,7 +55,7 @@ def mfi(adata: AnnData,
 
     mfi_fop_baseplot(adata = adata,
                      dataframe = mfi_data,
-                     markers = markers,
+                     color = color,
                      groupby = groupby,
                      gate = gate,
                      assay = "mfi",
@@ -73,7 +73,6 @@ def add_statistic(ax: Axis,
                   test: str,
                   dataframe: pd.DataFrame,
                   groupby: str,
-                  marker: str,
                   plot_params) -> Axis:
     
     pairs = create_comparisons(dataframe, groupby)
@@ -91,7 +90,7 @@ def add_statistic(ax: Axis,
 
 def mfi_fop_baseplot(adata: AnnData,
                      dataframe: pd.DataFrame,
-                     markers: Union[str, list[str]],
+                     color: Union[str, list[str]],
                      groupby: Union[str, list[str]],
                      assay: Literal["mfi", "fop"],
                      order: list[str] = None,
@@ -101,34 +100,37 @@ def mfi_fop_baseplot(adata: AnnData,
     if gate is None:
         raise TypeError("A Gate has to be provided")
     if overview:
-        if markers:
-            print("warning... markers argument is ignored when using overview")
-        markers = adata.var_names.to_list()
+        if color:
+            print("warning... color argument is ignored when using overview")
+        color = adata.var_names.to_list()
     
-    if not isinstance(markers, list):
-        markers = [markers]
+    if not isinstance(color, list):
+        color = [color]
     if not isinstance(groupby, list):
         groupby = [groupby]
 
+    full_gate_path = find_gate_path_of_gate(adata, gate)
+    gate_specific_mfis = dataframe.loc[dataframe["gate_path"] == full_gate_path, :]
+    
     for grouping in groupby:
         ncols = 4 if overview else 1
-        nrows = int(np.ceil(len(markers) / 4)) if overview else len(markers)
+        nrows = int(np.ceil(len(color) / 4)) if overview else len(color)
         figsize = (12 if overview
                    else 3,
-                   int(np.ceil(len(markers) / 4)) * 3 if overview
-                   else 5* len(markers)) 
+                   int(np.ceil(len(color) / 4)) * 3 if overview
+                   else 5* len(color)) 
         fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
-        if len(markers) > 1:
+        if len(color) > 1:
             ax = ax.flatten()
-        for i, marker in enumerate(markers):
-            print(marker)
+        for i, marker in enumerate(color):
+            print(f"plotting statistics for {marker}")
             plot_params = {
                 "x": "sample_ID" if grouping is None else grouping,
                 "y": marker,
                 "data": gate_specific_mfis,
                 "order": order
             }
-            if len(markers)>1:
+            if len(color)>1:
                 ax[i] = create_boxplot(ax = ax[i],
                                     grouping = grouping,
                                     plot_params = plot_params)
@@ -140,7 +142,6 @@ def mfi_fop_baseplot(adata: AnnData,
                                       test = "Kruskal",
                                       dataframe = gate_specific_mfis,
                                       groupby = "sample_ID" if grouping is None else grouping,
-                                      marker = marker,
                                       plot_params = plot_params)
             else:
                 ax = create_boxplot(ax = ax,
@@ -154,9 +155,8 @@ def mfi_fop_baseplot(adata: AnnData,
                                    test = "Kruskal",
                                    dataframe = gate_specific_mfis,
                                    groupby = "sample_ID" if grouping is None else grouping,
-                                   marker = marker,
                                    plot_params = plot_params)
-        if len(markers) > 1:
+        if len(color) > 1:
             ax = turn_off_missing_plots(ax)
         ax = np.reshape(ax, (ncols, nrows))
         
