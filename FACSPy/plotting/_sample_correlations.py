@@ -21,12 +21,12 @@ from ..exceptions.exceptions import AnalysisNotPerformedError
 
 
 def marker_correlation(adata: AnnData,
-                       groupby: Optional[Union[str, list[str]]],
                        gate: str,
                        scaling: Literal["MinMaxScaler", "RobustScaler"] = "MinMaxScaler",
                        on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
-                       cmap: str = "inferno") -> Optional[Figure]:
+                       cmap: str = "inferno",
+                       return_fig: bool = False) -> Optional[Figure]:
     
     try:
         data = adata.uns[on]
@@ -37,9 +37,7 @@ def marker_correlation(adata: AnnData,
         
     except KeyError as e:
         raise AnalysisNotPerformedError(on) from e
-    
-    if not isinstance(groupby, list):
-        groupby = [groupby]
+
 
     #fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (5,5))
     annotation_cmaps = ["Set1", "Set2", "tab10", "hls", "Paired",]
@@ -63,7 +61,8 @@ def marker_correlation(adata: AnnData,
     clustermap.ax_cbar.set_position([0.1, 0, 0.60, 0.02])
     ax = clustermap.ax_heatmap
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = 5)
-
+    if return_fig:
+        return clustermap
     plt.show()
 
 def sample_correlation(adata: AnnData,
@@ -72,7 +71,8 @@ def sample_correlation(adata: AnnData,
                        scaling: Literal["MinMaxScaler", "RobustScaler"] = "MinMaxScaler",
                        on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
-                       cmap: str = "inferno") -> Optional[Figure]:
+                       cmap: str = "inferno",
+                       return_fig: bool = False) -> Optional[Figure]:
     
     try:
         data = adata.uns[on]
@@ -123,5 +123,6 @@ def sample_correlation(adata: AnnData,
                                   )
         next_legend -= legend_space
         clustermap.fig.add_artist(group_legend)
-
+    if return_fig:
+        return clustermap
     plt.show()
