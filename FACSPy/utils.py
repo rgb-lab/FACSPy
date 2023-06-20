@@ -292,3 +292,6 @@ def remove_unnamed_channels(adata: AnnData,
     adata._inplace_subset_var(list(set(named_channels + non_fluo_channels)))
     
     return adata if copy else None
+
+def flatten_nested_list(l):
+    return [item for sublist in l for item in sublist]
