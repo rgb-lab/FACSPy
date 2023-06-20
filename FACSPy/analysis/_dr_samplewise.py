@@ -9,20 +9,9 @@ from umap import UMAP
 
 from typing import Optional, Union, Literal
 
-from sklearn.preprocessing import MinMaxScaler, RobustScaler
-
 from ..utils import reduction_names
 
-def scale_data(dataframe: pd.DataFrame,
-               scaling: Literal["MinMaxScaler", "RobustScaler"]) -> np.ndarray:
-    if scaling == "MinMaxScaler":
-        return MinMaxScaler().fit_transform(dataframe)
-    if scaling == "RobustScaler":
-        return RobustScaler().fit_transform(dataframe)
-
-def select_gate_from_dataframe(dataframe: pd.DataFrame,
-                               gate: str) -> pd.DataFrame:
-    return dataframe.loc[(slice(None), gate), :]
+from ..plotting.utils import select_gate_from_multiindex_dataframe, scale_data
 
 def perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
                data: np.ndarray,
@@ -52,7 +41,7 @@ def perform_samplewise_dr(data: pd.DataFrame,
     data = data.T
     gates = data.index.levels[1]
     for gate in gates:
-        gate_specific_data = select_gate_from_dataframe(data, gate)
+        gate_specific_data = select_gate_from_multiindex_dataframe(data, gate)
         gate_specific_data = scale_data(gate_specific_data, scaling = "MinMaxScaler")
         coords = perform_dr(reduction, gate_specific_data, n_components = 3)
         coord_columns = reduction_names[reduction]
