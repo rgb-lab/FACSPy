@@ -163,8 +163,7 @@ def marker_density(adata: AnnData,
             #print("Nico war hier möhöhöhö")
             
         else:
-            fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (3,3))
-
+            fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (2,2))
             sns.lineplot(data = histogram_df,
                         x = "x",
                         y = "y",
@@ -178,7 +177,7 @@ def marker_density(adata: AnnData,
 
             handles, labels = ax.get_legend_handles_labels()
             colorby_labels = np.array([[handle, label] for handle, label in zip(handles, labels) if
-                                    any(k in label for k in colorby + list(histogram_df[colorby[0]].unique()))])
+                                      any(k in label for k in colorby + list(histogram_df[colorby[0]].unique()))])
             ax.legend(colorby_labels[:,0],
                     colorby_labels[:,1],
                     bbox_to_anchor = (1.05,1))
