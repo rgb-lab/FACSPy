@@ -8,6 +8,10 @@ from anndata import AnnData
 
 from matplotlib.axis import Axis
 
+from typing import Optional, Literal, Union
+
+from sklearn.preprocessing import MinMaxScaler, RobustScaler
+
 def prep_uns_dataframe(adata: AnnData,
                        data: pd.DataFrame) -> pd.DataFrame:
     data = data.T
@@ -16,14 +20,32 @@ def prep_uns_dataframe(adata: AnnData,
     data["sample_ID"] = data["sample_ID"].astype("int64")
     return append_metadata(adata, data)
 
+def select_gate_from_multiindex_dataframe(dataframe: pd.DataFrame,
+                               gate: str) -> pd.DataFrame:
+    return dataframe.loc[(slice(None), gate), :]
+
+def select_gate_from_singleindex_dataframe(dataframe: pd.DataFrame,
+                               gate: str) -> pd.DataFrame:
+    return dataframe[dataframe["gate_path"] == gate]
+
+def scale_data(dataframe: pd.DataFrame,
+               scaling: Literal["MinMaxScaler", "RobustScaler"]) -> np.ndarray:
+    if scaling == "MinMaxScaler":
+        return MinMaxScaler().fit_transform(dataframe)
+    if scaling == "RobustScaler":
+        return RobustScaler().fit_transform(dataframe)
+
 
 def map_obs_to_cmap(data: pd.DataFrame,
                     parameter_to_map: str,
-                    cmap: str = "Set1") -> dict[str, tuple[float, float, float]]:
+                    cmap: str = "Set1",
+                    return_mapping: bool = False) -> dict[str, tuple[float, float, float]]:
     obs = data[parameter_to_map].unique()
     cmap = sns.color_palette(cmap, len(obs))
     mapping = {obs_entry: cmap[i] for i, obs_entry in enumerate(obs)}
-    return data[parameter_to_map].map(mapping)
+    if return_mapping:
+        return mapping
+    return data[parameter_to_map].astype("object").map(mapping)
 
 def append_metadata(adata: AnnData,
                     dataframe_to_merge: pd.DataFrame) -> pd.DataFrame:
@@ -74,6 +96,6 @@ def turn_off_missing_plot(ax: Axes) -> Axes:
 
 def turn_off_missing_plots(ax: Axes) -> Axes:
     for axs in ax:
-        if not axs.lines:
+        if not axs.lines and not axs.collections:
             turn_off_missing_plot(axs)
     return ax
