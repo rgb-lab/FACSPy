@@ -21,6 +21,7 @@ def samplewise_dr_plot(adata: AnnData,
                        reduction: Literal["PCA", "MDS", "TSNE", "UMAP"],
                        gate: Optional[str] = None,
                        overview: bool = False):
+    
     if not isinstance(color, list):
         color = [color]
     if gate is None:
@@ -76,17 +77,35 @@ def samplewise_dr_plot(adata: AnnData,
             ax[i] = create_scatterplot(ax = ax[i],
                                        plot_params = plot_params)
             ax[i].set_title(f"{reduction} samplewise reduction\ncolored by {grouping}")
+            #sns.move_legend(ax[i], "center right")
+            if gate_specific_mfis[grouping].dtype.__class__.__name__ == "CategoricalDtype":
+                handles, labels = ax[i].get_legend_handles_labels()
+                ax[i].legend(handles,
+                             labels,
+                             loc = "upper left",
+                             bbox_to_anchor = (1,1),
+                             title = grouping
+                             )
 
         else:
             ax = create_scatterplot(ax = ax,
                                     plot_params = plot_params)
             ax.set_title(f"{reduction} samplewise reduction\ncolored by {grouping}")
+            #sns.move_legend(ax, "center right", bbox_to_anchor = (2,0.5))
+            if gate_specific_mfis[grouping].dtype.__class__.__name__ == "CategoricalDtype":
+                handles, labels = ax.get_legend_handles_labels()
+                ax.legend(handles,
+                          labels,
+                          loc = "upper left",
+                          bbox_to_anchor = (1,1),
+                          title = grouping
+                          )
 
     if len(color) > 1:
         ax = turn_off_missing_plots(ax)
     ax = np.reshape(ax, (ncols, nrows))
 
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.show()
             
 
@@ -103,7 +122,8 @@ def pca_samplewise(adata: AnnData,
                    color: str,
                    gate: str, 
                    on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   overview: bool = False
+                   overview: bool = False,
+                   return_dataframe: bool = False
                    ) -> Optional[Figure]:
     
     try:
@@ -113,7 +133,12 @@ def pca_samplewise(adata: AnnData,
         #_ = data["PCA1"]
     except KeyError as e:
         raise AnalysisNotPerformedError(on) from e
-    
+    if return_dataframe:
+        full_gate_path = find_gate_path_of_gate(adata, gate)
+        gate_specific_mfis = data.loc[data["gate_path"] == full_gate_path, :]
+
+        plotting_dimensions = get_plotting_dimensions("PCA")
+        return gate_specific_mfis
     samplewise_dr_plot(adata = adata,
                        dataframe = data,
                        reduction = "PCA",
