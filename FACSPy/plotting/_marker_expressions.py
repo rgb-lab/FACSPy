@@ -55,6 +55,7 @@ def append_colorby_variable(adata: AnnData,
     dataframe[colorby[0]] = dataframe[groupby[0]].map(mapping)
     return dataframe
 
+#TODO: check if mapping is possible: either the colorby is not in metadata or the grouping by sampleID leads to multiple outputs, not mappable.
 def marker_density(adata: AnnData,
                    markers: Union[str, list[str]],
                    colorby: Union[str, list[str]],
@@ -79,17 +80,16 @@ def marker_density(adata: AnnData,
 
     expression_data = adata.to_df(layer = on)
     expression_data = append_metadata_obs(adata, expression_data)
-
     ## pot. buggy: groupby only singular at the moment...
     for marker in markers:
         histogram_df = convert_expression_to_histogram_data(expression_data = expression_data,
                                                             marker = marker,
                                                             groupby = groupby)
         
-        histogram_df = append_colorby_variable(adata = adata,
-                                               dataframe = histogram_df,
-                                               colorby = colorby,
-                                               groupby = groupby)
+        # histogram_df = append_colorby_variable(adata = adata,
+        #                                        dataframe = histogram_df,
+        #                                        colorby = colorby,
+        #                                        groupby = groupby)
         
         histogram_df[groupby[0]] = histogram_df[groupby[0]].astype("str")
         
