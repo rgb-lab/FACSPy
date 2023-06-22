@@ -12,6 +12,8 @@ from typing import Optional, Literal, Union
 
 from sklearn.preprocessing import MinMaxScaler, RobustScaler
 
+from scipy.cluster.hierarchy import cut_tree
+
 def prep_uns_dataframe(adata: AnnData,
                        data: pd.DataFrame) -> pd.DataFrame:
     data = data.T
@@ -46,6 +48,40 @@ def map_obs_to_cmap(data: pd.DataFrame,
     if return_mapping:
         return mapping
     return data[parameter_to_map].astype("object").map(mapping)
+
+def calculate_metaclusters(linkage: np.ndarray,
+                           n_clusters: int) -> dict[int: list[int]]:
+    ### stackoverflow https://stackoverflow.com/questions/65034792/print-all-clusters-and-samples-at-each-step-of-hierarchical-clustering-in-python
+    linkage_matrix = linkage
+    clusters = cut_tree(linkage_matrix, n_clusters=n_clusters)
+    # transpose matrix
+    clusters = clusters.T
+    for row in clusters[::-1]:
+        # create empty dictionary
+        groups = {}
+        for i, g in enumerate(row):
+            if g not in groups:
+                # add new key to dict and assign empty set
+                groups[g] = set([])
+            # add to set of certain group
+            groups[g].add(i)
+
+    return groups
+
+def map_metaclusters_to_sample_ID(metaclusters: dict,
+                                  sample_IDs: list) -> pd.DataFrame:
+    sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
+    for i, sample_ID in enumerate(sample_IDs["sample_ID"].to_list()):
+        sample_IDs.loc[sample_IDs["sample_ID"] == sample_ID, "metacluster"] = int([metacluster
+                                                                                   for metacluster in metaclusters
+                                                                                   if i in metaclusters[metacluster]][0])
+    
+    return sample_IDs
+
+def merge_metaclusters_into_dataframe(data, metacluster_mapping) -> pd.DataFrame:
+    if "metacluster" in data.columns:
+        data = data.drop(["metacluster"], axis = 1)
+    return pd.merge(data, metacluster_mapping, on = "sample_ID")
 
 def append_metadata(adata: AnnData,
                     dataframe_to_merge: pd.DataFrame) -> pd.DataFrame:
