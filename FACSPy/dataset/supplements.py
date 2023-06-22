@@ -223,6 +223,8 @@ class Metadata(BaseSupplement):
             if all(k not in col for k in ["sample_ID", "sample_id", "file_name", "staining"])
         ]
 
+    def get_factors(self):
+        return self.extract_metadata_factors()
 
 
 class CofactorTable(BaseSupplement):
