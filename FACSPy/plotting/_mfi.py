@@ -103,7 +103,7 @@ def mfi_fop_baseplot(adata: AnnData,
         if color:
             print("warning... color argument is ignored when using overview")
         color = adata.var_names.to_list()
-    
+
     if not isinstance(color, list):
         color = [color]
     if not isinstance(groupby, list):
@@ -111,14 +111,14 @@ def mfi_fop_baseplot(adata: AnnData,
 
     full_gate_path = find_gate_path_of_gate(adata, gate)
     gate_specific_mfis = dataframe.loc[dataframe["gate_path"] == full_gate_path, :]
-    
+
     for grouping in groupby:
         ncols = 4 if overview else 1
         nrows = int(np.ceil(len(color) / 4)) if overview else len(color)
         figsize = (12 if overview
                    else 3,
                    int(np.ceil(len(color) / 4)) * 3 if overview
-                   else 5* len(color)) 
+                   else 5* len(color))
         fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
         if len(color) > 1:
             ax = ax.flatten()
@@ -138,11 +138,17 @@ def mfi_fop_baseplot(adata: AnnData,
                                    marker = marker,
                                    grouping = grouping,
                                    assay = assay)
-                ax[i] = add_statistic(ax = ax[i],
-                                      test = "Kruskal",
-                                      dataframe = gate_specific_mfis,
-                                      groupby = "sample_ID" if grouping is None else grouping,
-                                      plot_params = plot_params)
+                try:
+                    ax[i] = add_statistic(ax = ax[i],
+                                          test = "Kruskal",
+                                          dataframe = gate_specific_mfis,
+                                          groupby = "sample_ID" if grouping is None else grouping,
+                                          plot_params = plot_params)
+                except ValueError as e:
+                    if str(e) != "All numbers are identical in kruskal":
+                        raise ValueError from e
+                    else:
+                        print("warning... Values were uniform, no statistics to plot.")
             else:
                 ax = create_boxplot(ax = ax,
                                     grouping = grouping,
@@ -151,15 +157,21 @@ def mfi_fop_baseplot(adata: AnnData,
                                 marker = marker,
                                 grouping = grouping,
                                 assay = assay)
-                ax = add_statistic(ax = ax,
-                                   test = "Kruskal",
-                                   dataframe = gate_specific_mfis,
-                                   groupby = "sample_ID" if grouping is None else grouping,
-                                   plot_params = plot_params)
+                try:
+                    ax = add_statistic(ax = ax,
+                                       test = "Kruskal",
+                                       dataframe = gate_specific_mfis,
+                                       groupby = "sample_ID" if grouping is None else grouping,
+                                       plot_params = plot_params)
+                except ValueError as e:
+                    if str(e) != "All numbers are identical in kruskal":
+                        raise ValueError from e
+                    else:
+                        print("warning... Values were uniform, no statistics to plot.")
         if len(color) > 1:
             ax = turn_off_missing_plots(ax)
         ax = np.reshape(ax, (ncols, nrows))
-        
+
         plt.tight_layout()
         plt.show()
 
