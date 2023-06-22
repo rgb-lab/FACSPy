@@ -6,6 +6,8 @@ import pandas as pd
 
 from .exceptions.exceptions import ChannelSubsetError
 
+from itertools import combinations
+
 reduction_names = {
     reduction: [f"{reduction}{i}" for i in range(1,4)] for reduction in ["PCA", "MDS", "UMAP", "TSNE"]
 }
@@ -295,3 +297,15 @@ def remove_unnamed_channels(adata: AnnData,
 
 def flatten_nested_list(l):
     return [item for sublist in l for item in sublist]
+
+
+def get_filename(adata: AnnData,
+                 sample_ID: str) -> str:
+    return adata.uns["metadata"].dataframe.loc[adata.uns["metadata"].dataframe["sample_ID"] == sample_ID, "file_name"].iloc[0]
+
+
+
+def create_comparisons(data: pd.DataFrame,
+                       groupby: str,
+                       n: int = 2) -> list[tuple[str, str]]:
+    return list(combinations(data[groupby].unique(), n))
