@@ -104,7 +104,7 @@ def sample_correlation(adata: AnnData,
         groupby = [groupby]
 
     #fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (5,5))
-    annotation_cmaps = ["Set1", "Set2", "tab10", "hls", "Paired",]
+    annotation_cmaps = ["Set1", "Set2", "tab10", "hls", "Paired"]
     sample_IDs = data["sample_ID"].to_list()
 
     correlation_data = data[fluo_columns].T.corr(method = corr_method)
