@@ -9,7 +9,7 @@ from matplotlib.axis import Axis
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from ..utils import find_gate_path_of_gate
+from ..utils import find_gate_path_of_gate, create_comparisons
 
 from ..exceptions.exceptions import AnalysisNotPerformedError
 
@@ -63,10 +63,7 @@ def mfi(adata: AnnData,
                      order = order)
 
 
-from itertools import combinations
-def create_comparisons(data: pd.DataFrame,
-                       groupby: str) -> list[tuple[str, str]]:
-    return list(combinations(data[groupby].unique(), 2))
+
 
 from statannotations.Annotator import Annotator
 def add_statistic(ax: Axis,
