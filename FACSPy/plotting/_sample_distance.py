@@ -9,7 +9,6 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Patch
 
 from scipy.spatial import distance_matrix
-from scipy.spatial.distance import squareform
 
 from typing import Literal, Union, Optional
 from .utils import (prep_uns_dataframe,
@@ -20,7 +19,8 @@ from .utils import (prep_uns_dataframe,
                     calculate_metaclusters,
                     map_metaclusters_to_sample_ID,
                     merge_metaclusters_into_dataframe)
-from ..utils import find_gate_path_of_gate, reduction_names
+
+from ..utils import find_gate_path_of_gate
 
 from ..exceptions.exceptions import AnalysisNotPerformedError
 
