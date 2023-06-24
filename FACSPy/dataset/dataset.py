@@ -231,10 +231,12 @@ class DatasetAssembler:
                  input_directory: str,
                  metadata: Metadata,
                  panel: Panel,
-                 workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> AnnData:
+                 workspace: Union[FlowJoWorkspace, DivaWorkspace],
+                 subsample_fcs_to: Optional[int] = None) -> AnnData:
 
         file_list: list[FCSFile] = self.fetch_fcs_files(input_directory,
-                                                        metadata)
+                                                        metadata,
+                                                        subsample_fcs_to)
         
 
         file_list: list[FCSFile] = self.compensate_samples(file_list,
@@ -470,12 +472,14 @@ class DatasetAssembler:
 
     def convert_fcs_to_FCSFile(self,
                                input_directory: str,
-                               metadata_fcs_files: list[str]) -> list[FCSFile]:
-        return [FCSFile(input_directory, file_name) for file_name in metadata_fcs_files]
+                               metadata_fcs_files: list[str],
+                               subsample_fcs_to: Optional[int]) -> list[FCSFile]:
+        return [FCSFile(input_directory, file_name, subsample = subsample_fcs_to) for file_name in metadata_fcs_files]
     
     def fetch_fcs_files(self,
                         input_directory: str,
-                        metadata: Metadata) -> list[FCSFile]:
+                        metadata: Metadata,
+                        subsample_fcs_to: Optional[int]) -> list[FCSFile]:
         metadata_fcs_files = metadata.dataframe["file_name"].to_list()
         
         if metadata_fcs_files:
@@ -485,7 +489,9 @@ class DatasetAssembler:
                                 if file.endswith(".fcs")]
         metadata = self.append_empty_metadata(metadata,
                                               available_fcs_files)
-        return self.convert_fcs_to_FCSFile(input_directory, available_fcs_files)
+        return self.convert_fcs_to_FCSFile(input_directory,
+                                           available_fcs_files,
+                                           subsample_fcs_to)
     
     def append_empty_metadata(self,
                               metadata: Metadata,
