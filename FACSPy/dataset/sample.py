@@ -104,7 +104,12 @@ class FCSFile:
     def subsample_events(self,
                          events: np.ndarray,
                          size: int) -> np.ndarray:
-        return events[np.random.randint(events.shape[0], size=size), :]
+        if size >= events.shape[0]:
+            return events
+        
+        return events[np.random.randint(events.shape[0],
+                                        size = size,
+                                        replace = False), :]
 
     def parse_and_process_original_events(self,
                                           fcs_data: FlowData,
