@@ -483,7 +483,7 @@ class DatasetAssembler:
         metadata_fcs_files = metadata.dataframe["file_name"].to_list()
         
         if metadata_fcs_files:
-            return self.convert_fcs_to_FCSFile(input_directory, metadata_fcs_files)   
+            return self.convert_fcs_to_FCSFile(input_directory, metadata_fcs_files, subsample_fcs_to)   
         
         available_fcs_files = [file for file in os.listdir(input_directory)
                                 if file.endswith(".fcs")]
