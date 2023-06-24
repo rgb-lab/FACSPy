@@ -16,7 +16,8 @@ class FCSFile:
     """
     def __init__(self,
                  input_directory: str,
-                 file_name: str
+                 file_name: str,
+                 subsample: Optional[int] = None
                  ) -> None:
         
         self.original_filename = file_name
@@ -35,7 +36,8 @@ class FCSFile:
         
         self.channels = self.parse_channel_information(raw_data)
         
-        self.original_events = self.parse_and_process_original_events(raw_data)
+        self.original_events = self.parse_and_process_original_events(raw_data,
+                                                                      subsample)
 
         self.fcs_compensation = self.parse_compensation_matrix_from_fcs()
 
@@ -99,9 +101,18 @@ class FCSFile:
                           fcs_data: FlowData):
         return fcs_data.event_count
 
+    def subsample_events(self,
+                         events: np.ndarray,
+                         size: int) -> np.ndarray:
+        return events[np.random.randint(events.shape[0], size=size), :]
+
     def parse_and_process_original_events(self,
-                                          fcs_data: FlowData) -> np.ndarray:
+                                          fcs_data: FlowData,
+                                          subsample: Optional[int]) -> np.ndarray:
         tmp_orig_events = self.parse_original_events(fcs_data)
+        if subsample is not None:
+            tmp_orig_events = self.subsample_events(tmp_orig_events,
+                                                    subsample)
         tmp_orig_events = self.process_original_events(tmp_orig_events)
         return tmp_orig_events
 
