@@ -50,13 +50,18 @@ def fold_change(adata: AnnData,
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = 10)
     ax.set_ylabel("antigen")
 
-    group_lut = {"p < 0.0001": cmap_colors[0], "p < 0.001": cmap_colors[1], "p < 0.01": cmap_colors[2], "p < 0.05": cmap_colors[3], "n.s.": "grey"}
+    group_lut = {"p < 0.0001": cmap_colors[0],
+                 "p < 0.001": cmap_colors[1],
+                 "p < 0.01": cmap_colors[2],
+                 "p < 0.05": cmap_colors[3],
+                 "n.s.": "grey"}
+    
     handles = [Patch(facecolor = group_lut[name]) for name in group_lut]
     ax.legend(handles,
-                                group_lut,
-                                bbox_to_anchor = (1.1,0.5),
-                                title = "p_signif."
-                                )
+              group_lut,
+              bbox_to_anchor = (1.1,0.5),
+              title = "p_signif."
+              )
     
     
     plt.tight_layout()
