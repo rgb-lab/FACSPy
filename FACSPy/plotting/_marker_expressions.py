@@ -86,10 +86,10 @@ def marker_density(adata: AnnData,
                                                             marker = marker,
                                                             groupby = groupby)
         
-        # histogram_df = append_colorby_variable(adata = adata,
-        #                                        dataframe = histogram_df,
-        #                                        colorby = colorby,
-        #                                        groupby = groupby)
+        histogram_df = append_colorby_variable(adata = adata,
+                                               dataframe = histogram_df,
+                                               colorby = colorby,
+                                               groupby = groupby)
         
         histogram_df[groupby[0]] = histogram_df[groupby[0]].astype("str")
         
