@@ -12,12 +12,15 @@ from ..analysis._fold_change import calculate_fold_changes
 
 from typing import Literal
 
+from ..utils import ifelse
+
 def fold_change(adata: AnnData,
                 groupby: str,
                 group1: str,
                 group2: str,
                 gate: str,
-                stat: Literal["p", "p_adj"] = "p"
+                stat: Literal["p", "p_adj"] = "p",
+                cmap: Literal["YlOrBr_r"] = "YlOrBr_r"
                 ):
     
     fold_changes = calculate_fold_changes(adata = adata,
@@ -30,7 +33,12 @@ def fold_change(adata: AnnData,
     fold_changes = fold_changes.reset_index()
 
     fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (3, len(fold_changes)/5))
-    p_color = ['red' if (x < 0.05) else 'grey' for x in fold_changes[stat]]
+    cmap_colors = sns.color_palette(cmap, 4)
+    p_color = [ifelse(x < 0.0001, cmap_colors[0],
+                      ifelse(x < 0.001, cmap_colors[1],
+                             ifelse(x < 0.01, cmap_colors[2],
+                                    ifelse(x < 0.05, cmap_colors[3], "grey")))) for x in fold_changes[stat].to_list()]
+                             
 
     sns.barplot(data = fold_changes,
                 x = "asinh_fc",
@@ -38,7 +46,18 @@ def fold_change(adata: AnnData,
                 palette = p_color,
                 ax = ax)
     ax.set_title(f"Comparison\n{group1} vs {group2}")
+    
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = 10)
+    ax.set_ylabel("antigen")
+
+    group_lut = {"p < 0.0001": cmap_colors[0], "p < 0.001": cmap_colors[1], "p < 0.01": cmap_colors[2], "p < 0.05": cmap_colors[3], "n.s.": "grey"}
+    handles = [Patch(facecolor = group_lut[name]) for name in group_lut]
+    ax.legend(handles,
+                                group_lut,
+                                bbox_to_anchor = (1.1,0.5),
+                                title = "p_signif."
+                                )
+    
     
     plt.tight_layout()
     plt.show()
