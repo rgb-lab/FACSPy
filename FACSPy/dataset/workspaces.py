@@ -758,12 +758,15 @@ class DivaWorkspace:
 
         for tube in tubes:
             tube_id = tube.find("data_filename").text
+            if "Compensation Control" in tube_id:
+                print(f"warning... currently not implemented, skipping tube {tube_id}")
+                continue
             wsp_dict["All Samples"][tube_id] = {}
             transform_lut = self._parse_diva_transformation(instrument_settings = tube.find("instrument_settings"))
             wsp_dict["All Samples"][tube_id]["transformations"] = transform_lut
             wsp_dict["All Samples"][tube_id]["transforms"] = [xform for (_, xform) in transform_lut.items()]
             wsp_dict["All Samples"][tube_id]["gates"] = self._parse_diva_gates(gate_elements = tube.find("gates"),
-                                                                transform_dict = transform_lut)
+                                                                               transform_dict = transform_lut)
             wsp_dict["All Samples"][tube_id]["compensation"] = self._parse_diva_compensation(instrument_settings = tube.find("instrument_settings"))
 
 
@@ -777,6 +780,8 @@ class DivaWorkspace:
     def _parse_diva_transformation(self,
                                    instrument_settings) -> dict:
         transform_dict = {}
+        if instrument_settings is None:
+            return {}
         use_auto_biexp_scale = bool(instrument_settings.find("use_auto_biexp_scale").text)
         biexp_scale_node = "comp_biexp_scale" if use_auto_biexp_scale else "manual_biexp_scale"
         parameters = instrument_settings.findall("parameter")
@@ -921,7 +926,6 @@ class DivaWorkspace:
                 # CytoML does multiply with 4.5 to "restore to the logicle scale"
                 # Comparison with flowkit seems to indicate that this step is not necessary
                 # gate_points[:,0] = gate_points[:,0] * 4.5 # restore it to the logicle scale
-
                 gate_points[:,0] = temp_transform.inverse(gate_points[:,0])
             else:
                 gate_points[:,0] = gate_points[:,0] * 10**5.4185380935668945
@@ -969,7 +973,7 @@ class DivaWorkspace:
 
         if y_param is not None:
             gate_points[:,1] = transform_lut[y_param].apply(gate_points[:,1])
-
+        
         return x_param, y_param, gate_type, gate_points
 
 
