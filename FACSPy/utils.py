@@ -303,9 +303,11 @@ def get_filename(adata: AnnData,
                  sample_ID: str) -> str:
     return adata.uns["metadata"].dataframe.loc[adata.uns["metadata"].dataframe["sample_ID"] == sample_ID, "file_name"].iloc[0]
 
-
-
 def create_comparisons(data: pd.DataFrame,
                        groupby: str,
                        n: int = 2) -> list[tuple[str, str]]:
     return list(combinations(data[groupby].unique(), n))
+
+from typing import Any
+def ifelse(condition, true_val, false_val) -> Any:
+    return true_val if condition else false_val
