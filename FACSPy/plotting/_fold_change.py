@@ -63,6 +63,5 @@ def fold_change(adata: AnnData,
               title = "p_signif."
               )
     
-    
     plt.tight_layout()
     plt.show()
