@@ -8,6 +8,8 @@ from .exceptions.exceptions import ChannelSubsetError
 
 from itertools import combinations
 
+from typing import Any
+
 reduction_names = {
     reduction: [f"{reduction}{i}" for i in range(1,4)] for reduction in ["PCA", "MDS", "UMAP", "TSNE"]
 }
@@ -308,6 +310,16 @@ def create_comparisons(data: pd.DataFrame,
                        n: int = 2) -> list[tuple[str, str]]:
     return list(combinations(data[groupby].unique(), n))
 
-from typing import Any
 def ifelse(condition, true_val, false_val) -> Any:
     return true_val if condition else false_val
+
+def convert_gate_to_obs(adata: AnnData,
+                        gate: str,
+                        copy: bool = False) -> Optional[AnnData]:
+    gate_path = find_gate_path_of_gate(adata, gate)
+    gate_index = find_gate_indices(adata, gate_path)
+    adata = adata.copy() if copy else adata
+    adata.obs[gate] = adata.obsm["gating"][:,gate_index].todense()
+    adata.obs[gate] = adata.obs[gate].map({True: gate, False: "other"})
+    adata.obs[gate] = adata.obs[gate].astype("category")
+    return adata if copy else None
