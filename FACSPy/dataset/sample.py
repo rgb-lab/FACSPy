@@ -154,7 +154,7 @@ class FCSFile:
 
     def find_time_channel(self) -> tuple[int, float]:
         time_step = float(self.fcs_metadata["timestep"]) if "timestep" in self.fcs_metadata else 1.0
-        time_index = int(self.channels.loc[self.channels.index.isin(["Time", "time"]), "channel_numbers"]) -1
+        time_index = int(self.channels.loc[self.channels.index.isin(["Time", "time"]), "channel_numbers"].iloc[0]) -1
         return (time_index, time_step)
 
     def time_channel_exists(self) -> bool:
