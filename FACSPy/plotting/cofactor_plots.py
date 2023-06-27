@@ -176,8 +176,10 @@ def transformation_plot(adata: AnnData,
     
     if sample_ID and file_name:
         raise TypeError("Please provide one of sample_ID or file_name but not both.")
+    
     if sample_ID is None and file_name is None:
         raise ValueError("Please provide either sample_ID or file_name")
+    
     if pregated_population:
         ### TODO TODO TODO: CHECK IF POPULATION EXISTS!!
         adata = subset_gate(adata,
