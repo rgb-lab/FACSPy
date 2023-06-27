@@ -44,9 +44,10 @@ def get_stained_samples(dataframe: pd.DataFrame,
                         by: Literal["sample_ID", "file_name"]) -> list[str]:
     return dataframe.loc[dataframe["staining"] == "stained", by].to_list()
 
+
 def reindex_metadata(metadata: pd.DataFrame,
                      indices: list[str]) -> pd.DataFrame:
-    return metadata.set_index(indices)
+    return metadata.set_index(indices) if indices else metadata
 
 def find_name_of_control_sample_by_metadata(sample,
                                             metadata_to_compare: pd.DataFrame,
@@ -60,15 +61,19 @@ def find_corresponding_control_samples(adata: AnnData,
     corresponding_controls = {}
     metadata: Metadata = adata.uns["metadata"]
     metadata_frame = metadata.to_df()
+    metadata_factors = metadata.get_factors()
     indexed_metadata = reindex_metadata(metadata_frame,
-                                                metadata.factors)
+                                        metadata_factors)
     
     stained_samples = get_stained_samples(metadata_frame,
                                           by = by)
     control_samples = get_control_samples(metadata_frame,
                                           by = by)
     for sample in stained_samples:
-        sample_metadata = metadata_frame.loc[metadata_frame[by] == sample, metadata.factors]
+        if not metadata_factors:
+            corresponding_controls[sample] = control_samples
+            continue
+        sample_metadata = metadata_frame.loc[metadata_frame[by] == sample, metadata.get_factors()]
         matching_control_samples = find_name_of_control_sample_by_metadata(sample,
                                                                            sample_metadata,
                                                                            indexed_metadata,
