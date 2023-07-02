@@ -32,8 +32,8 @@ def transform_data_array(compensated_data: np.ndarray,
 def get_histogram_curve(data_array: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     _, x = np.histogram(data_array, bins = 100)
     _, curve = FFTKDE(kernel = "gaussian",
-                        bw = "silverman"
-                        ).fit(data_array).evaluate(100)
+                      bw = "silverman"
+                      ).fit(data_array).evaluate(100)
     return x, curve
 
 def get_control_samples(dataframe: pd.DataFrame,
