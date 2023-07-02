@@ -1,7 +1,7 @@
 
 
 from anndata import AnnData
-from typing import Union, Optional
+from typing import Union, Optional, Literal
 
 import pandas as pd
 import numpy as np
@@ -14,7 +14,13 @@ from ..exceptions.exceptions import HierarchyError
 
 from .utils import create_boxplot
 
-from ..utils import GATE_SEPARATOR, find_gate_path_of_gate, find_parent_gate, subset_gate, find_parent_population
+from ..utils import (GATE_SEPARATOR,
+                     find_gate_path_of_gate,
+                     find_parent_gate,
+                     find_grandparent_gate,
+                     subset_gate,
+                     find_parent_population,
+                     find_grandparent_population)
 
 def prepare_dataframe_cell_counts(adata: AnnData,
                       groupby: Optional[Union[str, list[str]]]):
@@ -30,18 +36,21 @@ def prepare_dataframe_gate_frequency(adata: AnnData,
                                      gate: Union[str, list[str]],
                                      freq_of: Optional[Union[str, list[str]]],
                                      groupby: Optional[Union[str, list[str]]]) -> pd.DataFrame:
+    
     df = adata.uns["gate_frequencies"].reset_index()
     
     if GATE_SEPARATOR not in gate:
         gate = find_gate_path_of_gate(adata, gate)
 
-    if freq_of not in gate.split(GATE_SEPARATOR)[:-1] and freq_of not in [None, "parent"]:
+    if freq_of not in gate.split(GATE_SEPARATOR)[:-1] and freq_of not in [None, "parent", "grandparent", "all"]:
         raise HierarchyError
     
     if freq_of == "parent":
         freq_of = find_parent_gate(gate)
-    elif freq_of is None:
+    elif freq_of is None or freq_of == "all":
         freq_of = "root"
+    elif freq_of == "grandparent":
+        freq_of = find_grandparent_gate(gate)
     elif GATE_SEPARATOR not in freq_of:
         freq_of = find_gate_path_of_gate(adata, freq_of)
 
@@ -54,7 +63,7 @@ def prepare_dataframe_gate_frequency(adata: AnnData,
 
 def gate_frequency(adata: AnnData,
                    gate: Union[str, list[str]],
-                   freq_of: Optional[Union[str, list[str]]] = None,
+                   freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent", "all"]]] = None,
                    groupby: Optional[Union[str, list[str]]] = None):
     
     if not isinstance(groupby, list):
@@ -65,7 +74,6 @@ def gate_frequency(adata: AnnData,
                                           freq_of,
                                           groupby)
 
-    
     ncols = 1
     nrows = len(groupby)
     figsize = (len(df) / 10, 3 * len(groupby)) 
@@ -86,7 +94,8 @@ def gate_frequency(adata: AnnData,
             ax[i] = label_frequency_plot(ax[i],
                                          grouping,
                                          gate,
-                                         freq_of if freq_of != "parent"else find_parent_population(find_gate_path_of_gate(adata, gate)))
+                                         find_y_label(adata, freq_of, gate)
+                                         )
         else:
             ax = create_boxplot(ax,
                                 grouping,
@@ -94,7 +103,8 @@ def gate_frequency(adata: AnnData,
             ax = label_frequency_plot(ax,
                                       grouping,
                                       gate,
-                                      freq_of if freq_of != "parent"else find_parent_population(find_gate_path_of_gate(adata, gate)))
+                                      find_y_label(adata, freq_of, gate)
+                                      )
         
     plt.tight_layout()
     plt.show()
@@ -108,13 +118,23 @@ def label_cell_count_plot(ax: Axis,
     ax.set_xlabel("")
     return ax
 
+def find_y_label(adata: AnnData,
+                 freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent"]]],
+                 gate: Union[str, list[str]]):
+    
+    if freq_of == "parent":
+        return find_parent_population(find_gate_path_of_gate(adata, gate))
+    if freq_of == "grandparent":
+        return find_grandparent_population(find_gate_path_of_gate(adata, gate))
+    return "All Cells" if freq_of in ["root", "all"] else freq_of
+
 def label_frequency_plot(ax: Axis,
                          grouping: str,
                          gate: str,
                          freq_of: str) -> Axis:
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
     ax.set_title(f"gate frequency per {grouping}\ngate: {gate}")
-    ax.set_ylabel(f"freq. of\n{freq_of or 'All Cells'}")
+    ax.set_ylabel(f"freq. of\n{freq_of}")
     ax.set_xlabel("")
     return ax
 
