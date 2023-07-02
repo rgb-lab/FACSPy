@@ -29,8 +29,11 @@ class Transformer:
 
     def __init__(self,
                  dataset: AnnData,
-                 cofactor_table: Optional[CofactorTable] = None) -> None:
+                 cofactor_table: Optional[CofactorTable] = None,
+                 use_gate: Optional[str] = None) -> None:
         ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
+        
+        
         if not cofactor_table:
             cofactor_table, raw_cofactor_table = self.calculate_cofactors(dataset)
             dataset.uns["raw_cofactors"] = raw_cofactor_table
@@ -211,7 +214,9 @@ class Transformer:
     def merge_cofactors_into_dataset_var(self,
                                          dataset: AnnData,
                                          cofactor_table: CofactorTable):
-        
+        if "cofactors" in dataset.var.columns:
+            print("... replacing cofactors")
+            dataset.var = dataset.var.drop("cofactors", axis = 1)
         dataset_var = dataset.var.merge(cofactor_table.dataframe,
                                         left_index = True,
                                         right_on = "fcs_colname",
