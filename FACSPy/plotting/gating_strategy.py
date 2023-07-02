@@ -455,14 +455,14 @@ def manage_axis_scale(adata: AnnData,
         except IndexError:
             cofactor = 5
         ax.set_xscale("symlog", linthresh = cofactor)
-        ax.set_xlim(-1e3, 1e5)
+    
     if adata.var.loc[adata.var["pns"] == y_channel, "type"].iloc[0] == "fluo":
         try:
             cofactor = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == y_channel, "pnn"].iloc[0])
         except IndexError:
             cofactor = 5
         ax.set_yscale("symlog", linthresh = cofactor)
-        ax.set_ylim(-1e3, 1e5)
+    
     return ax
 
 
@@ -492,10 +492,12 @@ def gating_strategy(adata: AnnData,
     nrows = gate_map.shape[0]
     figsize = (3 * ncols,
                3 * nrows)
+    
     fig, ax = plt.subplots(ncols = ncols,
                            nrows = nrows,
                            figsize = figsize)
     ax = ax.flatten()
+    
     for i, gate in enumerate(gates_to_plot):
         ## TODO: think of a better way...
         adata = adata[adata.obs["file_name"] == file_name,:]
@@ -522,9 +524,9 @@ def gating_strategy(adata: AnnData,
                                    gates = gate
                                 )
             ax[i] = manage_axis_scale(adata = adata,
-                                        ax = ax[i],
-                                        gate_lut = gate_lut,
-                                        gates = gate)
+                                      ax = ax[i],
+                                      gate_lut = gate_lut,
+                                      gates = gate)
         else:
             ax[i] = single_plot(adata = adata,
                                 idx_map = gate_map,
@@ -540,9 +542,9 @@ def gating_strategy(adata: AnnData,
                                gate_lut = gate_lut,
                                gates = gate)        
             ax[i] = manage_axis_scale(adata = adata,
-                                        ax = ax[i],
-                                        gate_lut = gate_lut,
-                                        gates = gate)
+                                      ax = ax[i],
+                                      gate_lut = gate_lut,
+                                      gates = gate)
         ax[i].set_title(gate)
         # ax[i] = draw_gate_connections(adata = adata,
         #                               ax = ax[i])
