@@ -473,7 +473,7 @@ def gating_strategy(adata: AnnData,
                     sample_size: Optional[int] = 5_000,
                     return_fig: bool = False,
                     show: bool = True):
-    np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning) 
+
     if sample_ID and not file_name:
         file_name = map_sample_ID_to_filename(adata, sample_ID)
     
