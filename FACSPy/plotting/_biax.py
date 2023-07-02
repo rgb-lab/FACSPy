@@ -43,10 +43,18 @@ def biax(adata: AnnData,
                     ax = ax)
 
     if layer in ["compensated", "raw"]:
+        x_channel_cofactor = adata.uns["cofactors"].get_cofactor(x_channel)
+        y_channel_cofactor = adata.uns["cofactors"].get_cofactor(y_channel)
+        print(x_channel_cofactor, y_channel_cofactor)
         plt.xscale("symlog",
-                   linthresh = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == x_channel, "pnn"].iloc[0]))
+                   linthresh = x_channel_cofactor)
+        ax.axvline(x_channel_cofactor)
         plt.yscale("symlog",
-                   linthresh = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == y_channel, "pnn"].iloc[0]))
+                   linthresh = y_channel_cofactor)
+        ax.axhline(y_channel_cofactor)
+    if layer in ["transformed"]:
+        ax.axhline(np.arcsinh(1))
+        ax.axvline(np.arcsinh(1))
     ax.set_title(f"{layer}\nexpression")
     plt.tight_layout()
     plt.show()
