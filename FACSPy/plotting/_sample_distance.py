@@ -29,17 +29,17 @@ from scipy.cluster import hierarchy
 
 
 def sample_distance(adata: AnnData,
-                       groupby: Optional[Union[str, list[str]]],
-                       gate: str,
-                       scaling: Literal["MinMaxScaler", "RobustScaler"] = "MinMaxScaler",
-                       on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                       corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
-                       cmap: str = "inferno",
-                       return_fig: bool = False,
-                       return_dataframe: bool = False,
-                       metaclusters: Optional[int] = None,
-                       label_metaclusters_in_dataset: bool = True,
-                       label_metaclusters_key: Optional[str] = "metacluster_sc") -> Optional[Figure]:
+                    groupby: Optional[Union[str, list[str]]],
+                    gate: str,
+                    scaling: Literal["MinMaxScaler", "RobustScaler"] = "MinMaxScaler",
+                    on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
+                    cmap: str = "inferno",
+                    return_fig: bool = False,
+                    return_dataframe: bool = False,
+                    metaclusters: Optional[int] = None,
+                    label_metaclusters_in_dataset: bool = True,
+                    label_metaclusters_key: Optional[str] = "metacluster_sc") -> Optional[Figure]:
     
     try:
         data = adata.uns[on]
@@ -77,26 +77,24 @@ def sample_distance(adata: AnnData,
                 adata.uns["metadata"].dataframe[label_metaclusters_key] = adata.uns["metadata"].dataframe["metacluster"]
                 adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
 
-
-    #fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (5,5))
     annotation_cmaps = ["Set1", "Set2", "tab10", "hls", "Paired"]
     clustermap = sns.clustermap(
-        data=distance_data,
-        row_colors=[
+        data = distance_data,
+        row_colors = [
             map_obs_to_cmap(data, group, annotation_cmaps[i])
             for i, group in enumerate(groupby)
         ],
-        col_colors=[
+        col_colors = [
             map_obs_to_cmap(data, group, annotation_cmaps[i])
             for i, group in enumerate(groupby)
         ],
-        cmap=cmap,
-        dendrogram_ratio=(0.1, 0.1),
-        annot_kws={"size": 4},
-        figsize=(5, 3.8),
-        cbar_kws={"label": "distance", "orientation": 'horizontal'},
-        yticklabels=False,
-        xticklabels=False,
+        cmap = cmap,
+        dendrogram_ratio = (0.1, 0.1),
+        annot_kws = {"size": 4},
+        figsize = (5, 3.8),
+        cbar_kws = {"label": "distance", "orientation": 'horizontal'},
+        yticklabels = False,
+        xticklabels = False,
     )
     clustermap.fig.subplots_adjust(right=0.7)
 
