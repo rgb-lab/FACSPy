@@ -368,9 +368,11 @@ def single_plot(adata: AnnData,
     if user_plot_params:
         plot_params = merge_plotting_parameters(plot_params, user_plot_params)
 
-    return sns.scatterplot(c = plot_data[find_gate_path_of_gate(adata, gate)].map({True: "red",
-                                                                                   False: "gray"}),
+    ax = sns.scatterplot(c = plot_data[find_gate_path_of_gate(adata, gate)].map({True: "red",
+                                                                                 False: "gray"}),
                            **plot_params)
+
+    return ax
 
 def merge_plotting_parameters(facspy_plot_params: dict,
                               user_plot_params: dict) -> dict:
