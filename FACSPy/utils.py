@@ -315,11 +315,12 @@ def ifelse(condition, true_val, false_val) -> Any:
 
 def convert_gate_to_obs(adata: AnnData,
                         gate: str,
+                        key_added: Optional[str] = None,
                         copy: bool = False) -> Optional[AnnData]:
     gate_path = find_gate_path_of_gate(adata, gate)
     gate_index = find_gate_indices(adata, gate_path)
     adata = adata.copy() if copy else adata
-    adata.obs[gate] = adata.obsm["gating"][:,gate_index].todense()
-    adata.obs[gate] = adata.obs[gate].map({True: gate, False: "other"})
-    adata.obs[gate] = adata.obs[gate].astype("category")
+    adata.obs[gate or key_added] = adata.obsm["gating"][:,gate_index].todense()
+    adata.obs[gate or key_added] = adata.obs[gate or key_added].map({True: gate, False: "other"})
+    adata.obs[gate or key_added] = adata.obs[gate or key_added].astype("category")
     return adata if copy else None
