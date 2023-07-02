@@ -252,16 +252,16 @@ class CofactorTable(BaseSupplement):
         ) 
     
     def get_cofactor(self,
-                     channel_name) -> float:
+                     channel_name: str) -> float:
         return self.dataframe.loc[self.dataframe["fcs_colname"] == channel_name, "cofactors"].iloc[0]
     
     def set_cofactor(self,
-                     channel_name,
-                     cofactor) -> None:
+                     channel_name: str,
+                     cofactor: Union[int, float]) -> None:
         self.dataframe.loc[self.dataframe["fcs_colname"] == channel_name, "cofactors"] = cofactor
 
     def set_columns(self,
-                    columns) -> None:
+                    columns: list[str]) -> None:
         self.dataframe["fcs_colname"] = columns
     
     def set_cofactors(self,
