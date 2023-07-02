@@ -148,8 +148,7 @@ def sample_correlation(adata: AnnData,
         cbar_kws = {"label": f"{corr_method} correlation",
                     "orientation": 'horizontal'},
         yticklabels = False,
-        xticklabels = False,
-        square = True)
+        xticklabels = False)
     clustermap.fig.subplots_adjust(right=0.7)
 
     clustermap.ax_cbar.set_position([0.16, 0, 0.53, 0.02])
