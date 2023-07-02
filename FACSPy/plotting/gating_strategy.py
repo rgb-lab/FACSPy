@@ -390,15 +390,16 @@ def draw_gates(adata: AnnData,
                     vertices[:,1],
                     **gate_line_params)
         elif gate_dict["gate_type"] == "GMLRectangleGate":
+            ### handles the case of quandrant gates
             if np.isnan(vertices).any():
                 if any(np.isnan(vertices[:,0])):
                     if all(np.isnan(vertices[:,0])):
                         ax.axvline(x = np.nan,
-                                **hvline_params)
+                                   **hvline_params)
                     else:
                         #TODO incredibly messy...
                         ax.axvline(x = int(vertices[0][~np.isnan(vertices[0])][0]),
-                                **hvline_params)
+                                   **hvline_params)
                 if any(np.isnan(vertices[:,1])):
                     if all(np.isnan(vertices[:,1])):
                         ax.axhline(y = np.nan,
@@ -408,6 +409,7 @@ def draw_gates(adata: AnnData,
                         ax.axhline(y = int(vertices[1][~np.isnan(vertices[1])][0]),
                             **hvline_params)              
                 continue
+            
             patch_starting_point = (vertices[0,0], vertices[1,0])
             height = abs(int(np.diff(vertices[1])))
             width = abs(int(np.diff(vertices[0])))
@@ -455,18 +457,24 @@ def calculate_range_extension_viewLim(point: float,
 def manage_axis_scale(adata: AnnData,
                       ax: Axes,
                       gate_lut: dict,
-                      gates: Union[str, list[str]]) -> Axes:
+                      gates: Union[str, list[str]],
+                      axis_kwargs: dict) -> Axes:
 
     x_channel, y_channel = extract_channels_for_gate(adata, gate_lut, gates)
-
-    if adata.var.loc[adata.var["pns"] == x_channel, "type"].iloc[0] == "fluo":
+    if x_channel in axis_kwargs:
+        if axis_kwargs[x_channel] == "log":
+            ax.set_xscale("symlog", linthresh = 1)
+    elif adata.var.loc[adata.var["pns"] == x_channel, "type"].iloc[0] == "fluo":
         try:
             cofactor = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == x_channel, "pnn"].iloc[0])
         except IndexError:
             cofactor = 5
         ax.set_xscale("symlog", linthresh = cofactor)
     
-    if adata.var.loc[adata.var["pns"] == y_channel, "type"].iloc[0] == "fluo":
+    if y_channel in axis_kwargs:
+        if axis_kwargs[y_channel] == "log":
+            ax.set_yscale("symlog", linthresh = 1)
+    elif adata.var.loc[adata.var["pns"] == y_channel, "type"].iloc[0] == "fluo":
         try:
             cofactor = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == y_channel, "pnn"].iloc[0])
         except IndexError:
@@ -482,7 +490,8 @@ def gating_strategy(adata: AnnData,
                     file_name: Optional[str] = None,
                     sample_size: Optional[int] = 5_000,
                     return_fig: bool = False,
-                    show: bool = True):
+                    show: bool = True,
+                    axis_kwargs: dict = {}):
 
     if sample_ID and not file_name:
         file_name = map_sample_ID_to_filename(adata, sample_ID)
@@ -536,7 +545,8 @@ def gating_strategy(adata: AnnData,
             ax[i] = manage_axis_scale(adata = adata,
                                       ax = ax[i],
                                       gate_lut = gate_lut,
-                                      gates = gate)
+                                      gates = gate,
+                                      axis_kwargs = axis_kwargs)
         else:
             ax[i] = single_plot(adata = adata,
                                 idx_map = gate_map,
@@ -554,7 +564,8 @@ def gating_strategy(adata: AnnData,
             ax[i] = manage_axis_scale(adata = adata,
                                       ax = ax[i],
                                       gate_lut = gate_lut,
-                                      gates = gate)
+                                      gates = gate,
+                                      axis_kwargs = axis_kwargs)
         ax[i].set_title(gate)
         # ax[i] = draw_gate_connections(adata = adata,
         #                               ax = ax[i])
