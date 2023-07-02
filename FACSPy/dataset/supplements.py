@@ -269,6 +269,8 @@ class CofactorTable(BaseSupplement):
                       cytof: bool = False) -> None:
         if cofactors is None and not cytof:
             raise ValueError("Please provide a list of cofactors or set the cytof flag to True")
-        self.dataframe["cofactors"] = cofactors if not cytof else 5       
+        if cytof and cofactors is not None:
+            print("... warning cytof flag has been set to True, cofactors will be 5 for each channel.")
+        self.dataframe["cofactors"] = 5 if cytof else cofactors       
         
 
