@@ -12,7 +12,7 @@ from matplotlib.figure import Figure
 from matplotlib.patches import ConnectionPatch
 import matplotlib.patches as patches
 
-from typing import Union, Optional
+from typing import Union, Optional, Literal
 
 
 from ..utils import (create_gate_lut,
@@ -366,24 +366,6 @@ def single_plot(adata: AnnData,
 
     return ax
 
-# def draw_gates(adata: AnnData,
-#                ax: Axes,
-#                gate_lut: dict,
-#                gates: Union[str, list[str]],
-#                ) -> Axes:
-#     if not isinstance(gates, list):
-#         gates = [gates]
-#     for gate in gates:
-#         vertices = fetch_vertices(gate_lut, gate)
-#         ax.plot(vertices[:,0],
-#                 vertices[:,1],
-#                 linestyle = "-",
-#                 markersize = 0,
-#                 linewidth = 1)
-        
-#     return ax
-
-
 def draw_gates(adata: AnnData,
                ax: Axes,
                gate_lut: dict,
@@ -426,21 +408,49 @@ def draw_gates(adata: AnnData,
                         ax.axhline(y = int(vertices[1][~np.isnan(vertices[1])][0]),
                             **hvline_params)              
                 continue
-            
+            patch_starting_point = (vertices[0,0], vertices[1,0])
+            height = abs(int(np.diff(vertices[1])))
+            width = abs(int(np.diff(vertices[0])))
             ax.add_patch(
                 patches.Rectangle(
-                    xy = (vertices[0,0], vertices[1,0]),
-                    width = abs(int(np.diff(vertices[0]))),
-                    height = abs(int(np.diff(vertices[1]))),
+                    xy = patch_starting_point,
+                    width = width,
+                    height = height,
                     facecolor = "none",
                     edgecolor = "black",
                     linestyle = "-",
                     linewidth = 1
                 )
             )
+            ax = adjust_viewlim(ax, patch_starting_point, height, width)
 
     return ax
-            
+
+def adjust_viewlim(ax: Axes,
+                   patch_starting_point: tuple[float, float],
+                   height: int,
+                   width: int) -> Axes:
+    current_viewlim = ax.viewLim
+    current_x_lims = current_viewlim._points[:,0]
+    current_y_lims = current_viewlim._points[:,1]
+    x0 = calculate_range_extension_viewLim(point = min(current_x_lims[0], patch_starting_point[0]),
+                                           point_loc = "min")
+    y0 = calculate_range_extension_viewLim(point = min(current_y_lims[0], patch_starting_point[1]),
+                                           point_loc = "min")
+    x1 = calculate_range_extension_viewLim(point = max(current_x_lims[1], patch_starting_point[0] + width),
+                                           point_loc = "max")
+    y1 = calculate_range_extension_viewLim(point = max(current_y_lims[1], patch_starting_point[1] + height),
+                                           point_loc = "max")
+    current_viewlim.set_points(np.array([[x0,y0],
+                                         [x1, y1]]))
+    return ax
+
+def calculate_range_extension_viewLim(point: float,
+                                      point_loc: Literal["min", "max"]) -> float:
+    if point_loc == "min":
+        return point * 1.1 if point < 0 else point * 0.9
+    if point_loc == "max":
+        return point * 0.9 if point < 0 else point * 1.1
 
 def manage_axis_scale(adata: AnnData,
                       ax: Axes,
