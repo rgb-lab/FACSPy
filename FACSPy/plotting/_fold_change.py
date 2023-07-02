@@ -8,7 +8,7 @@ from matplotlib.axis import Axis
 from matplotlib.figure import Figure
 from matplotlib.patches import Patch
 
-from ..analysis._fold_change import calculate_fold_changes
+from ..tools._fold_change import calculate_fold_changes
 
 from typing import Literal
 
