@@ -260,3 +260,15 @@ class CofactorTable(BaseSupplement):
                      cofactor) -> None:
         self.dataframe.loc[self.dataframe["fcs_colname"] == channel_name, "cofactors"] = cofactor
 
+    def set_columns(self,
+                    columns) -> None:
+        self.dataframe["fcs_colname"] = columns
+    
+    def set_cofactors(self,
+                      cofactors: Optional[list[Union[str, int]]] = None,
+                      cytof: bool = False) -> None:
+        if cofactors is None and not cytof:
+            raise ValueError("Please provide a list of cofactors or set the cytof flag to True")
+        self.dataframe["cofactors"] = cofactors if not cytof else 5       
+        
+
