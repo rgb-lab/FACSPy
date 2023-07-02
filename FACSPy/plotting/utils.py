@@ -8,7 +8,7 @@ from anndata import AnnData
 
 from matplotlib.axis import Axis
 
-from typing import Optional, Literal, Union
+from typing import Literal
 
 from sklearn.preprocessing import MinMaxScaler, RobustScaler
 
@@ -36,7 +36,6 @@ def scale_data(dataframe: pd.DataFrame,
         return MinMaxScaler().fit_transform(dataframe)
     if scaling == "RobustScaler":
         return RobustScaler().fit_transform(dataframe)
-
 
 def map_obs_to_cmap(data: pd.DataFrame,
                     parameter_to_map: str,
