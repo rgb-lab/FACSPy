@@ -62,7 +62,6 @@ def sample_distance(adata: AnnData,
     distance_data = distance_matrix(data[fluo_columns].to_numpy(), data[fluo_columns].to_numpy())
 
     row_linkage = hierarchy.linkage(distance.pdist(distance_data), method='average')
-    col_linkage = hierarchy.linkage(distance.pdist(distance_data.T), method='average')
 
     if metaclusters is not None:
         metaclusters = calculate_metaclusters(row_linkage, n_clusters = metaclusters)
