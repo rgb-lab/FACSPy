@@ -43,7 +43,6 @@ def find_gate_indices(adata: AnnData,
         gate_columns = [gate_columns]
     return [adata.uns["gating_cols"].get_loc(gate) for gate in gate_columns]
 
-
 def find_parent_gate(gate: str) -> str:
     """returns the parent gate path"""
     """Example: gate = 'root/singlets/T_cells' -> 'root/singlets' """
