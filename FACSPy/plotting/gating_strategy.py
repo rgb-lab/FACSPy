@@ -295,7 +295,8 @@ def group_plot(adata: AnnData,
                group: str,
                sample_size: int,
                fig: Figure,
-               ax: Axes
+               ax: Axes,
+               user_plot_params: dict,
                ) -> Axes:
     
     group_index = group.split("-")[1]
@@ -310,8 +311,6 @@ def group_plot(adata: AnnData,
                                   x_channel,
                                   y_channel,
                                   sample_size)
-    #if gate_lut[reference_gate]["gate_type"] == "GMLRectangleGate":
-    #   quadrant_map = {gate: get_rectangle_quadrant(gate_lut, gate) for gate in gate_list}
 
     plot_params = {
         "x": x_channel,
@@ -321,7 +320,10 @@ def group_plot(adata: AnnData,
         "ax": ax,
         "rasterized": True
     }
-
+    
+    if user_plot_params:
+        plot_params = merge_plotting_parameters(plot_params, user_plot_params)
+    
     for i, gate in enumerate(gate_list):
         gate_specific_data = plot_data[plot_data[find_gate_path_of_gate(adata, gate)] == True]
         ax = sns.scatterplot(data = gate_specific_data,
@@ -338,7 +340,8 @@ def single_plot(adata: AnnData,
                 gate: str,
                 sample_size: int,
                 fig: Figure,
-                ax: Axes
+                ax: Axes,
+                user_plot_params: dict,
                 ) -> Axes:
     parent_gating_path = gate_lut[gate]["parent_path"]
     x_channel, y_channel = extract_channels_for_gate(adata, gate_lut, gate)
@@ -361,10 +364,20 @@ def single_plot(adata: AnnData,
         "ax": ax,
         "rasterized": True
     }
-    ax = sns.scatterplot(c = plot_data[find_gate_path_of_gate(adata, gate)].map({True: "red", False: "gray"}),
-                         **plot_params)
 
-    return ax
+    if user_plot_params:
+        plot_params = merge_plotting_parameters(plot_params, user_plot_params)
+
+    return sns.scatterplot(c = plot_data[find_gate_path_of_gate(adata, gate)].map({True: "red",
+                                                                                   False: "gray"}),
+                           **plot_params)
+
+def merge_plotting_parameters(facspy_plot_params: dict,
+                              user_plot_params: dict) -> dict:
+    """ merges plotting parameters. user defined parameters overwrite FACSPy ones """
+    for key in user_plot_params:
+        facspy_plot_params[key] = user_plot_params[key]
+    return facspy_plot_params
 
 def draw_gates(adata: AnnData,
                ax: Axes,
@@ -491,7 +504,8 @@ def gating_strategy(adata: AnnData,
                     sample_size: Optional[int] = 5_000,
                     return_fig: bool = False,
                     show: bool = True,
-                    axis_kwargs: dict = {}):
+                    axis_kwargs: dict = {},
+                    plot_kwargs: dict = {}):
 
     if sample_ID and not file_name:
         file_name = map_sample_ID_to_filename(adata, sample_ID)
@@ -532,7 +546,8 @@ def gating_strategy(adata: AnnData,
                                group = gate,
                                sample_size = sample_size,
                                fig = fig,
-                               ax = ax[i]
+                               ax = ax[i],
+                               user_plot_params = plot_kwargs
                                )
             group_index = gate.split("-")[1]
             gate_list = gate_group_map[group_index]
@@ -555,7 +570,8 @@ def gating_strategy(adata: AnnData,
                                 gate = gate,
                                 sample_size = sample_size,
                                 fig = fig,
-                                ax = ax[i]
+                                ax = ax[i],
+                                user_plot_params = plot_kwargs
                                 )
             ax[i] = draw_gates(adata = adata,
                                ax = ax[i],
