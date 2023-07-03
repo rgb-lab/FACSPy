@@ -37,6 +37,15 @@ class ChannelSubsetError(Exception):
         )
         super().__init__(self.message)
 
+class NotSupportedStatisticalTestError(Exception):
+    
+    def __init__(self,
+                 test: str,
+                 available_tests) -> None:
+        self.message = (
+            f"The test ({test}) you provided is not supported. Please choose one of {available_tests}"
+        )
+        super().__init__(self.message)
 
 class ExhaustedHierarchyError(Exception):
 
