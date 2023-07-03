@@ -135,6 +135,7 @@ def mfi_fop_baseplot(adata: AnnData,
                    else 3 if colorby is None else 4,
                    int(np.ceil(len(marker) / 4)) * 3 if overview
                    else 4 * len(marker))
+        
         fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
         
         if len(marker) > 1:
