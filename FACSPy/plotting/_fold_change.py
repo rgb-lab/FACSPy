@@ -10,17 +10,17 @@ from matplotlib.patches import Patch
 
 from ..tools._fold_change import calculate_fold_changes
 
-from typing import Literal
+from typing import Literal, Union
 
 from ..utils import ifelse
 
 def fold_change(adata: AnnData,
                 groupby: str,
-                group1: str,
-                group2: str,
+                group1: Union[str, list[Union[str, int]]],
+                group2: Union[str, list[Union[str, int]]],
                 gate: str,
                 stat: Literal["p", "p_adj"] = "p",
-                cmap: Literal["YlOrBr_r"] = "YlOrBr_r"
+                cmap: str = "Reds_r"
                 ):
     
     fold_changes = calculate_fold_changes(adata = adata,
