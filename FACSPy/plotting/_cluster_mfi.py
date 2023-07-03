@@ -7,7 +7,7 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from matplotlib.patches import Patch
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from typing import Literal, Optional, Union
 
@@ -27,6 +27,32 @@ from scipy.spatial import distance_matrix
 
 from ._frequency_plots import prep_dataframe_cluster_freq
 from ..exceptions.exceptions import AnalysisNotPerformedError
+
+def cluster_mfi(adata: AnnData,
+                marker: Union[str, list[str]],
+                groupby: Union[str, list[str]] = None,
+                on: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
+                colorby: Optional[str] = None,
+                order: list[str] = None,
+                gate: str = None,
+                overview: bool = False,
+                return_dataframe: bool = False) -> Optional[Figure]:
+
+    try:
+        data = adata.uns[on]
+        data = select_gate_from_multiindex_dataframe(data.T, find_gate_path_of_gate(adata, gate))
+        fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
+
+    except KeyError as e:
+        raise AnalysisNotPerformedError(on) from e
+
+    data.index = data.index.set_names(["cluster", "gate"])
+    raw_data = data.reset_index()
+
+    sns.barplot(data = raw_data,
+                x = "cluster",
+                y = marker)
+    plt.show()
 
 def cluster_heatmap(adata: AnnData,
                     groupby: Optional[Union[str, list[str]]],
@@ -57,13 +83,14 @@ def cluster_heatmap(adata: AnnData,
 
     data.index = data.index.set_names(["cluster", "gate"])
     raw_data = data.reset_index()
+    cluster_annot = raw_data["cluster"].astype("object").to_list()
 
-
-    #fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (5,5))
     annotation_cmaps = ["Set1", "Set2", "tab10", "hls", "Paired"]
     sample_IDs = raw_data["cluster"].to_list()
 
     raw_data = raw_data[fluo_columns].T
+    raw_data.columns = cluster_annot
+
 
     if cluster_method == "correlation":
         correlation_data = raw_data.corr(method = corr_method)
@@ -89,12 +116,7 @@ def cluster_heatmap(adata: AnnData,
     #             adata.uns["metadata"].dataframe[label_metaclusters_key] = adata.uns["metadata"].dataframe["metacluster"]
     #             adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
 
-    cluster_freqs = prep_dataframe_cluster_freq(
-        adata,
-        groupby = annotation_kwargs.get("groupby", "sample_ID"),
-        cluster_key = annotation_kwargs.get("cluster_key", "leiden"),
-        normalize = annotation_kwargs.get("normalize", True),
-    )
+
 
     # fig = plt.figure(figsize = figsize)
     # gs = GridSpec(3,3)
@@ -113,8 +135,16 @@ def cluster_heatmap(adata: AnnData,
         yticklabels = True,
         xticklabels = True
     )
+    
+    cluster_freqs = prep_dataframe_cluster_freq(
+        adata,
+        groupby = annotation_kwargs.get("groupby", "sample_ID"),
+        cluster_key = annotation_kwargs.get("cluster_key", "leiden"),
+        normalize = annotation_kwargs.get("normalize", True),
+    )
     indices = [t.get_text() for t in np.array(clustermap.ax_heatmap.get_xticklabels())]
-    cluster_freqs = cluster_freqs.iloc[indices]
+    cluster_freqs = cluster_freqs.loc[indices]
+    
     clustermap.fig.subplots_adjust(right=0.7)
 
     clustermap.ax_cbar.set_position([0.16, 0, 0.53, 0.02])
@@ -128,9 +158,9 @@ def cluster_heatmap(adata: AnnData,
     clustermap.ax_row_dendrogram.set_visible(False)
 
 
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
     divider = make_axes_locatable(clustermap.ax_heatmap)
-    ax3 = divider.append_axes("bottom", size = "15%", pad = 0.02)
+    ax3: Axes = divider.append_axes("bottom", size = "15%", pad = 0.02)
 
     cluster_freqs.plot(kind = "bar",
                        stacked = True,
@@ -140,6 +170,8 @@ def cluster_heatmap(adata: AnnData,
                        )
     ax3.legend(bbox_to_anchor = (1.01, 0.5), loc = "center left")
     ax3.set_ylabel("Frequency")
+    ax3.invert_yaxis()
+    ax3.set_yticklabels(ax3.get_yticklabels(), fontsize = y_label_fontsize)
 
 
     if return_fig:
