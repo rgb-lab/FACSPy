@@ -4,7 +4,7 @@ import numpy as np
 from typing import Union, Literal, Optional
 
 from matplotlib.figure import Figure
-from matplotlib.axis import Axis
+from matplotlib.axes import Axes
 
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -39,12 +39,14 @@ def fop(adata: AnnData,
     except KeyError as e:
         raise AnalysisNotPerformedError("fop") from e
     
+    full_gate_path = find_gate_path_of_gate(adata, gate)
+    gate_specific_mfis = fop_data.loc[fop_data["gate_path"] == full_gate_path, :]
+
     if return_dataframe:
-        full_gate_path = find_gate_path_of_gate(adata, gate)
-        return fop_data.loc[fop_data["gate_path"] == full_gate_path, :]
+        return gate_specific_mfis
     
     mfi_fop_baseplot(adata = adata,
-                     dataframe = fop_data,
+                     dataframe = gate_specific_mfis,
                      marker = marker,
                      groupby = groupby,
                      colorby = colorby,
@@ -67,13 +69,15 @@ def mfi(adata: AnnData,
         mfi_data = prep_uns_dataframe(adata, mfi_data)
     except KeyError as e:
         raise AnalysisNotPerformedError("mfi") from e
+    
+    full_gate_path = find_gate_path_of_gate(adata, gate)
+    gate_specific_mfis = mfi_data.loc[mfi_data["gate_path"] == full_gate_path, :]
 
     if return_dataframe:
-        full_gate_path = find_gate_path_of_gate(adata, gate)
-        return mfi_data.loc[mfi_data["gate_path"] == full_gate_path, :]
+        return gate_specific_mfis
     
     mfi_fop_baseplot(adata = adata,
-                     dataframe = mfi_data,
+                     dataframe = gate_specific_mfis,
                      marker = marker,
                      groupby = groupby,
                      colorby = colorby,
@@ -81,25 +85,6 @@ def mfi(adata: AnnData,
                      assay = "mfi",
                      overview = overview,
                      order = order)
-
-
-def add_statistic(ax: Axis,
-                  test: str,
-                  dataframe: pd.DataFrame,
-                  groupby: str,
-                  plot_params) -> Axis:
-    
-    pairs = create_comparisons(dataframe, groupby)
-    annotator = Annotator(ax,
-                          pairs,
-                          **plot_params,
-                          verbose = False)
-    annotator.configure(test = test, text_format = "star", loc = "inside")
-    annotator.apply_and_annotate()
-
-    return ax
-    
-    
 
 def mfi_fop_baseplot(adata: AnnData,
                      dataframe: pd.DataFrame,
@@ -125,9 +110,6 @@ def mfi_fop_baseplot(adata: AnnData,
     if not isinstance(groupby, list):
         groupby = [groupby]
 
-    full_gate_path = find_gate_path_of_gate(adata, gate)
-    gate_specific_mfis = dataframe.loc[dataframe["gate_path"] == full_gate_path, :]
-
     for grouping in groupby:
         ncols = 4 if overview else 1
         nrows = int(np.ceil(len(marker) / 4)) if overview else len(marker)
@@ -148,7 +130,7 @@ def mfi_fop_baseplot(adata: AnnData,
             plot_params = {
                 "x": "sample_ID" if grouping is None else grouping,
                 "y": _marker,
-                "data": gate_specific_mfis,
+                "data": dataframe,
                 "order": order,
                 "hue": colorby
             }
@@ -165,7 +147,7 @@ def mfi_fop_baseplot(adata: AnnData,
                 try:
                     ax[i] = add_statistic(ax = ax[i],
                                           test = "Kruskal",
-                                          dataframe = gate_specific_mfis,
+                                          dataframe = dataframe,
                                           groupby = "sample_ID" if grouping is None else grouping,
                                           plot_params = plot_params)
                 except ValueError as e:
@@ -186,7 +168,7 @@ def mfi_fop_baseplot(adata: AnnData,
                 try:
                     ax = add_statistic(ax = ax,
                                        test = "Kruskal",
-                                       dataframe = gate_specific_mfis,
+                                       dataframe = dataframe,
                                        groupby = "sample_ID" if grouping is None else grouping,
                                        plot_params = plot_params)
                 except ValueError as e:
@@ -203,17 +185,32 @@ def mfi_fop_baseplot(adata: AnnData,
         plt.tight_layout()
         plt.show()
 
-from matplotlib.axes import Axes
 def adjust_legend(ax: Axes) -> Axes:
     ax.legend(loc = "upper left",
               bbox_to_anchor = (1.05, 0.5))
     return ax
 
 
-def label_plot(ax: Axis,
+def add_statistic(ax: Axes,
+                  test: str,
+                  dataframe: pd.DataFrame,
+                  groupby: str,
+                  plot_params) -> Axes:
+    
+    pairs = create_comparisons(dataframe, groupby)
+    annotator = Annotator(ax,
+                          pairs,
+                          **plot_params,
+                          verbose = False)
+    annotator.configure(test = test, text_format = "star", loc = "inside")
+    annotator.apply_and_annotate()
+
+    return ax
+    
+def label_plot(ax: Axes,
                marker: str,
                grouping: str,
-               assay: Literal["mfi", "fop"]) -> Axis:
+               assay: Literal["mfi", "fop"]) -> Axes:
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
     ax.set_title(f"{marker} expression\nper {grouping}")
     ax.set_ylabel("expression" if assay == "mfi" else "fraction positive")
