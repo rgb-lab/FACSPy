@@ -34,8 +34,8 @@ def calculate_mfis(adata: AnnData,
     for identifier in adata.obs[groupby].unique():
         tmp = adata[adata.obs[groupby] == identifier, :]
         mfis[str(identifier)] = calculate_medians(adata = tmp,
-                                                 gates = gates,
-                                                 on = on)
+                                                  gates = gates,
+                                                  on = on)
     return mfis
 
 def mfi(adata: AnnData,
