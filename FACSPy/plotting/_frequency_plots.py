@@ -7,15 +7,10 @@ from matplotlib.figure import Figure
 from matplotlib.axis import Axis
 
 from matplotlib import pyplot as plt
-import seaborn as sns
-
-from ..utils import find_gate_path_of_gate
-
-from ..exceptions.exceptions import AnalysisNotPerformedError
-
-from .utils import create_boxplot, append_metadata, turn_off_missing_plots, prep_uns_dataframe
 
 from typing import Optional
+
+
 
 def prep_dataframe_cluster_freq(adata: AnnData,
                                 groupby: str,
@@ -25,7 +20,8 @@ def prep_dataframe_cluster_freq(adata: AnnData,
     dataframe = pd.DataFrame(dataframe.groupby(cluster_key).value_counts([groupby]),
                              columns = ["count"]).reset_index()
     if normalize:
-        group_sizes = dataframe.groupby(cluster_key).sum()
+        
+        group_sizes = dataframe.groupby(cluster_key).sum("count")
         dataframe = dataframe.groupby([cluster_key, groupby]).mean().div(group_sizes).reset_index()
     
     return dataframe.groupby([cluster_key, groupby], as_index = False)["count"].mean()\
@@ -42,7 +38,8 @@ def cluster_frequency(adata: AnnData,
                       order: Optional[list[str]] = None,
                       cluster_key: str = "leiden",
                       normalize: bool = True,
-                      return_dataframe: bool = False) -> Optional[Figure]:
+                      return_dataframe: bool = False,
+                      return_fig: bool = False) -> Optional[Figure]:
     
     dataframe = prep_dataframe_cluster_freq(adata, groupby, cluster_key, normalize)
     
@@ -60,5 +57,8 @@ def cluster_frequency(adata: AnnData,
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 0)
     ax.set_title(f"{cluster_key} cluster frequency\nper {groupby}")
     ax.set_ylabel("frequency [dec.]")
+
+    if return_fig:
+        return fig
     plt.tight_layout()
     plt.show()
