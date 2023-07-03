@@ -31,7 +31,7 @@ from scipy.cluster import hierarchy
 def sample_distance(adata: AnnData,
                     groupby: Optional[Union[str, list[str]]],
                     gate: str,
-                    scaling: Literal["MinMaxScaler", "RobustScaler"] = "MinMaxScaler",
+                    scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
                     on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                     cmap: str = "inferno",
@@ -46,7 +46,8 @@ def sample_distance(adata: AnnData,
         data = prep_uns_dataframe(adata, data)
         data = select_gate_from_singleindex_dataframe(data, find_gate_path_of_gate(adata, gate))
         fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
-        data[fluo_columns] = scale_data(data[fluo_columns], scaling)
+        if scaling is not None:
+            data[fluo_columns] = scale_data(data[fluo_columns], scaling)
 
     except KeyError as e:
         raise AnalysisNotPerformedError(on) from e
