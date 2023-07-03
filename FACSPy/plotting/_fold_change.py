@@ -20,14 +20,16 @@ def fold_change(adata: AnnData,
                 group2: Union[str, list[Union[str, int]]],
                 gate: str,
                 stat: Literal["p", "p_adj"] = "p",
-                cmap: str = "Reds_r"
+                cmap: str = "Reds_r",
+                test: str = "Kruskal"
                 ):
     
     fold_changes = calculate_fold_changes(adata = adata,
                                           groupby = groupby,
                                           group1 = group1,
                                           group2 = group2,
-                                          gate = gate)
+                                          gate = gate,
+                                          test = test)
     
     fold_changes = fold_changes.sort_values("asinh_fc", ascending = False)
     fold_changes = fold_changes.reset_index()
