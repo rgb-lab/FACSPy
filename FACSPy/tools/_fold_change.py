@@ -20,8 +20,8 @@ def calculate_asinh_fold_change(data: pd.DataFrame,
                                 fluo_columns: list[str]) -> pd.DataFrame:
     grouped = data.groupby(groupby).mean(fluo_columns)
     grouped = grouped.loc[group1 + group2, fluo_columns]
-    grouped.loc["group1",:] = np.mean(grouped.loc[group1,:])
-    grouped.loc["group2",:] = np.mean(grouped.loc[group2,:])
+    grouped.loc["group1",:] = np.mean(grouped.loc[group1,:], axis = 0)
+    grouped.loc["group2",:] = np.mean(grouped.loc[group2,:], axis = 0)
     grouped = grouped.drop(group1 + group2, axis = 0)
     grouped.loc["asinh_fc", :] = np.arcsinh([grouped.loc["group2",:]]) - np.arcsinh([grouped.loc["group1",:]])
     return grouped.T
