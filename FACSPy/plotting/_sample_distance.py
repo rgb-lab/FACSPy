@@ -8,8 +8,6 @@ from matplotlib.axis import Axis
 from matplotlib.figure import Figure
 from matplotlib.patches import Patch
 
-from scipy.spatial import distance_matrix
-
 from typing import Literal, Union, Optional
 from .utils import (prep_uns_dataframe,
                     turn_off_missing_plots,
@@ -26,6 +24,7 @@ from ..exceptions.exceptions import AnalysisNotPerformedError
 
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
+from scipy.spatial import distance_matrix
 
 
 def sample_distance(adata: AnnData,
@@ -89,6 +88,8 @@ def sample_distance(adata: AnnData,
             map_obs_to_cmap(data, group, annotation_cmaps[i])
             for i, group in enumerate(groupby)
         ],
+        row_linkage = row_linkage,
+        col_linkage = row_linkage,
         cmap = cmap,
         dendrogram_ratio = (0.1, 0.1),
         annot_kws = {"size": 4},
