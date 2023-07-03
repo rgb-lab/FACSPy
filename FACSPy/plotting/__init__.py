@@ -9,3 +9,5 @@ from ._samplewise_dr import pca_samplewise, mds_samplewise
 from .cofactor_plots import cofactor_distribution, transformation_plot
 from .gating_strategy import gating_strategy
 from .qc import cell_counts, gate_frequency
+from ._expression_heatmap import expression_heatmap
+from ._cluster_mfi import cluster_heatmap
