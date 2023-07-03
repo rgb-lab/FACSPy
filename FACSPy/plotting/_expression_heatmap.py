@@ -54,6 +54,7 @@ def expression_heatmap(adata: AnnData,
         fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
         if scaling is not None:
             data[fluo_columns] = scale_data(data[fluo_columns], scaling)
+    
     except KeyError as e:
         raise AnalysisNotPerformedError(on) from e
 
