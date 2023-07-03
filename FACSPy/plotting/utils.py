@@ -6,13 +6,18 @@ import seaborn as sns
 
 from anndata import AnnData
 
-from matplotlib.axis import Axis
-
 from typing import Literal
 
 from sklearn.preprocessing import MinMaxScaler, RobustScaler
 
 from scipy.cluster.hierarchy import cut_tree
+
+def remove_unused_categories(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """ handles the case where categorical variables are still there that are not present anymore """
+    categorical_columns = [col for col in dataframe.columns if dataframe[col].dtype == "category"]
+    for col in categorical_columns:
+        dataframe[col] = dataframe[col].cat.remove_unused_categories()
+    return dataframe
 
 def prep_uns_dataframe(adata: AnnData,
                        data: pd.DataFrame) -> pd.DataFrame:
@@ -85,11 +90,11 @@ def merge_metaclusters_into_dataframe(data, metacluster_mapping) -> pd.DataFrame
 def append_metadata(adata: AnnData,
                     dataframe_to_merge: pd.DataFrame) -> pd.DataFrame:
     metadata = adata.uns["metadata"].to_df()
-    return pd.merge(dataframe_to_merge, metadata, on = "sample_ID")
+    return remove_unused_categories(pd.merge(dataframe_to_merge, metadata, on = "sample_ID"))
 
-def create_boxplot(ax: Axis,
+def create_boxplot(ax: Axes,
                    grouping: str,
-                   plot_params: dict) -> Axis:
+                   plot_params: dict) -> Axes:
     
     if grouping is None or grouping == "sample_ID":
         sns.barplot(**plot_params,
@@ -97,10 +102,11 @@ def create_boxplot(ax: Axis,
     
     else:
         sns.stripplot(**plot_params,
-                      dodge = True,
+                      dodge = False,
                       jitter = True,
                       linewidth = 1,
                       ax = ax)
+        plot_params["hue"] = None
         sns.boxplot(**plot_params,
                     boxprops = dict(facecolor = "white"),
                     whis = (0,100),
