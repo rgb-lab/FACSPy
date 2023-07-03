@@ -6,18 +6,22 @@ from anndata import AnnData
 from typing import Union, Optional, Literal
 from ..utils import find_gate_path_of_gate, create_comparisons
 
-from ..exceptions.exceptions import AnalysisNotPerformedError
+from ..exceptions.exceptions import AnalysisNotPerformedError, NotSupportedStatisticalTestError
 
 from ..plotting.utils import (prep_uns_dataframe,
                               select_gate_from_singleindex_dataframe)
 
-from scipy.stats import kruskal
+from scipy.stats import kruskal, wilcoxon
 
 def calculate_asinh_fold_change(data: pd.DataFrame,
                                 groupby: str,
                                 group1: list[Union[str, int]],
                                 group2: list[Union[str, int]],
                                 fluo_columns: list[str]) -> pd.DataFrame:
+    """ 
+    calculates the asinh fold change by getting subtracting the arcsinh MFIs
+    If multiple groups have been defined, the mean of both is used for calculation
+    """
     grouped = data.groupby(groupby).mean(fluo_columns)
     grouped = grouped.loc[group1 + group2, fluo_columns]
     grouped.loc["group1",:] = np.mean(grouped.loc[group1,:], axis = 0)
@@ -33,20 +37,33 @@ def calculate_p_values(data: pd.DataFrame,
                        fluo_columns: list[str],
                        n_comparisons: int,
                        test: str) -> pd.DataFrame:
-    
+    """ 
+    calculates the asinh fold change by getting subtracting the arcsinh MFIs
+    If multiple groups have been defined, both values are used for the p_value calculation
+    """  
     p_frame = pd.DataFrame(index = fluo_columns,
                            columns = ["p", "p_adj"])
     
     for marker in fluo_columns:
-        group_1 = data.loc[data[groupby].isin(group1), marker]
-        group_2 = data.loc[data[groupby].isin(group2), marker]
-        p_value = kruskal(group_1, group_2).pvalue
+        group_1 = data.loc[data[groupby].isin(group1), marker].to_numpy()
+        group_2 = data.loc[data[groupby].isin(group2), marker].to_numpy()
+        p_value = calculate_pvalue(group_1,
+                                   group_2,
+                                   test)
         p_frame.loc[marker, "p"] = p_value
         p_frame.loc[marker, "p_adj"] = p_value * n_comparisons
 
     return p_frame
 
-
+def calculate_pvalue(group1: np.ndarray,
+                     group2: np.ndarray,
+                     test: str) -> float:
+    if test == "Kruskal":
+        return kruskal(group1, group2).pvalue
+    if test == "Wilcoxon":
+        return wilcoxon(group1, group2).pvalue
+    available_tests = ["Kruskal", "Wilcoxon"]
+    raise NotSupportedStatisticalTestError(test, available_tests)
 
 def calculate_fold_changes(adata: AnnData,
                            groupby: str,
