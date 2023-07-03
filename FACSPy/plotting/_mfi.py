@@ -1,7 +1,7 @@
 from anndata import AnnData
 import pandas as pd
 import numpy as np
-from typing import Union, Literal
+from typing import Union, Literal, Optional
 
 from matplotlib.figure import Figure
 from matplotlib.axis import Axis
@@ -9,21 +9,29 @@ from matplotlib.axis import Axis
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from ..utils import find_gate_path_of_gate, create_comparisons
+
+from statannotations.Annotator import Annotator
+
+from ..utils import (find_gate_path_of_gate,
+                     create_comparisons)
 
 from ..exceptions.exceptions import AnalysisNotPerformedError
 
-from .utils import create_boxplot, append_metadata, turn_off_missing_plots, prep_uns_dataframe
+from .utils import (create_boxplot,
+                    turn_off_missing_plots,
+                    prep_uns_dataframe)
 ### mfi plot
 
 
 
 def fop(adata: AnnData,
-        color: Union[str, list[str]],
-        groupby: Union[str, list[str]],
+        marker: Union[str, list[str]],
+        groupby: Union[str, list[str]] = None,
+        colorby: Optional[str] = None,
         order: list[str] = None,
         gate: str = None,
-        overview: bool = False):
+        overview: bool = False,
+        return_dataframe: bool = False):
     
     try:
         fop_data = adata.uns["fop"]
@@ -31,21 +39,28 @@ def fop(adata: AnnData,
     except KeyError as e:
         raise AnalysisNotPerformedError("fop") from e
     
+    if return_dataframe:
+        full_gate_path = find_gate_path_of_gate(adata, gate)
+        return fop_data.loc[fop_data["gate_path"] == full_gate_path, :]
+    
     mfi_fop_baseplot(adata = adata,
                      dataframe = fop_data,
-                     color = color,
+                     marker = marker,
                      groupby = groupby,
+                     colorby = colorby,
                      gate = gate,
                      assay = "fop",
                      overview = overview,
                      order = order)
 
 def mfi(adata: AnnData,
-        color: Union[str, list[str]],
+        marker: Union[str, list[str]],
+        colorby: Optional[str] = None,
         order: list[str] = None,
         groupby: Union[str, list[str]] = None,
         gate: str = None,
-        overview: bool = False):
+        overview: bool = False,
+        return_dataframe: bool = False):
 
     try:
         mfi_data = adata.uns["mfi"]
@@ -53,19 +68,21 @@ def mfi(adata: AnnData,
     except KeyError as e:
         raise AnalysisNotPerformedError("mfi") from e
 
+    if return_dataframe:
+        full_gate_path = find_gate_path_of_gate(adata, gate)
+        return mfi_data.loc[mfi_data["gate_path"] == full_gate_path, :]
+    
     mfi_fop_baseplot(adata = adata,
                      dataframe = mfi_data,
-                     color = color,
+                     marker = marker,
                      groupby = groupby,
+                     colorby = colorby,
                      gate = gate,
                      assay = "mfi",
                      overview = overview,
                      order = order)
 
 
-
-
-from statannotations.Annotator import Annotator
 def add_statistic(ax: Axis,
                   test: str,
                   dataframe: pd.DataFrame,
@@ -73,7 +90,6 @@ def add_statistic(ax: Axis,
                   plot_params) -> Axis:
     
     pairs = create_comparisons(dataframe, groupby)
-
     annotator = Annotator(ax,
                           pairs,
                           **plot_params,
@@ -87,8 +103,9 @@ def add_statistic(ax: Axis,
 
 def mfi_fop_baseplot(adata: AnnData,
                      dataframe: pd.DataFrame,
-                     color: Union[str, list[str]],
+                     marker: Union[str, list[str]],
                      groupby: Union[str, list[str]],
+                     colorby: str,
                      assay: Literal["mfi", "fop"],
                      order: list[str] = None,
                      gate: str = None,
@@ -96,13 +113,15 @@ def mfi_fop_baseplot(adata: AnnData,
     
     if gate is None:
         raise TypeError("A Gate has to be provided")
+    
     if overview:
-        if color:
-            print("warning... color argument is ignored when using overview")
-        color = adata.var_names.to_list()
+        if marker:
+            print("warning... marker argument is ignored when using overview")
+        marker = adata.var_names.to_list()
 
-    if not isinstance(color, list):
-        color = [color]
+    if not isinstance(marker, list):
+        marker = [marker]
+
     if not isinstance(groupby, list):
         groupby = [groupby]
 
@@ -111,30 +130,37 @@ def mfi_fop_baseplot(adata: AnnData,
 
     for grouping in groupby:
         ncols = 4 if overview else 1
-        nrows = int(np.ceil(len(color) / 4)) if overview else len(color)
+        nrows = int(np.ceil(len(marker) / 4)) if overview else len(marker)
         figsize = (12 if overview
-                   else 3,
-                   int(np.ceil(len(color) / 4)) * 3 if overview
-                   else 5* len(color))
+                   else 3 if colorby is None else 4,
+                   int(np.ceil(len(marker) / 4)) * 3 if overview
+                   else 4 * len(marker))
         fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
-        if len(color) > 1:
+        
+        if len(marker) > 1:
             ax = ax.flatten()
-        for i, marker in enumerate(color):
-            print(f"plotting statistics for {marker}")
+        
+        for i, _marker in enumerate(marker):
+            print(f"plotting statistics for {_marker}")
+            if grouping is None:
+                print("... warning: You are computing statistics for each sample... this takes a while")
             plot_params = {
                 "x": "sample_ID" if grouping is None else grouping,
-                "y": marker,
+                "y": _marker,
                 "data": gate_specific_mfis,
-                "order": order
+                "order": order,
+                "hue": colorby
             }
-            if len(color)>1:
+            if len(marker)>1:
                 ax[i] = create_boxplot(ax = ax[i],
-                                    grouping = grouping,
-                                    plot_params = plot_params)
+                                       grouping = grouping,
+                                       plot_params = plot_params)
                 ax[i] = label_plot(ax = ax[i],
-                                   marker = marker,
+                                   marker = _marker,
                                    grouping = grouping,
                                    assay = assay)
+                if colorby is not None:
+                    ax[i] = adjust_legend(ax[i])
                 try:
                     ax[i] = add_statistic(ax = ax[i],
                                           test = "Kruskal",
@@ -151,9 +177,11 @@ def mfi_fop_baseplot(adata: AnnData,
                                     grouping = grouping,
                                     plot_params = plot_params)
                 ax = label_plot(ax = ax,
-                                marker = marker,
+                                marker = _marker,
                                 grouping = grouping,
                                 assay = assay)
+                if colorby is not None:
+                    ax = adjust_legend(ax)
                 try:
                     ax = add_statistic(ax = ax,
                                        test = "Kruskal",
@@ -165,13 +193,20 @@ def mfi_fop_baseplot(adata: AnnData,
                         raise ValueError from e
                     else:
                         print("warning... Values were uniform, no statistics to plot.")
-        if len(color) > 1:
+
+                
+        if len(marker) > 1:
             ax = turn_off_missing_plots(ax)
         ax = np.reshape(ax, (ncols, nrows))
 
         plt.tight_layout()
         plt.show()
 
+from matplotlib.axes import Axes
+def adjust_legend(ax: Axes) -> Axes:
+    ax.legend(loc = "upper left",
+              bbox_to_anchor = (1.05, 0.5))
+    return ax
 
 
 def label_plot(ax: Axis,
