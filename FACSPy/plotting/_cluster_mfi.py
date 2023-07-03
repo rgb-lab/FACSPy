@@ -37,6 +37,7 @@ def cluster_heatmap(adata: AnnData,
                     cluster_method: Literal["correlation", "distance"] = "distance",
                     cmap: str = "inferno",
                     return_fig: bool = False,
+                    annotation_kwargs: dict = {},
                     metaclusters: Optional[int] = None,
                     label_metaclusters_in_dataset: bool = True,
                     label_metaclusters_key: Optional[str] = "metacluster_sc",
@@ -50,7 +51,7 @@ def cluster_heatmap(adata: AnnData,
         fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
         if scaling is not None:
             data[fluo_columns] = scale_data(data[fluo_columns], scaling)
-    
+
     except KeyError as e:
         raise AnalysisNotPerformedError(on) from e
 
@@ -68,7 +69,7 @@ def cluster_heatmap(adata: AnnData,
         correlation_data = raw_data.corr(method = corr_method)
         col_linkage = hierarchy.linkage(distance.pdist(correlation_data.to_numpy()), method='average')
         row_linkage = hierarchy.linkage(distance.pdist(correlation_data.to_numpy().T), method='average')
-    
+
     elif cluster_method == "distance":
         distance_data = distance_matrix(data[fluo_columns].to_numpy(), data[fluo_columns].to_numpy())
         row_linkage = hierarchy.linkage(distance.pdist(distance_data), method='average')
@@ -88,9 +89,12 @@ def cluster_heatmap(adata: AnnData,
     #             adata.uns["metadata"].dataframe[label_metaclusters_key] = adata.uns["metadata"].dataframe["metacluster"]
     #             adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
 
-    cluster_freqs = prep_dataframe_cluster_freq(adata, groupby = groupby, cluster_key = "leiden", normalize = True)
-
-    from matplotlib.gridspec import GridSpec
+    cluster_freqs = prep_dataframe_cluster_freq(
+        adata,
+        groupby = annotation_kwargs.get("groupby", "sample_ID"),
+        cluster_key = annotation_kwargs.get("cluster_key", "leiden"),
+        normalize = annotation_kwargs.get("normalize", True),
+    )
 
     # fig = plt.figure(figsize = figsize)
     # gs = GridSpec(3,3)
@@ -122,30 +126,24 @@ def cluster_heatmap(adata: AnnData,
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)
     ax.set_ylabel("")
     clustermap.ax_row_dendrogram.set_visible(False)
-    
-    
+
+
     from mpl_toolkits.axes_grid1 import make_axes_locatable
     divider = make_axes_locatable(clustermap.ax_heatmap)
-    ax3 = divider.append_axes("bottom", size = "30%", pad = 0.02)
+    ax3 = divider.append_axes("bottom", size = "15%", pad = 0.02)
 
     cluster_freqs.plot(kind = "bar",
-                                   stacked = True,
-                                   legend = True,
-                                   ax = ax3,
-                                   subplots = False,
-                                   )
+                       stacked = True,
+                       legend = True,
+                       ax = ax3,
+                       subplots = False,
+                       )
     ax3.legend(bbox_to_anchor = (1.01, 0.5), loc = "center left")
     ax3.set_ylabel("Frequency")
 
 
     if return_fig:
         return clustermap
-    plt.show()
-
-
-    #print(type(freq_plot))
-    print("everything is fine...")
-    
     plt.show()
 
 
