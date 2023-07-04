@@ -25,11 +25,14 @@ from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from scipy.spatial import distance_matrix
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from ..exceptions.exceptions import AnalysisNotPerformedError
 
 def expression_heatmap(adata: AnnData,
                        groupby: Optional[Union[str, list[str]]],
                        gate: str,
+                       annotate: Optional[str] = None,
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
                        on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
@@ -51,6 +54,7 @@ def expression_heatmap(adata: AnnData,
             data = adata.uns[on]
             data = prep_uns_dataframe(adata, data)
             data = select_gate_from_singleindex_dataframe(data, find_gate_path_of_gate(adata, gate))
+            annot_data = data.copy()
         fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
         if scaling is not None:
             data[fluo_columns] = scale_data(data[fluo_columns], scaling)
@@ -65,8 +69,9 @@ def expression_heatmap(adata: AnnData,
     #fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (5,5))
     annotation_cmaps = ["Set1", "Set2", "tab10", "hls", "Paired"]
     sample_IDs = data["sample_ID"].to_list()
-
+    sample_annot = data["sample_ID"].astype("object").to_list()
     raw_data = data[fluo_columns].T
+    raw_data.columns = sample_annot
 
     if cluster_method == "correlation":
         correlation_data = raw_data.corr(method = corr_method)
@@ -92,36 +97,37 @@ def expression_heatmap(adata: AnnData,
                 adata.uns["metadata"].dataframe[label_metaclusters_key] = adata.uns["metadata"].dataframe["metacluster"]
                 adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
 
-
     clustermap = sns.clustermap(
         data = raw_data,
         col_colors = [
-            map_obs_to_cmap(data, group, annotation_cmaps[i])
+            map_obs_to_cmap(data, group, annotation_cmaps[i], as_series = True)
             for i, group in enumerate(groupby)
         ],
         col_linkage = col_linkage,
-
         row_cluster = True,
         vmin = 0 if scaling is not None else None,
         vmax = 1 if scaling is not None else None,
         cmap = cmap,
         dendrogram_ratio = (0.1, 0.1),
-        annot_kws = {"size": 4},
+        #annot_kws = {"size": 4},
         figsize = figsize,
         cbar_kws = {"label": "scaled expression", "orientation": 'horizontal'},
         yticklabels = True,
-        xticklabels = False,
+        xticklabels = True,
     )
+    indices = [t.get_text() for t in np.array(clustermap.ax_heatmap.get_xticklabels())]
     clustermap.fig.subplots_adjust(right=0.7)
+    
 
-    clustermap.ax_cbar.set_position([0.16, 0, 0.53, 0.02])
+    clustermap.ax_cbar.set_position([0.10, 0, 0.60, 0.02])
     ax = clustermap.ax_heatmap
-    ax.set_xticklabels([])
+    ax.set_xticklabels("")
+    ax.set_xticks([])
     ax.yaxis.set_ticks_position("left")
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)
     clustermap.ax_row_dendrogram.set_visible(False)
 
-    next_legend = 0.8
+    next_legend = 0.65
     for i, group in enumerate(groupby):
         group_lut = map_obs_to_cmap(data, group, annotation_cmaps[i], return_mapping = True)
         handles = [Patch(facecolor = group_lut[name]) for name in group_lut]
@@ -135,6 +141,35 @@ def expression_heatmap(adata: AnnData,
                                   )
         next_legend -= legend_space
         clustermap.fig.add_artist(group_legend)
+
+
+    if annotate is not None:
+        if annotate in adata.var_names:
+            annot_data["sample_ID"] = annot_data["sample_ID"].astype("object")
+            annot_data = annot_data.set_index("sample_ID")
+            annot_data.index = [str(idx) for idx in annot_data.index.to_list()]
+            annot_frame = annot_data[annotate]
+
+        annot_frame = annot_frame.loc[indices]
+        divider = make_axes_locatable(clustermap.ax_heatmap)
+        ax3: Axes = divider.append_axes("top", size = "20%", pad = 0.05)
+
+        annot_frame.plot(kind = "bar",
+                         stacked = annotate == "frequency",
+                         legend = True,
+                         ax = ax3,
+                         subplots = False,
+                         )
+        ax3.legend(bbox_to_anchor = (1.01, 0.5), loc = "center left")
+        ax3.set_ylabel(on)
+        #ax3.invert_yaxis()
+        ax3.set_yticklabels(ax3.get_yticklabels(), fontsize = y_label_fontsize)
+        ax3.set_xticklabels([])
+        ax3.set_xticks([])
+        ax3.set_ylim(ax3.get_ylim()[0], ax3.get_ylim()[1] * 1.4)
+        ax3.set_xlabel("")
+
+
     if return_fig:
         return clustermap
     plt.show()
