@@ -4,8 +4,6 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from matplotlib.axis import Axis
-from matplotlib.figure import Figure
 from matplotlib.patches import Patch
 
 from ..tools._fold_change import calculate_fold_changes
