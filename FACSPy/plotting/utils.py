@@ -1,4 +1,7 @@
 from matplotlib.axes import Axes
+from matplotlib.patches import Patch
+from matplotlib import pyplot as plt
+from matplotlib.transforms import Bbox
 import numpy as np
 import pandas as pd
 
@@ -6,11 +9,79 @@ import seaborn as sns
 
 from anndata import AnnData
 
-from typing import Literal
+from typing import Literal, Union, Optional
 
 from sklearn.preprocessing import MinMaxScaler, RobustScaler
 
 from scipy.cluster.hierarchy import cut_tree
+import scipy
+from scipy.spatial import distance
+from scipy.cluster import hierarchy
+from scipy.spatial import distance_matrix
+
+ANNOTATION_CMAPS = ["Set1", "Set2", "tab10", "hls", "Paired"]
+
+def remove_ticks(ax: Axes,
+                 which: Literal["x", "y", "both"]) -> None:
+    if which == "x":
+        ax.set_xticks([])
+    if which == "y":
+        ax.set_yticks([])
+    if which == "both":
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+def remove_ticklabels(ax: Axes,
+                      which: Literal["x", "y", "both"]) -> None:
+    if which == "x":
+        ax.set_xticklabels([])
+    if which == "y":
+        ax.set_yticklabels([])
+    if which == "both":
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+
+
+def label_metaclusters_in_dataset(adata: AnnData,
+                                  data: pd.DataFrame,
+                                  label_metaclusters_key: Optional[str] = None) -> None:
+    if "metacluster" in adata.uns["metadata"].dataframe:
+        print("warninig... overwriting metaclusters")
+        adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
+    adata.uns["metadata"].dataframe = pd.merge(adata.uns["metadata"].dataframe,
+                                                data[["sample_ID", "metacluster"]],
+                                                on = "sample_ID")
+    if label_metaclusters_key is not None:
+        adata.uns["metadata"].dataframe[label_metaclusters_key] = adata.uns["metadata"].dataframe["metacluster"]
+        adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
+
+def add_metaclusters(adata: AnnData,
+                           row_linkage: np.ndarray,
+                           n_clusters: int,
+                           sample_IDs: Union[pd.Index, pd.Series, list[int], list[str]],
+                           label_metaclusters: bool,
+                           label_metaclusters_key: str
+                           ):
+    metaclusters = calculate_metaclusters(row_linkage, n_clusters = n_clusters)
+    metacluster_mapping = map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
+    data = merge_metaclusters_into_dataframe(data, metacluster_mapping)
+    
+    if label_metaclusters:
+        label_metaclusters_in_dataset(adata = adata,
+                                      data = data,
+                                      label_metaclusters_key = label_metaclusters_key)
+    
+    return data
+
+
+def calculate_linkage(dataframe: pd.DataFrame) -> np.ndarray:
+    """calculates the linkage"""
+    return hierarchy.linkage(distance.pdist(dataframe), method='average')
+
+def calculate_sample_distance(dataframe: pd.DataFrame) -> np.ndarray:
+    """ returns sample distance matrix of given dataframe"""
+    return distance_matrix(dataframe.to_numpy(),
+                           dataframe.to_numpy())
 
 def remove_unused_categories(dataframe: pd.DataFrame) -> pd.DataFrame:
     """ handles the case where categorical variables are still there that are not present anymore """
@@ -41,16 +112,54 @@ def scale_data(dataframe: pd.DataFrame,
         return MinMaxScaler().fit_transform(dataframe)
     if scaling == "RobustScaler":
         return RobustScaler().fit_transform(dataframe)
+    return
+
+def calculate_correlation_data(data: pd.DataFrame,
+                               corr_method: Literal["pearson", "spearman", "kendall"]) -> pd.DataFrame:
+    return data.corr(method = corr_method)
+
+def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
+                                         heatmap: Axes,
+                                         data: pd.DataFrame,
+                                         groupby: list[str]) -> None:
+    next_legend = 0
+    for i, group in enumerate(groupby):
+        group_lut = map_obs_to_cmap(data, group, ANNOTATION_CMAPS[i], return_mapping = True)
+        handles = [Patch(facecolor = group_lut[name]) for name in group_lut]
+        legend_space = 0.1 * (len(handles) + 1)
+        group_legend = heatmap.legend(handles,
+                                 group_lut,
+                                 title = group,
+                                 loc = "upper left",
+                                 bbox_to_anchor = (1.02, 1 - next_legend, 0, 0),
+                                 bbox_transform = heatmap.transAxes
+                                 )
+
+        next_legend += legend_space
+        clustermap.fig.add_artist(group_legend)
+
+def scale_cbar_to_heatmap(clustermap: sns.matrix.ClusterGrid,
+                          heatmap_position: Bbox,
+                          cbar_padding: Optional[float] = 0.7,
+                          cbar_height: Optional[float] = 0.02) -> None:
+    clustermap.ax_cbar.set_position([heatmap_position.x0,
+                                     heatmap_position.y0 * cbar_padding,
+                                     heatmap_position.x1 - heatmap_position.x0,
+                                     cbar_height])
+    return
 
 def map_obs_to_cmap(data: pd.DataFrame,
                     parameter_to_map: str,
                     cmap: str = "Set1",
-                    return_mapping: bool = False) -> dict[str, tuple[float, float, float]]:
+                    return_mapping: bool = False,
+                    as_series: bool = True) -> dict[str, tuple[float, float, float]]:
     obs = data[parameter_to_map].unique()
     cmap = sns.color_palette(cmap, len(obs))
     mapping = {obs_entry: cmap[i] for i, obs_entry in enumerate(obs)}
     if return_mapping:
         return mapping
+    if as_series:
+        return pd.Series(data[parameter_to_map].astype("object").map(mapping), name = parameter_to_map)
     return data[parameter_to_map].astype("object").map(mapping)
 
 def calculate_metaclusters(linkage: np.ndarray,
