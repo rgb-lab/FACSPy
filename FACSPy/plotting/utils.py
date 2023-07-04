@@ -56,12 +56,13 @@ def label_metaclusters_in_dataset(adata: AnnData,
         adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
 
 def add_metaclusters(adata: AnnData,
-                           row_linkage: np.ndarray,
-                           n_clusters: int,
-                           sample_IDs: Union[pd.Index, pd.Series, list[int], list[str]],
-                           label_metaclusters: bool,
-                           label_metaclusters_key: str
-                           ):
+                     data: pd.DataFrame,
+                     row_linkage: np.ndarray,
+                     n_clusters: int,
+                     sample_IDs: Union[pd.Index, pd.Series, list[int], list[str]],
+                     label_metaclusters: bool,
+                     label_metaclusters_key: str
+                     ):
     metaclusters = calculate_metaclusters(row_linkage, n_clusters = n_clusters)
     metacluster_mapping = map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
     data = merge_metaclusters_into_dataframe(data, metacluster_mapping)
