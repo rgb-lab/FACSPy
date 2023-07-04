@@ -10,13 +10,9 @@ from matplotlib.patches import Patch
 
 from typing import Literal, Union, Optional
 from .utils import (prep_uns_dataframe,
-                    turn_off_missing_plots,
                     scale_data,
                     select_gate_from_singleindex_dataframe,
                     map_obs_to_cmap,
-                    calculate_metaclusters,
-                    map_metaclusters_to_sample_ID,
-                    merge_metaclusters_into_dataframe,
                     calculate_sample_distance,
                     calculate_linkage,
                     add_metaclusters,
@@ -92,7 +88,7 @@ def sample_distance(adata: AnnData,
                                    row_linkage = row_linkage,
                                    col_linkage = row_linkage,
                                    cmap = cmap,
-                                    figsize = figsize
+                                   figsize = figsize
                                    )
     
     ax = clustermap.ax_heatmap
