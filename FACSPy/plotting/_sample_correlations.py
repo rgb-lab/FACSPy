@@ -118,6 +118,7 @@ def sample_correlation(adata: AnnData,
     if metaclusters is not None:
         groupby += ["metacluster"]
         data = add_metaclusters(adata = adata,
+                                data = data,
                                 row_linkage = row_linkage,
                                 n_clusters = metaclusters,
                                 sample_IDs = sample_IDs,
