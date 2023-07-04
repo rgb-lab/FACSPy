@@ -48,9 +48,9 @@ def mfi(adata: AnnData,
 
     if groupby == "sample_ID":
         mfis = calculate_mfis(adata,
-                            gates,
-                            on = "compensated",
-                            groupby = groupby)
+                              gates,
+                              on = "compensated",
+                              groupby = groupby)
         
 
         tmfis = calculate_mfis(adata,
