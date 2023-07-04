@@ -11,15 +11,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from typing import Literal, Optional, Union
 
-from ..utils import subset_gate, find_gate_path_of_gate
-from .utils import (prep_uns_dataframe,
-                    select_gate_from_multiindex_dataframe,
-                    select_gate_from_singleindex_dataframe,
-                    scale_data,
-                    map_obs_to_cmap,
-                    calculate_metaclusters,
-                    map_metaclusters_to_sample_ID,
-                    merge_metaclusters_into_dataframe
+from ..utils import find_gate_path_of_gate
+from .utils import (select_gate_from_multiindex_dataframe,
+                    scale_data
                     )
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
@@ -41,7 +35,6 @@ def cluster_mfi(adata: AnnData,
     try:
         data = adata.uns[on]
         data = select_gate_from_multiindex_dataframe(data.T, find_gate_path_of_gate(adata, gate))
-        fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
 
     except KeyError as e:
         raise AnalysisNotPerformedError(on) from e
