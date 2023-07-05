@@ -80,7 +80,7 @@ def sample_distance(adata: AnnData,
                                      data = plot_data,
                                      row_linkage = row_linkage,
                                      n_clusters = metaclusters,
-                                     sample_IDs = raw_data.index,
+                                     sample_IDs = plot_data["sample_ID"],
                                      label_metaclusters = label_metaclusters_in_dataset,
                                      label_metaclusters_key = label_metaclusters_key)
     
