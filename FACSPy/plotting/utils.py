@@ -1,6 +1,6 @@
 from matplotlib.axes import Axes
 from matplotlib.patches import Patch
-from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.transforms import Bbox
 import numpy as np
 import pandas as pd
@@ -54,6 +54,16 @@ def label_metaclusters_in_dataset(adata: AnnData,
     if label_metaclusters_key is not None:
         adata.uns["metadata"].dataframe[label_metaclusters_key] = adata.uns["metadata"].dataframe["metacluster"]
         adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
+
+def remove_dendrogram(clmap: sns.matrix.ClusterGrid,
+                      which: Literal["x", "y", "both"]) -> None:
+    if which == "x":
+        clmap.ax_col_dendrogram.set_visible(False)
+    if which == "y":
+        clmap.ax_row_dendrogram.set_visible(False)
+    if which == "both":
+        clmap.ax_col_dendrogram.set_visible(False)
+        clmap.ax_row_dendrogram.set_visible(False)
 
 def add_metaclusters(adata: AnnData,
                      data: pd.DataFrame,
@@ -119,6 +129,34 @@ def calculate_correlation_data(data: pd.DataFrame,
                                corr_method: Literal["pearson", "spearman", "kendall"]) -> pd.DataFrame:
     return data.corr(method = corr_method)
 
+def add_annotation_plot(adata: AnnData,
+                        annotate: str,
+                        annot_frame: pd.DataFrame,
+                        indices: list[Union[str, int]],
+                        clustermap: sns.matrix.ClusterGrid,
+                        y_label_fontsize: Optional[int],
+                        y_label: Optional[str]
+                        ) -> None:
+    
+    annot_frame = annot_frame.loc[indices]
+    divider = make_axes_locatable(clustermap.ax_heatmap)
+    ax: Axes = divider.append_axes("top", size = "20%", pad = 0.05)
+
+    annot_frame.plot(kind = "bar",
+                        stacked = annotate == "frequency",
+                        legend = True,
+                        ax = ax,
+                        subplots = False,
+                        )
+    ax.legend(bbox_to_anchor = (1.01, 0.5), loc = "center left")
+    ax.set_ylabel(y_label)
+    #ax3.invert_yaxis()
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)
+    remove_ticklabels(ax, which = "x")
+    remove_ticks(ax, which = "x")
+    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1] * 1.4)
+    ax.set_xlabel("")
+
 def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
                                          heatmap: Axes,
                                          data: pd.DataFrame,
@@ -142,11 +180,18 @@ def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
 def scale_cbar_to_heatmap(clustermap: sns.matrix.ClusterGrid,
                           heatmap_position: Bbox,
                           cbar_padding: Optional[float] = 0.7,
-                          cbar_height: Optional[float] = 0.02) -> None:
-    clustermap.ax_cbar.set_position([heatmap_position.x0,
-                                     heatmap_position.y0 * cbar_padding,
-                                     heatmap_position.x1 - heatmap_position.x0,
-                                     cbar_height])
+                          cbar_height: Optional[float] = 0.02,
+                          loc: Literal["bottom", "right"] = "bottom") -> None:
+    if loc == "bottom":
+        clustermap.ax_cbar.set_position([heatmap_position.x0,
+                                         heatmap_position.y0 * cbar_padding,
+                                         heatmap_position.x1 - heatmap_position.x0,
+                                         cbar_height])
+    if loc == "right":
+        clustermap.ax_cbar.set_position([heatmap_position.x1 * cbar_padding,
+                                         heatmap_position.y0,
+                                         cbar_height,
+                                         heatmap_position.x1 - heatmap_position.x0])
     return
 
 def map_obs_to_cmap(data: pd.DataFrame,
