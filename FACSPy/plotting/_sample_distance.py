@@ -89,7 +89,9 @@ def sample_distance(adata: AnnData,
                                    row_linkage = row_linkage,
                                    col_linkage = row_linkage,
                                    cmap = cmap,
-                                   figsize = figsize
+                                   figsize = figsize,
+                                   cbar_kws = {"label": "distance",
+                                               "orientation": 'horizontal'}
                                    )
     
     ax = clustermap.ax_heatmap
