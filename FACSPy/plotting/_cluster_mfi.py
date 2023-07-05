@@ -12,24 +12,17 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Literal, Optional, Union
 
 from ..utils import subset_gate, find_gate_path_of_gate
-from .utils import (prep_uns_dataframe,
-                    scale_data,
+from .utils import (scale_data,
                     select_gate_from_multiindex_dataframe,
-                    map_obs_to_cmap,
                     calculate_sample_distance,
                     calculate_linkage,
-                    add_metaclusters,
                     remove_ticklabels,
                     remove_ticks,
                     scale_cbar_to_heatmap,
-                    add_categorical_legend_to_clustermap,
                     calculate_correlation_data,
                     remove_dendrogram,
-                    add_annotation_plot,
-                    ANNOTATION_CMAPS)
-from scipy.spatial import distance
-from scipy.cluster import hierarchy
-from scipy.spatial import distance_matrix
+                    add_annotation_plot)
+
 
 from ._clustermap import create_clustermap
 from ._frequency_plots import prep_dataframe_cluster_freq
