@@ -48,7 +48,6 @@ def cluster_mfi(adata: AnnData,
     try:
         data = adata.uns[on]
         data = select_gate_from_multiindex_dataframe(data.T, find_gate_path_of_gate(adata, gate))
-        fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
 
     except KeyError as e:
         raise AnalysisNotPerformedError(on) from e
