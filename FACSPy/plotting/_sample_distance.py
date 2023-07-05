@@ -4,34 +4,42 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from matplotlib.axis import Axis
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from matplotlib.patches import Patch
 
 from typing import Literal, Union, Optional
-from .utils import (prep_uns_dataframe,
-                    scale_data,
-                    select_gate_from_singleindex_dataframe,
+from .utils import (scale_data,
                     map_obs_to_cmap,
                     calculate_sample_distance,
+                    append_metadata,
                     calculate_linkage,
                     add_metaclusters,
                     remove_ticklabels,
                     remove_ticks,
                     scale_cbar_to_heatmap,
                     add_categorical_legend_to_clustermap,
+                    get_dataframe,
                     ANNOTATION_CMAPS)
-
-from ..utils import find_gate_path_of_gate
-
-from ..exceptions.exceptions import AnalysisNotPerformedError
-
-from scipy.spatial import distance
-from scipy.cluster import hierarchy
-from scipy.spatial import distance_matrix
 
 from ._clustermap import create_clustermap
 
+
+def prepare_plot_data(adata: AnnData,
+                      raw_data: pd.DataFrame,
+                      scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]],
+                      copy: bool = False
+                      ) -> pd.DataFrame:
+    plot_data = raw_data.copy() if copy else raw_data
+    fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
+    if scaling is not None:
+        plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
+    sample_distances = calculate_sample_distance(plot_data[fluo_columns])
+    plot_data = pd.DataFrame(data = sample_distances,
+                             columns = raw_data.index.to_list(),
+                             index = raw_data.index)
+    plot_data = append_metadata(adata, plot_data)
+
+    return plot_data
 
 def sample_distance(adata: AnnData,
                     groupby: Optional[Union[str, list[str]]],
@@ -44,46 +52,45 @@ def sample_distance(adata: AnnData,
                     return_dataframe: bool = False,
                     metaclusters: Optional[int] = None,
                     label_metaclusters_in_dataset: bool = True,
-                    label_metaclusters_key: Optional[str] = "metacluster_sc") -> Optional[Figure]:
+                    label_metaclusters_key: Optional[str] = "sample_distance_metaclusters") -> Optional[Figure]:
     
-    try:
-        data = adata.uns[on]
-        data = prep_uns_dataframe(adata, data)
-        data = select_gate_from_singleindex_dataframe(data, find_gate_path_of_gate(adata, gate))
-        fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
-        if scaling is not None:
-            data[fluo_columns] = scale_data(data[fluo_columns], scaling)
-
-    except KeyError as e:
-        raise AnalysisNotPerformedError(on) from e
-    
-    if return_dataframe:
-        return data
+    """ plots sample distance metrics as a heatmap """
     
     if not isinstance(groupby, list):
-        groupby = [groupby]
-
-    sample_IDs = data["sample_ID"].to_list()
-    distance_data = calculate_sample_distance(data[fluo_columns])
-    row_linkage = calculate_linkage(distance_data)
+        groupby = [groupby] 
+    
+    raw_data = get_dataframe(adata = adata,
+                             gate = gate,
+                             table_identifier = on,
+                             column_identifier_name = "sample_ID")
+    
+    plot_data = prepare_plot_data(adata = adata,
+                                  raw_data = raw_data,
+                                  copy = False,
+                                  scaling = scaling)
+    
+    if return_dataframe:
+        return plot_data
+    
+    row_linkage = calculate_linkage(plot_data[plot_data["sample_ID"].to_list()])
 
     if metaclusters is not None:
         groupby += ["metacluster"]
-        data = add_metaclusters(adata = adata,
-                                data = data,
-                                row_linkage = row_linkage,
-                                n_clusters = metaclusters,
-                                sample_IDs = sample_IDs,
-                                label_metaclusters = label_metaclusters_in_dataset,
-                                label_metaclusters_key = label_metaclusters_key)
+        plot_data = add_metaclusters(adata = adata,
+                                     data = plot_data,
+                                     row_linkage = row_linkage,
+                                     n_clusters = metaclusters,
+                                     sample_IDs = raw_data.index,
+                                     label_metaclusters = label_metaclusters_in_dataset,
+                                     label_metaclusters_key = label_metaclusters_key)
     
-    clustermap = create_clustermap(data = distance_data,
+    clustermap = create_clustermap(data = plot_data[plot_data["sample_ID"]],
                                    row_colors = [
-                                       map_obs_to_cmap(data, group, ANNOTATION_CMAPS[i])
+                                       map_obs_to_cmap(plot_data, group, ANNOTATION_CMAPS[i])
                                        for i, group in enumerate(groupby)
                                    ],
                                    col_colors = [
-                                       map_obs_to_cmap(data, group, ANNOTATION_CMAPS[i])
+                                       map_obs_to_cmap(plot_data, group, ANNOTATION_CMAPS[i])
                                        for i, group in enumerate(groupby)
                                    ],
                                    row_linkage = row_linkage,
@@ -103,7 +110,7 @@ def sample_distance(adata: AnnData,
     remove_ticks(ax, which = "both")
     add_categorical_legend_to_clustermap(clustermap,
                                          heatmap = ax,
-                                         data = data,
+                                         data = plot_data,
                                          groupby = groupby)
     
     if return_fig:
