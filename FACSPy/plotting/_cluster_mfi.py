@@ -2,16 +2,12 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
 import numpy as np
-import pandas as pd
 
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from typing import Literal, Optional, Union
 
-from ..utils import subset_gate, find_gate_path_of_gate
+from ..utils import find_gate_path_of_gate
 from .utils import (scale_data,
                     select_gate_from_multiindex_dataframe,
                     calculate_sample_distance,
