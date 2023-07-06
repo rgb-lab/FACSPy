@@ -8,7 +8,7 @@ from ..utils import find_gate_path_of_gate, create_comparisons
 
 from ..exceptions.exceptions import AnalysisNotPerformedError, NotSupportedStatisticalTestError
 
-from ..plotting.utils import (prep_uns_dataframe,
+from ..plotting.utils import (get_uns_dataframe,
                               select_gate_from_singleindex_dataframe)
 
 from scipy.stats import kruskal, wilcoxon
@@ -77,17 +77,15 @@ def calculate_fold_changes(adata: AnnData,
     """asinh fold change calculation"""
     if not isinstance(group1, list):
         group1 = [group1]
+    
     if not isinstance(group2, list):
         group2 = [group2]
-    try:
-        data = adata.uns[on]
-        data = prep_uns_dataframe(adata, data)
-        data = select_gate_from_singleindex_dataframe(data, find_gate_path_of_gate(adata, gate))
-        fluo_columns = [col for col in data.columns if col in adata.var_names.to_list()]
-
-    except KeyError as e:
-        raise AnalysisNotPerformedError(on) from e
     
+    data = get_uns_dataframe(adata = adata,
+                             gate = gate,
+                             table_identifier = "mfi",
+                             column_identifier_name = "sample_ID")
+    fluo_columns = [col for col in data.columns if col in adata.var_names]
     #comparisons = create_comparisons(data, groupby)
 
     print(group1, group2)
