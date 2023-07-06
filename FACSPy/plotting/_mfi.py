@@ -19,7 +19,7 @@ from ..exceptions.exceptions import AnalysisNotPerformedError
 
 from .utils import (create_boxplot,
                     turn_off_missing_plots,
-                    prep_uns_dataframe)
+                    get_uns_dataframe)
 ### mfi plot
 
 
@@ -33,20 +33,16 @@ def fop(adata: AnnData,
         overview: bool = False,
         return_dataframe: bool = False):
     
-    try:
-        fop_data = adata.uns["fop"]
-        fop_data = prep_uns_dataframe(adata, fop_data)
-    except KeyError as e:
-        raise AnalysisNotPerformedError("fop") from e
-    
-    full_gate_path = find_gate_path_of_gate(adata, gate)
-    gate_specific_mfis = fop_data.loc[fop_data["gate_path"] == full_gate_path, :]
+    data = get_uns_dataframe(adata = adata,
+                             gate = gate,
+                             table_identifier = "fop",
+                             column_identifier_name = "sample_ID")
 
     if return_dataframe:
-        return gate_specific_mfis
+        return data
     
     mfi_fop_baseplot(adata = adata,
-                     dataframe = gate_specific_mfis,
+                     dataframe = data,
                      marker = marker,
                      groupby = groupby,
                      colorby = colorby,
@@ -64,20 +60,16 @@ def mfi(adata: AnnData,
         overview: bool = False,
         return_dataframe: bool = False):
 
-    try:
-        mfi_data = adata.uns["mfi"]
-        mfi_data = prep_uns_dataframe(adata, mfi_data)
-    except KeyError as e:
-        raise AnalysisNotPerformedError("mfi") from e
-    
-    full_gate_path = find_gate_path_of_gate(adata, gate)
-    gate_specific_mfis = mfi_data.loc[mfi_data["gate_path"] == full_gate_path, :]
+    data = get_uns_dataframe(adata = adata,
+                             gate = gate,
+                             table_identifier = "mfi",
+                             column_identifier_name = "sample_ID")
 
     if return_dataframe:
-        return gate_specific_mfis
+        return data
     
     mfi_fop_baseplot(adata = adata,
-                     dataframe = gate_specific_mfis,
+                     dataframe = data,
                      marker = marker,
                      groupby = groupby,
                      colorby = colorby,
@@ -189,7 +181,6 @@ def adjust_legend(ax: Axes) -> Axes:
     ax.legend(loc = "upper left",
               bbox_to_anchor = (1.05, 0.5))
     return ax
-
 
 def add_statistic(ax: Axes,
                   test: str,
