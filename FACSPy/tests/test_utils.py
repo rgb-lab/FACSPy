@@ -1,10 +1,6 @@
 import pytest
 from ..utils import reduction_names, GATE_SEPARATOR, cytof_technical_channels
-from ..utils import (find_current_population,
-                     find_parent_population,
-                     find_gate_path_of_gate,
-                     find_gate_indices,
-                     find_parent_gate)
+from ..utils import *
 from ..exceptions.utils import GateNotProvidedError
 from ..exceptions.exceptions import ExhaustedHierarchyError
 
