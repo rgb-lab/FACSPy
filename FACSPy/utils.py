@@ -338,6 +338,6 @@ def convert_gates_to_obs(adata: AnnData,
     adata = adata.copy() if copy else adata
     for gate in adata.uns["gating_cols"]:
         convert_gate_to_obs(adata,
-                            gate,
+                            find_current_population(gate),
                             copy = False)
     return adata if copy else None
