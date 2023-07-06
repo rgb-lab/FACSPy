@@ -6,19 +6,14 @@ import scanpy as sc
 from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from matplotlib.ticker import ScalarFormatter
-from ..exceptions.exceptions import CofactorsNotCalculatedError
 
 from .utils import (calculate_fig_size,
                     turn_off_missing_plots,
                     calculate_nrows)
 
-from scanpy.plotting._utils import savefig_or_show
-
 from typing import Optional, Union, Literal
 
 from ..dataset.utils import (find_corresponding_control_samples,
-                             create_sample_subset_with_controls,
                              get_histogram_curve)
 from ..utils import subset_gate
 
