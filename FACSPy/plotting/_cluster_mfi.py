@@ -148,6 +148,7 @@ def cluster_heatmap(adata: AnnData,
                             )
     if return_fig:
         return clustermap
+    
     plt.show()
 
 
