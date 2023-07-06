@@ -8,7 +8,7 @@ from typing import Literal, Union, Optional
 from .utils import (scale_data,
                     map_obs_to_cmap,
                     append_metadata,
-                    get_dataframe,
+                    get_uns_dataframe,
                     calculate_linkage,
                     add_metaclusters,
                     remove_ticklabels,
@@ -56,10 +56,10 @@ def sample_correlation(adata: AnnData,
     if not isinstance(groupby, list):
         groupby = [groupby] 
     
-    raw_data = get_dataframe(adata = adata,
-                             gate = gate,
-                             table_identifier = on,
-                             column_identifier_name = "sample_ID")
+    raw_data = get_uns_dataframe(adata = adata,
+                                 gate = gate,
+                                 table_identifier = on,
+                                 column_identifier_name = "sample_ID")
     
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
