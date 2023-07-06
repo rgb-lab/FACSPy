@@ -32,7 +32,6 @@ def prepare_plot_data(adata: AnnData,
         plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
     correlations = calculate_correlation_data(plot_data[fluo_columns].T,
                                               corr_method = corr_method)
-    print(correlations.shape)
     plot_data = pd.DataFrame(data = correlations,
                              columns = raw_data.index.to_list(),
                              index = raw_data.index)
