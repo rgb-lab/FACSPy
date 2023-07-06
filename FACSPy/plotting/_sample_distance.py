@@ -18,7 +18,7 @@ from .utils import (scale_data,
                     remove_ticks,
                     scale_cbar_to_heatmap,
                     add_categorical_legend_to_clustermap,
-                    get_dataframe,
+                    get_uns_dataframe,
                     ANNOTATION_CMAPS)
 
 from ._clustermap import create_clustermap
@@ -59,7 +59,7 @@ def sample_distance(adata: AnnData,
     if not isinstance(groupby, list):
         groupby = [groupby] 
     
-    raw_data = get_dataframe(adata = adata,
+    raw_data = get_uns_dataframe(adata = adata,
                              gate = gate,
                              table_identifier = on,
                              column_identifier_name = "sample_ID")
