@@ -9,7 +9,7 @@ from matplotlib.figure import Figure
 
 from typing import Literal, Union, Optional
 
-from .utils import get_dataframe, turn_off_missing_plots
+from .utils import get_uns_dataframe, turn_off_missing_plots
 from ..utils import find_gate_path_of_gate, reduction_names
 
 from ..exceptions.exceptions import AnalysisNotPerformedError
@@ -125,10 +125,10 @@ def pca_samplewise(adata: AnnData,
     if gate is None:
         raise TypeError("A Gate has to be provided")
     
-    data = get_dataframe(adata = adata,
-                         gate = gate,
-                         table_identifier = on,
-                         column_identifier_name = "sample_ID")
+    data = get_uns_dataframe(adata = adata,
+                             gate = gate,
+                             table_identifier = on,
+                             column_identifier_name = "sample_ID")
 
     if return_dataframe:
         return data
@@ -150,10 +150,10 @@ def mds_samplewise(adata: AnnData,
     if gate is None:
         raise TypeError("A Gate has to be provided")
     
-    data = get_dataframe(adata = adata,
-                         gate = gate,
-                         table_identifier = on,
-                         column_identifier_name = "sample_ID")
+    data = get_uns_dataframe(adata = adata,
+                             gate = gate,
+                             table_identifier = on,
+                             column_identifier_name = "sample_ID")
 
     if return_dataframe:
         return data
