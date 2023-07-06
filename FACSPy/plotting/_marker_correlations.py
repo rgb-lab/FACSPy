@@ -6,17 +6,11 @@ from matplotlib.figure import Figure
 from typing import Literal, Union, Optional
 
 from .utils import (scale_data,
-                    map_obs_to_cmap,
-                    append_metadata,
-                    get_dataframe,
-                    calculate_linkage,
-                    add_metaclusters,
+                    get_uns_dataframe,
                     remove_ticklabels,
                     remove_ticks,
                     scale_cbar_to_heatmap,
-                    add_categorical_legend_to_clustermap,
-                    calculate_correlation_data,
-                    ANNOTATION_CMAPS)
+                    calculate_correlation_data)
 
 from ._clustermap import create_clustermap
 
@@ -49,10 +43,10 @@ def marker_correlation(adata: AnnData,
                        return_fig: bool = False,
                        return_dataframe: bool = False) -> Optional[Figure]:
     
-    raw_data = get_dataframe(adata = adata,
-                             gate = gate,
-                             table_identifier = on,
-                             column_identifier_name = "sample_ID")
+    raw_data = get_uns_dataframe(adata = adata,
+                                 gate = gate,
+                                 table_identifier = on,
+                                 column_identifier_name = "sample_ID")
     
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
