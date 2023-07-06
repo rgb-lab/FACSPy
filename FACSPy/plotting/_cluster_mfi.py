@@ -2,36 +2,25 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
 import numpy as np
+import pandas as pd
 
 from matplotlib.figure import Figure
 
 from typing import Literal, Optional, Union
 
-<<<<<<< HEAD
-from ..utils import subset_gate, find_gate_path_of_gate
-=======
 from ..utils import find_gate_path_of_gate
->>>>>>> 425dc6a5d3058f2c6623ed6efa4dccb893827e19
 from .utils import (scale_data,
                     select_gate_from_multiindex_dataframe,
                     calculate_sample_distance,
                     calculate_linkage,
                     remove_ticklabels,
+                    get_uns_dataframe,
                     remove_ticks,
                     scale_cbar_to_heatmap,
                     calculate_correlation_data,
                     remove_dendrogram,
-<<<<<<< HEAD
-                    add_annotation_plot,
-                    get_dataframe,
-                    ANNOTATION_CMAPS)
-from scipy.spatial import distance
-from scipy.cluster import hierarchy
-from scipy.spatial import distance_matrix
-=======
                     add_annotation_plot)
 
->>>>>>> 425dc6a5d3058f2c6623ed6efa4dccb893827e19
 
 from ._clustermap import create_clustermap
 from ._frequency_plots import prep_dataframe_cluster_freq
@@ -62,6 +51,17 @@ def cluster_mfi(adata: AnnData,
                 y = marker)
     plt.show()
 
+def prepare_plot_data(adata: AnnData,
+                      raw_data: pd.DataFrame,
+                      scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]],
+                      copy: bool = False
+                      ) -> pd.DataFrame:
+    plot_data = raw_data.copy() if copy else raw_data
+    fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
+    if scaling is not None:
+        plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
+    return plot_data
+
 def cluster_heatmap(adata: AnnData,
                     groupby: Optional[Union[str, list[str]]],
                     gate: str,
@@ -77,28 +77,27 @@ def cluster_heatmap(adata: AnnData,
                     y_label_fontsize: Optional[Union[int, float]] = 4,
                     return_dataframe: bool = False) -> Optional[Figure]:
     
-    raw_data = get_dataframe(adata = adata,
-                             gate = gate,
-                             table_identifier = on,
-                             column_identifier_name = "cluster")
+    raw_data = get_uns_dataframe(adata = adata,
+                                 gate = gate,
+                                 table_identifier = on,
+                                 column_identifier_name = "cluster")
     
-    plot_data = raw_data.copy()
-    fluo_columns = [col for col in raw_data.columns if col in adata.var_names.to_list()]
-    if scaling is not None:
-        plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
-    
-    plot_data = plot_data[fluo_columns].T
+    fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
+    plot_data = prepare_plot_data(adata = adata,
+                                  raw_data = raw_data,
+                                  copy = True,
+                                  scaling = scaling)
 
     if return_dataframe:
         return plot_data
 
     if cluster_method == "correlation":
-        col_linkage = calculate_linkage(calculate_correlation_data(plot_data, corr_method))
+        col_linkage = calculate_linkage(calculate_correlation_data(plot_data[fluo_columns].T, corr_method))
 
     elif cluster_method == "distance":
-        col_linkage = calculate_linkage(calculate_sample_distance(plot_data.T))
+        col_linkage = calculate_linkage(calculate_sample_distance(plot_data[fluo_columns]))
 
-    clustermap = create_clustermap(data = plot_data,
+    clustermap = create_clustermap(data = plot_data[fluo_columns].T,
                                    row_cluster = True,
                                    col_linkage = col_linkage,
                                    cmap = cmap,
