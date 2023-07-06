@@ -4,8 +4,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from .exceptions.exceptions import ChannelSubsetError, ExhaustedHierarchyError
-from .expcetions.utils import GateNotProvidedError
+from .exceptions.exceptions import ChannelSubsetError
+from .exceptions.utils import GateNotProvidedError, ExhaustedHierarchyError
 from itertools import combinations
 
 from typing import Any
