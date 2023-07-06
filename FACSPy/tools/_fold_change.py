@@ -3,13 +3,11 @@ import pandas as pd
 
 from anndata import AnnData
 
-from typing import Union, Optional, Literal
-from ..utils import find_gate_path_of_gate, create_comparisons
+from typing import Union, Literal
 
-from ..exceptions.exceptions import AnalysisNotPerformedError, NotSupportedStatisticalTestError
+from ..exceptions.exceptions import NotSupportedStatisticalTestError
 
-from ..plotting.utils import (get_uns_dataframe,
-                              select_gate_from_singleindex_dataframe)
+from ..plotting.utils import get_uns_dataframe
 
 from scipy.stats import kruskal, wilcoxon
 
@@ -86,9 +84,6 @@ def calculate_fold_changes(adata: AnnData,
                              table_identifier = "mfi",
                              column_identifier_name = "sample_ID")
     fluo_columns = [col for col in data.columns if col in adata.var_names]
-    #comparisons = create_comparisons(data, groupby)
-
-    print(group1, group2)
 
     asinh_fc = calculate_asinh_fold_change(data,
                                            groupby,
