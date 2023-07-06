@@ -323,10 +323,21 @@ def convert_gate_to_obs(adata: AnnData,
                         gate: str,
                         key_added: Optional[str] = None,
                         copy: bool = False) -> Optional[AnnData]:
+    adata = adata.copy() if copy else adata
+
     gate_path = find_gate_path_of_gate(adata, gate)
     gate_index = find_gate_indices(adata, gate_path)
+    gate_id = key_added or gate
+    adata.obs[gate_id] = adata.obsm["gating"][:,gate_index].todense()
+    adata.obs[gate_id] = adata.obs[gate_id].map({True: gate, False: "other"})
+    adata.obs[gate_id] = adata.obs[gate_id].astype("category")
+    return adata if copy else None
+
+def convert_gates_to_obs(adata: AnnData,
+                         copy: bool = False) -> Optional[AnnData]:
     adata = adata.copy() if copy else adata
-    adata.obs[gate_path or key_added] = adata.obsm["gating"][:,gate_index].todense()
-    adata.obs[gate_path or key_added] = adata.obs[gate or key_added].map({True: gate, False: "other"})
-    adata.obs[gate_path or key_added] = adata.obs[gate or key_added].astype("category")
+    for gate in adata.uns["gating_cols"]:
+        convert_gate_to_obs(adata,
+                            gate,
+                            copy = False)
     return adata if copy else None
