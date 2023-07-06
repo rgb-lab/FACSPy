@@ -48,6 +48,7 @@ def cluster_frequency(adata: AnnData,
 
     if return_dataframe:
         return dataframe
+    
     fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (5,4))
     dataframe.plot(kind = "bar",
                    stacked = True,
