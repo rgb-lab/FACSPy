@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from .exceptions.exceptions import ChannelSubsetError, ExhaustedHierarchyError
-
+from .expcetions.utils import GateNotProvidedError
 from itertools import combinations
 
 from typing import Any
@@ -30,6 +30,8 @@ scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
 time_channels = ["time", "Time"]
 
 def find_current_population(gate: str) -> str:
+    if not gate:
+        raise GateNotProvidedError(gate)
     return gate.split(GATE_SEPARATOR)[-1]
 
 def find_gate_path_of_gate(adata: AnnData,
@@ -46,6 +48,8 @@ def find_gate_indices(adata: AnnData,
 def find_parent_gate(gate: str) -> str:
     """returns the parent gate path"""
     """Example: gate = 'root/singlets/T_cells' -> 'root/singlets' """
+    if not gate:
+        raise GateNotProvidedError(gate)
     if GATE_SEPARATOR in gate:
         return GATE_SEPARATOR.join(gate.split(GATE_SEPARATOR)[:-1])
     else:
@@ -54,6 +58,8 @@ def find_parent_gate(gate: str) -> str:
 def find_parent_population(gate: str) -> str:
     """returns the parent population"""
     """Example: gate = 'root/singlets/T_cells' -> 'singlets'"""
+    if not gate:
+        raise GateNotProvidedError(gate)
     if GATE_SEPARATOR in gate:
         return gate.split(GATE_SEPARATOR)[:-1][::-1][0]
     else:
@@ -65,7 +71,7 @@ def find_grandparent_gate(gate: str) -> str:
 def find_grandparent_population(gate: str) -> str:
     return find_parent_population(find_parent_population(gate))
 
-def find_parents_recursively(gate: str, parent_list = None):
+def find_parents_recursively(gate: str, parent_list = None) -> list[str]:
     if parent_list is None:
         parent_list = []
     parent = find_parent_gate(gate)
