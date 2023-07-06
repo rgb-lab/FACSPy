@@ -2,16 +2,16 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
 import numpy as np
-import pandas as pd
 
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from typing import Literal, Optional, Union
 
+<<<<<<< HEAD
 from ..utils import subset_gate, find_gate_path_of_gate
+=======
+from ..utils import find_gate_path_of_gate
+>>>>>>> 425dc6a5d3058f2c6623ed6efa4dccb893827e19
 from .utils import (scale_data,
                     select_gate_from_multiindex_dataframe,
                     calculate_sample_distance,
@@ -21,12 +21,17 @@ from .utils import (scale_data,
                     scale_cbar_to_heatmap,
                     calculate_correlation_data,
                     remove_dendrogram,
+<<<<<<< HEAD
                     add_annotation_plot,
                     get_dataframe,
                     ANNOTATION_CMAPS)
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from scipy.spatial import distance_matrix
+=======
+                    add_annotation_plot)
+
+>>>>>>> 425dc6a5d3058f2c6623ed6efa4dccb893827e19
 
 from ._clustermap import create_clustermap
 from ._frequency_plots import prep_dataframe_cluster_freq
