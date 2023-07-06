@@ -9,7 +9,7 @@ from matplotlib.figure import Figure
 
 from typing import Literal, Union, Optional
 
-from .utils import prep_uns_dataframe, turn_off_missing_plots
+from .utils import get_dataframe, turn_off_missing_plots
 from ..utils import find_gate_path_of_gate, reduction_names
 
 from ..exceptions.exceptions import AnalysisNotPerformedError
@@ -17,19 +17,18 @@ from ..exceptions.exceptions import AnalysisNotPerformedError
 
 def samplewise_dr_plot(adata: AnnData,
                        dataframe: pd.DataFrame,
-                       color: Optional[Union[str, list[str]]],
+                       groupby: Optional[Union[str, list[str]]],
                        reduction: Literal["PCA", "MDS", "TSNE", "UMAP"],
-                       gate: Optional[str] = None,
                        overview: bool = False):
     
-    if not isinstance(color, list):
-        color = [color]
-    if gate is None:
-        raise TypeError("A Gate has to be provided")
+    if not isinstance(groupby, list):
+        groupby = [groupby]
+    
     if overview:
-        if color:
-            print("warning... color argument are ignored when using overview")
-        color = [
+        if groupby:
+            print("warning... groupby argument are ignored when using overview")
+        #TODO add fluo_columns as negative selection!
+        groupby = [
             entry
             for entry in dataframe.columns.to_list()
             if all(
@@ -47,38 +46,35 @@ def samplewise_dr_plot(adata: AnnData,
             )
         ]
 
-    full_gate_path = find_gate_path_of_gate(adata, gate)
-    gate_specific_mfis = dataframe.loc[dataframe["gate_path"] == full_gate_path, :]
-
     plotting_dimensions = get_plotting_dimensions(reduction)
 
     ncols = 4 if overview else 1
-    nrows = int(np.ceil(len(color) / 4)) if overview else len(color)
+    nrows = int(np.ceil(len(groupby) / 4)) if overview else len(groupby)
     figsize = (12 if overview else 3,
-               int(np.ceil(len(color) / 4)) * 3.2 if overview else 3.2 * len(color)) 
+               int(np.ceil(len(groupby) / 4)) * 3.2 if overview else 3.2 * len(groupby)) 
 
     fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
-    if len(color) > 1:
+    if len(groupby) > 1:
         ax = ax.flatten()
-    for i, grouping in enumerate(color):
+    for i, grouping in enumerate(groupby):
         plot_params = {
             "x": plotting_dimensions[0],
             "y": plotting_dimensions[1],
-            "data": gate_specific_mfis,
+            "data": dataframe,
             "hue": grouping
-                   if gate_specific_mfis[grouping].dtype.__class__.__name__ == "CategoricalDtype"
+                   if dataframe[grouping].dtype.__class__.__name__ == "CategoricalDtype"
                    else None,
-            "c": gate_specific_mfis[grouping]
-                 if gate_specific_mfis[grouping].dtype.__class__.__name__ != "CategoricalDtype" 
+            "c": dataframe[grouping]
+                 if dataframe[grouping].dtype.__class__.__name__ != "CategoricalDtype" 
                  else None
         }
 
-        if len(color) > 1:
+        if len(groupby) > 1:
             ax[i] = create_scatterplot(ax = ax[i],
                                        plot_params = plot_params)
-            ax[i].set_title(f"{reduction} samplewise reduction\ncolored by {grouping}")
+            ax[i].set_title(f"{reduction} samplewise reduction\ngroupbyed by {grouping}")
             #sns.move_legend(ax[i], "center right")
-            if gate_specific_mfis[grouping].dtype.__class__.__name__ == "CategoricalDtype":
+            if dataframe[grouping].dtype.__class__.__name__ == "CategoricalDtype":
                 handles, labels = ax[i].get_legend_handles_labels()
                 ax[i].legend(handles,
                              labels,
@@ -90,9 +86,9 @@ def samplewise_dr_plot(adata: AnnData,
         else:
             ax = create_scatterplot(ax = ax,
                                     plot_params = plot_params)
-            ax.set_title(f"{reduction} samplewise reduction\ncolored by {grouping}")
+            ax.set_title(f"{reduction} samplewise reduction\ngroupbyed by {grouping}")
             #sns.move_legend(ax, "center right", bbox_to_anchor = (2,0.5))
-            if gate_specific_mfis[grouping].dtype.__class__.__name__ == "CategoricalDtype":
+            if dataframe[grouping].dtype.__class__.__name__ == "CategoricalDtype":
                 handles, labels = ax.get_legend_handles_labels()
                 ax.legend(handles,
                           labels,
@@ -101,7 +97,7 @@ def samplewise_dr_plot(adata: AnnData,
                           title = grouping
                           )
 
-    if len(color) > 1:
+    if len(groupby) > 1:
         ax = turn_off_missing_plots(ax)
     ax = np.reshape(ax, (ncols, nrows))
 
@@ -119,49 +115,51 @@ def create_scatterplot(ax: Axis,
                            ax = ax)
 
 def pca_samplewise(adata: AnnData,
-                   color: str,
+                   groupby: str,
                    gate: str, 
                    on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                    overview: bool = False,
                    return_dataframe: bool = False
                    ) -> Optional[Figure]:
     
-    try:
-        data = adata.uns[on]
-        data = prep_uns_dataframe(adata, data)
-        #TODO
-        #_ = data["PCA1"]
-    except KeyError as e:
-        raise AnalysisNotPerformedError(on) from e
-    if return_dataframe:
-        full_gate_path = find_gate_path_of_gate(adata, gate)
-        gate_specific_mfis = data.loc[data["gate_path"] == full_gate_path, :]
+    if gate is None:
+        raise TypeError("A Gate has to be provided")
+    
+    data = get_dataframe(adata = adata,
+                         gate = gate,
+                         table_identifier = on,
+                         column_identifier_name = "sample_ID")
 
-        plotting_dimensions = get_plotting_dimensions("PCA")
-        return gate_specific_mfis
+    if return_dataframe:
+        return data
+    
     samplewise_dr_plot(adata = adata,
                        dataframe = data,
                        reduction = "PCA",
-                       color = color,
-                       gate = gate,
+                       groupby = groupby,
                        overview = overview)
     
 def mds_samplewise(adata: AnnData,
-                   color: str,
+                   groupby: str,
                    gate: str, 
                    on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   overview: bool = False
+                   overview: bool = False,
+                   return_dataframe: bool = False
                    ) -> Optional[Figure]:
     
-    try:
-        data = adata.uns[on]
-        data = prep_uns_dataframe(adata, data)
-    except KeyError as e:
-        raise AnalysisNotPerformedError(on) from e
+    if gate is None:
+        raise TypeError("A Gate has to be provided")
+    
+    data = get_dataframe(adata = adata,
+                         gate = gate,
+                         table_identifier = on,
+                         column_identifier_name = "sample_ID")
+
+    if return_dataframe:
+        return data
     
     samplewise_dr_plot(adata = adata,
                        dataframe = data,
                        reduction = "MDS",
-                       color = color,
-                       gate = gate,
+                       groupby = groupby,
                        overview = overview)
