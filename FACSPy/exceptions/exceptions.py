@@ -8,7 +8,7 @@ class AnalysisNotPerformedError(Exception):
                  analysis):
         self.message = (
             f"You tried to access analysis values for {analysis}. Data were not found. " +
-            "Please run {analysis}() first."
+            f"Please run {analysis}() first."
         )
         super().__init__(self.message)
 
