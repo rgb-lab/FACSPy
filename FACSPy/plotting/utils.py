@@ -13,6 +13,10 @@ from typing import Literal, Union, Optional
 
 from sklearn.preprocessing import MinMaxScaler, RobustScaler
 
+from ..exceptions.exceptions import AnalysisNotPerformedError
+
+from ..utils import find_gate_path_of_gate
+
 from scipy.cluster.hierarchy import cut_tree
 import scipy
 from scipy.spatial import distance
@@ -77,11 +81,12 @@ def add_metaclusters(adata: AnnData,
     metacluster_mapping = map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
     data = merge_metaclusters_into_dataframe(data, metacluster_mapping)
     
+    
     if label_metaclusters:
         label_metaclusters_in_dataset(adata = adata,
                                       data = data,
                                       label_metaclusters_key = label_metaclusters_key)
-    
+    data = data.set_index("sample_ID")
     return data
 
 
@@ -101,13 +106,42 @@ def remove_unused_categories(dataframe: pd.DataFrame) -> pd.DataFrame:
         dataframe[col] = dataframe[col].cat.remove_unused_categories()
     return dataframe
 
-def prep_uns_dataframe(adata: AnnData,
-                       data: pd.DataFrame) -> pd.DataFrame:
+def extract_uns_dataframe(adata: AnnData,
+                       data: pd.DataFrame,
+                       column_identifier_name: str) -> pd.DataFrame:
     data = data.T
-    data.index = data.index.set_names(["sample_ID", "gate_path"])
+    data.index = data.index.set_names([column_identifier_name, "gate_path"])
     data = data.reset_index()
-    data["sample_ID"] = data["sample_ID"].astype("int64")
-    return append_metadata(adata, data)
+    data[column_identifier_name] = data[column_identifier_name].astype("str")
+    return data
+
+def append_metadata(adata: AnnData,
+                    dataframe_to_merge: pd.DataFrame) -> pd.DataFrame:
+    metadata = adata.uns["metadata"].to_df().copy()
+    metadata["sample_ID"] = metadata["sample_ID"].astype("str")
+
+    return remove_unused_categories(pd.merge(dataframe_to_merge, metadata, on = "sample_ID"))
+
+def get_uns_dataframe(adata: AnnData,
+                      gate: str,
+                      table_identifier: str,
+                      column_identifier_name: Literal["sample_ID", "cluster"]) -> pd.DataFrame:
+    
+    if table_identifier not in adata.uns:
+        raise AnalysisNotPerformedError(table_identifier)
+    
+    data = adata.uns[table_identifier]
+    data = extract_uns_dataframe(adata,
+                                 data,
+                                 column_identifier_name)
+    data = select_gate_from_singleindex_dataframe(data, find_gate_path_of_gate(adata, gate))
+
+    if column_identifier_name == "sample_ID":
+        data = append_metadata(adata, data)
+    
+    data = data.set_index(column_identifier_name)
+    return data
+
 
 def select_gate_from_multiindex_dataframe(dataframe: pd.DataFrame,
                                gate: str) -> pd.DataFrame:
@@ -137,7 +171,7 @@ def add_annotation_plot(adata: AnnData,
                         y_label_fontsize: Optional[int],
                         y_label: Optional[str]
                         ) -> None:
-    
+    #TODO: add sampleID/clusterID on top?
     annot_frame = annot_frame.loc[indices]
     divider = make_axes_locatable(clustermap.ax_heatmap)
     ax: Axes = divider.append_axes("top", size = "20%", pad = 0.05)
@@ -150,7 +184,6 @@ def add_annotation_plot(adata: AnnData,
                         )
     ax.legend(bbox_to_anchor = (1.01, 0.5), loc = "center left")
     ax.set_ylabel(y_label)
-    #ax3.invert_yaxis()
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)
     remove_ticklabels(ax, which = "x")
     remove_ticks(ax, which = "x")
@@ -242,10 +275,6 @@ def merge_metaclusters_into_dataframe(data, metacluster_mapping) -> pd.DataFrame
         data = data.drop(["metacluster"], axis = 1)
     return pd.merge(data, metacluster_mapping, on = "sample_ID")
 
-def append_metadata(adata: AnnData,
-                    dataframe_to_merge: pd.DataFrame) -> pd.DataFrame:
-    metadata = adata.uns["metadata"].to_df()
-    return remove_unused_categories(pd.merge(dataframe_to_merge, metadata, on = "sample_ID"))
 
 def create_boxplot(ax: Axes,
                    grouping: str,
