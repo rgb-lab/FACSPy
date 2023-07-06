@@ -3,7 +3,7 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 
 from matplotlib.figure import Figure
-from typing import Literal, Union, Optional
+from typing import Literal, Optional
 
 from .utils import (scale_data,
                     get_uns_dataframe,
@@ -13,7 +13,6 @@ from .utils import (scale_data,
                     calculate_correlation_data)
 
 from ._clustermap import create_clustermap
-
 
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,
