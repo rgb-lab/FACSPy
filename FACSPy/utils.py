@@ -69,7 +69,7 @@ def find_grandparent_gate(gate: str) -> str:
     return find_parent_gate(find_parent_gate(gate))
 
 def find_grandparent_population(gate: str) -> str:
-    return find_parent_population(find_parent_population(gate))
+    return find_parent_population(find_parent_gate(gate))
 
 def find_parents_recursively(gate: str, parent_list = None) -> list[str]:
     if parent_list is None:
