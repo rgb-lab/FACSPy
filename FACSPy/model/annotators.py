@@ -79,6 +79,13 @@ class supervisedGating(BaseGating):
             for gate_to_train in self.train_sets
         }
 
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}(" + 
+            f"{self.classifiers}" +
+            ")"
+        )
+
     def tune_hyperparameters(self):
         raise NotImplementedError("Hyperparameter tuning is currently not supported. :(")
 
@@ -104,7 +111,8 @@ class supervisedGating(BaseGating):
             print(f"Gating {gate_to_train}")
             non_gated_samples = [sample for sample in self.adata.obs["file_name"].unique()
                                 if sample not in self.train_sets[gate_to_train]]
-            gate_indices = self.find_gate_indices(gate_columns = self.train_sets[gate_to_train]["training_columns"])
+            gate_indices = find_gate_indices(self.adata,
+                                             gate_columns = self.train_sets[gate_to_train]["training_columns"])
             for sample in non_gated_samples:
                 print(f"Gating sample {sample}...")
                 sample_view = self.subset_anndata_by_sample(samples = sample, copy = False)
@@ -127,7 +135,8 @@ class supervisedGating(BaseGating):
              
         adata_subset = self.subset_anndata_by_sample(samples)
         assert adata_subset.is_view ##TODO: delete later
-        gate_indices = self.find_gate_indices(gate_columns)
+        gate_indices = find_gate_indices(self.adata,
+                                         gate_columns)
         X = adata_subset.layers["compensated"]
         y = adata_subset.obsm["gating"][:, gate_indices].toarray()
         assert self.y_identities_correct(y = y,
