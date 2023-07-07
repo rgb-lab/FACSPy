@@ -288,11 +288,9 @@ class unsupervisedGating(BaseGating):
         gate_indices = find_gate_indices(self.adata, population_gate_path)
         
         if parent_population != "root":
-            print(parent_population)
             dataset = subset_gate(self.adata,
                                   gate = parent_population,
                                   as_view = True)
-            print(dataset.shape)
             assert dataset.is_view
         else:
             dataset = self.adata.copy()
