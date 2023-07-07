@@ -1,8 +1,7 @@
 import pytest
-from ..utils import reduction_names, GATE_SEPARATOR, cytof_technical_channels
+from ..utils import GATE_SEPARATOR
 from ..utils import *
-from ..exceptions.utils import GateNotProvidedError
-from ..exceptions.exceptions import ExhaustedHierarchyError
+from ..exceptions.utils import GateNotProvidedError, ExhaustedHierarchyError
 
 def test_find_current_population():
     test_string1 = f"root{GATE_SEPARATOR}singlets"
@@ -35,6 +34,20 @@ def test_find_parent_gate():
     with pytest.raises(GateNotProvidedError):
         find_parent_gate(test_string4)
 
+def test_find_grandparent_gate():
+    test_string1 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
+    test_string2 = "root"
+    test_string3 = f"root{GATE_SEPARATOR}singlets"
+    test_string4 = ""
+
+    assert find_grandparent_gate(test_string1) == "root"
+    with pytest.raises(ExhaustedHierarchyError):
+        find_grandparent_gate(test_string2)
+    with pytest.raises(ExhaustedHierarchyError):
+        find_grandparent_gate(test_string3)
+    with pytest.raises(GateNotProvidedError):
+        find_grandparent_gate(test_string4)
+
 def test_find_parent_population():
     test_string1 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
     test_string2 = "root"
@@ -58,9 +71,9 @@ def test_find_grandparent_population():
     with pytest.raises(ExhaustedHierarchyError):
         find_grandparent_population(test_string2)
     with pytest.raises(ExhaustedHierarchyError):
-        find_grandparent(test_string3)
+        find_grandparent_population(test_string3)
     with pytest.raises(GateNotProvidedError):
-        find_grandparent(test_string4)
+        find_grandparent_population(test_string4)
 
 def test_find_parents_recursively():
     test_string1 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
@@ -79,11 +92,12 @@ def test_find_parents_recursively():
         find_parents_recursively(test_string4)
 
 def test_subset_stained_samples(): pass
-
 def test_subset_unstained_samples(): pass
+
 def test_close_polygon_gate_coordinates():
-    coordinates = np.array([[1,2],[3,4]])
-    assert close_polygon_coordinates(coordinate_array) == np.array([[1,2],[3,4],[1,2]])
+    coordinate_array = np.array([[1,2],[3,4]])
+    assert np.array_equal(close_polygon_gate_coordinates(coordinate_array),
+                          np.array([[1,2],[3,4],[1,2]]))
 
 def test_fetch_fluo_channels(): pass
 def test_subset_fluo_channels(): pass
@@ -101,7 +115,8 @@ def test_flatten_nested_list():
 def test_get_filename(): pass
 def test_create_comparisons(): pass
 def test_ifelse():
-    assert ifelse(1 == 1, "right", "wrong") == "right"
+    assert ifelse(True, "right", "wrong") == "right"
+    assert ifelse(False, "right", "wrong") == "wrong"
     assert ifelse(np.nan == np.nan, "right", "wrong") == "wrong"
 def test_convert_gate_to_obs(): pass
 def test_convert_gates_to_obs(): pass
