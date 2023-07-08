@@ -5,7 +5,8 @@ import os
 from ..exceptions.supplements import (SupplementDataTypeError,
                                       SupplementFileNotFoundError,
                                       SupplementCreationError,
-                                      SupplementColumnError)
+                                      SupplementColumnError,
+                                      SupplementNoInputDirectoryError)
 
 
 class BaseSupplement:
@@ -28,16 +29,9 @@ class BaseSupplement:
         
         self.input_directory = input_directory
 
-    def save(self,
-             output_directory: Optional[str] = None):
-        if output_directory is None:
-            output_directory = self.input_directory
-        if self.__class__.__name__ == "Panel":
-            self.dataframe.to_csv(os.path.join(output_directory, "panel.csv"))
-        elif self.__class__.__name__ == "Metadata":
-            self.dataframe.to_csv(os.path.join(output_directory, "metadata.csv"))
-        elif self.__class__.__name__ == "CofactorTable":
-            self.dataframe.to_csv(os.path.join(output_directory, "cofactors.csv"))    
+    def write(self,
+              output_directory: Union[str, os.PathLike] = ''):
+        self.dataframe.to_csv(output_directory, index = False)    
 
     def strip_prefixes(self,
                        dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -179,13 +173,17 @@ class Metadata(BaseSupplement):
                          file_name = file_name,
                          data = metadata,
                          from_fcs = from_fcs)
-        
+
         self.dataframe = self.validate_user_supplied_table(self.dataframe,
                                                            ["sample_ID", "file_name"])
-        
-        if from_fcs:
-            self.append_metadata_from_folder(input_directory)
 
+        if from_fcs:
+            if input_directory:
+                self.append_metadata_from_folder(input_directory)
+
+            else:
+                raise SupplementNoInputDirectoryError
+        
         self.factors = self.extract_metadata_factors()
 
         self.make_dataframe_categorical()
