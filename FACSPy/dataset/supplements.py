@@ -119,7 +119,7 @@ class Panel(BaseSupplement):
     
     """
     Panel class to represent and unify flow cytometry panel representations.
-    The structure has to be at least to columns: fcs_colname with the channels
+    The structure has to be at least two columns: fcs_colname with the channels
     and antigen with the custom antigen names.
     If the panel is supposed to be read from the FCS files directly, set the
     flag from_fcs. 
