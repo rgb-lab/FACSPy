@@ -1,5 +1,5 @@
 from anndata import AnnData
-from typing import Optional, Union, Literal
+from typing import Optional, Union
 import warnings
 import numpy as np
 import pandas as pd
@@ -30,24 +30,105 @@ scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
 time_channels = ["time", "Time"]
 
 def find_current_population(gate: str) -> str:
+    """Finds current population of a specified gating path
+
+    Parameters
+    ----------
+
+    gate: str, no default
+        provided gating path
+
+    Examples
+    --------
+    >>> find_current_population("root/singlets")
+    singlets
+    >>> find_current_population("root")
+    root
+    >>> find_current_population("root/singlets/T_cells")
+    singlets
+    """
+
     if not gate:
         raise GateNotProvidedError(gate)
     return gate.split(GATE_SEPARATOR)[-1]
 
 def find_gate_path_of_gate(adata: AnnData,
                            gate: str) -> str:
+    """Finds the gate path of the specified population
+    This function looks into adata.uns["gating_cols"] and selects
+    the entry that endswith the provided population
+
+    Parameters
+    ----------
+
+    adata: AnnData
+        the current dataset with an uns dict
+    
+    gate: str
+        the population that is looked up
+
+    Examples
+    --------
+
+    >>> adata = ad.AnnData(uns = {"gating_cols": pd.Index(["root/singlets"])})
+    >>> find_gate_path_of_gate(adata, "singlets")
+    "root/singlets"
+
+    """
+
     return [gate_path for gate_path in adata.uns["gating_cols"]
             if gate_path.endswith(gate)][0]
 
 def find_gate_indices(adata: AnnData,
-                      gate_columns):
+                      gate_columns: Union[str, list[str]]) -> list[int]:
+    """Finds the index of provided populations in adata.uns["gating_cols"]
+    This function is supposed to index columns provided as a string.
+    That way, the indices can be used to access the sparse matrix
+    in adata.obsm["gating"] that stores the gating values.
+
+    Parameters
+    ----------
+    adata: AnnData
+        the provided dataset
+    
+    gate_columns: Union[str, list[str]]:
+        the gate columns that are supposed to be looked up
+
+    Examples
+    --------
+    >>> adata = ad.Anndata(uns = {"gating_cols": pd.Index(["root/singlets",
+                                                           "root/singlets/T_cells])}
+    >>> find_gate_indices(adata, "root/singlets")
+    [0]
+    >>> find_gate_indices(adata, ["root/singlets", "root/singlets/T_cells"])
+    [0,1]
+
+    """
+
     if not isinstance(gate_columns, list):
         gate_columns = [gate_columns]
     return [adata.uns["gating_cols"].get_loc(gate) for gate in gate_columns]
 
 def find_parent_gate(gate: str) -> str:
-    """returns the parent gate path"""
-    """Example: gate = 'root/singlets/T_cells' -> 'root/singlets' """
+    """Returns the parent gate path of the provided gate
+
+    Parameters
+    ----------
+    gate: str
+        the provided gate path
+
+    Examples
+    --------
+
+    >>> find_parent_gate("root/singlets/T_cells")
+    root/singlets
+    >>> find_parent_gate("root")
+    ExhaustedHierarchyError
+    >>> find_parent_gate("root/singlets")
+    root
+    
+    """
+
     if not gate:
         raise GateNotProvidedError(gate)
     if GATE_SEPARATOR in gate:
@@ -56,8 +137,23 @@ def find_parent_gate(gate: str) -> str:
         raise ExhaustedHierarchyError(gate)
 
 def find_parent_population(gate: str) -> str:
-    """returns the parent population"""
-    """Example: gate = 'root/singlets/T_cells' -> 'singlets'"""
+    """Returns the parent population of the provided gate path
+
+    Parameters
+    ----------
+    gate: str
+        the provided gate path
+
+    Examples
+    --------
+    >>> find_parent_population("root/singlets/T_cells")
+    singlets
+    >>> find_parent_population("root")
+    ExhaustedHierarchyError
+    >>> find_parent_population("root/singlets/")
+    root
+    """
+
     if not gate:
         raise GateNotProvidedError(gate)
     if GATE_SEPARATOR in gate:
@@ -66,12 +162,64 @@ def find_parent_population(gate: str) -> str:
         raise ExhaustedHierarchyError(gate)
 
 def find_grandparent_gate(gate: str) -> str:
+    """Finds the grandparent gating path of a provided gate
+
+    Parameters
+    ----------
+    gate: str
+        the provided gating path
+
+    Examples
+    --------
+
+    >>> find_grandparent_gate("root/singlets/T_cells")
+    root
+    >>> find_grandparent_gate("root/singlets/T_cells/cytotoxic")
+    root/singlets
+    >>> find_grandparent_gate("root/singlets")
+    ExhaustedHieararchyError
+    """
+
     return find_parent_gate(find_parent_gate(gate))
 
 def find_grandparent_population(gate: str) -> str:
+    """Finds the grandparent population of a provided gate
+
+    Parameters
+    ----------
+    gate: str
+        the provided gating path
+
+    Examples
+    --------
+
+    >>> find_grandparent_gate("root/singlets/T_cells")
+    root
+    >>> find_grandparent_gate("root/singlets/T_cells/cytotoxic")
+    singlets
+    >>> find_grandparent_gate("root/singlets")
+    ExhaustedHieararchyError
+    """
     return find_parent_population(find_parent_gate(gate))
 
 def find_parents_recursively(gate: str, parent_list = None) -> list[str]:
+    """Finds all parent gates of a specified gate
+
+    Parameters
+    ----------
+    gate: str
+        provided gating path
+    parent_list: None
+        is instantiated to None because the function is used recursively
+
+    Examples
+    --------
+
+    >>> find_parents_recursively("root/singlets/T_cells")
+    ["root_singlets", "root"]
+    >>> find_parents_recursively("root")
+    ExhaustedHierarchyError
+    """
     if parent_list is None:
         parent_list = []
     parent = find_parent_gate(gate)
