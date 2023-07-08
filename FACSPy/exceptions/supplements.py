@@ -14,6 +14,14 @@ class PanelMatchWarning():
                 )
         warnings.warn(message, UserWarning)
     
+class SupplementNoInputDirectoryError(Exception):
+
+    def __init__(self):
+        self.message = (
+            "You did not provide an input directory. If 'from_fcs' is set to True, " + 
+            "an input directory containing the fcs files must be provided"
+        )
+        super().__init__(self.message)
 
 class SupplementDataTypeError(Exception):
     
