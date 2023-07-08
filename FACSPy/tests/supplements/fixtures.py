@@ -39,6 +39,18 @@ def mock_cofactors_with_prefixes():
     )
 
 @pytest.fixture
+def mock_metadata_with_factors():
+    return pd.DataFrame(
+        {
+            "sample_ID": list(range(5)),
+            "file_name": [f"file{i}" for i in range(5)],
+            "some": ["some" for _ in range(5)],
+            "metadata": ["metadata" for _ in range(5)],
+            "factors": ["factors" for _ in range(5)]
+        }
+    )
+
+@pytest.fixture
 def mock_cofactors_correct():
     return pd.DataFrame(
         {
