@@ -1,10 +1,10 @@
 import pytest
 import pandas as pd
 from ..dataset.supplements import Panel, Metadata, CofactorTable
-from ..exceptions.exceptions import (SupplementDataTypeError,
-                                     SupplementFileNotFoundError,
-                                     SupplementCreationError,
-                                     SupplementColumnError)
+from ..exceptions.supplements import (SupplementDataTypeError,
+                                      SupplementFileNotFoundError,
+                                      SupplementCreationError,
+                                      SupplementColumnError)
 import os
 
 
