@@ -230,12 +230,53 @@ def find_parents_recursively(gate: str, parent_list = None) -> list[str]:
     
 def subset_stained_samples(adata: AnnData,
                            copy: bool = False) -> Optional[AnnData]:
+    """Subsets all stained samples from a anndata dataset
+    
+    Parameters
+    ----------
+    adata:
+        the provided dataset
+    copy: bool
+        whether to copy and return the adata object or subset inplace
+
+    Examples
+    --------
+
+    >>> adata = ad.AnnData(obs = pd.DataFrame({"staining": ["stained", "stained", "unstained"]}))
+    >>> stained_adata = subset_stained_samples(adata, copy = True)
+    >>> len(stained_adata)
+    2
+    >>> stained_adata.obs["staining"].to_list()
+    ["stained", "stained"]
+
+    """
     adata = adata.copy() if copy else adata
     adata._inplace_subset_obs(adata.obs[adata.obs["staining"] == "stained"].index)
     return adata if copy else None
 
 def subset_unstained_samples(adata: AnnData,
                              copy: bool = False) -> Optional[AnnData]:
+
+    """Subsets all unstained samples from a anndata dataset
+    
+    Parameters
+    ----------
+    adata:
+        the provided dataset
+    copy: bool
+        whether to copy and return the adata object or subset inplace
+
+    Examples
+    --------
+
+    >>> adata = ad.AnnData(obs = pd.DataFrame({"staining": ["stained", "stained", "unstained"]}))
+    >>> unstained_adata = subset_unstained_samples(adata, copy = True)
+    >>> len(unstained_adata)
+    1
+    >>> stained_adata.obs["staining"].to_list()
+    ["unstained"]
+
+    """    
     adata = adata.copy() if copy else adata
     adata._inplace_subset_obs(adata.obs[adata.obs["staining"] != "stained"].index)
     return adata if copy else None
@@ -243,6 +284,7 @@ def subset_unstained_samples(adata: AnnData,
 def transform_gates_according_to_gate_transform(vertices: np.ndarray,
                                                 transforms: dict,
                                                 gate_channels: list[str]) -> np.ndarray:
+    
     for i, gate_channel in enumerate(gate_channels):
         channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
         if len(channel_transforms) > 1:
@@ -265,6 +307,21 @@ def transform_vertices_according_to_gate_transform(vertices: np.ndarray,
     return vertices
 
 def close_polygon_gate_coordinates(vertices: np.ndarray) -> np.ndarray:
+    """Closes a polygon gate by adding the first coordinate to the bottom of the array
+
+    Parameters
+    ----------
+
+    vertices: np.ndarray
+        the array that contains the gate coordinates
+
+    Examples
+    --------
+    >>> coordinates = np.array([[1,2], [3,4]])
+    >>> close_polygon_gate_coordinates(coordinates)
+    np.array([[1,2], [3,4], [1,2]])
+    """
+    
     return np.vstack([vertices, vertices[0]])
 
 
