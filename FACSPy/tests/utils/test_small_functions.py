@@ -99,13 +99,13 @@ def test_flatten_nested_list():
     test_list = [["some", "strings", 2], ["some", "other", "ints"]]
     assert flatten_nested_list(test_list) == ["some", "strings", 2, "some", "other", "ints"]
 
+
+
 def test_subset_stained_samples(): pass
 def test_subset_unstained_samples(): pass
 def test_fetch_fluo_channels(): pass
-def test_subset_fluo_channels(): pass
 def test_subset_channels(): pass
 def test_subset_gate(): pass
-def test_equalize_groups(): pass
 def test_annotate_metadata_samplewise(): pass
 def test_contains_only_fluo(): pass
 def test_get_idx_loc(): pass
@@ -114,5 +114,5 @@ def test_get_filename(): pass
 def test_create_comparisons(): pass
 def test_convert_gate_to_obs(): pass
 def test_convert_gates_to_obs(): pass
-def test_find_gate_path_of_gate(): pass
-def test_find_gate_indices(): pass
+
+from sklearn.preprocessing import MinMaxScaler
