@@ -295,8 +295,10 @@ def transform_gates_according_to_gate_transform(vertices: np.ndarray,
     return vertices
 
 def transform_vertices_according_to_gate_transform(vertices: np.ndarray,
-                                                transforms: dict,
-                                                gate_channels: list[str]) -> np.ndarray:
+                                                   transforms: dict,
+                                                   gate_channels: list[str]) -> np.ndarray:
+    
+    
     for i, gate_channel in enumerate(gate_channels):
         channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
         if len(channel_transforms) > 1:
@@ -321,7 +323,7 @@ def close_polygon_gate_coordinates(vertices: np.ndarray) -> np.ndarray:
     >>> close_polygon_gate_coordinates(coordinates)
     np.array([[1,2], [3,4], [1,2]])
     """
-    
+
     return np.vstack([vertices, vertices[0]])
 
 
