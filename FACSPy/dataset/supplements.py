@@ -2,10 +2,10 @@ from typing import Optional, Union
 
 import pandas as pd
 import os
-from ..exceptions.exceptions import (SupplementDataTypeError,
-                                     SupplementFileNotFoundError,
-                                     SupplementCreationError,
-                                     SupplementColumnError)
+from ..exceptions.supplements import (SupplementDataTypeError,
+                                      SupplementFileNotFoundError,
+                                      SupplementCreationError,
+                                      SupplementColumnError)
 
 
 class BaseSupplement:
