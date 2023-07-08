@@ -18,7 +18,7 @@ from .utils import (find_corresponding_control_samples,
                     create_sample_subset_with_controls)
 
 from ..transforms._matrix import Matrix
-from ..exceptions.exceptions import PanelMatchWarning
+from ..exceptions.supplements import PanelMatchWarning
 from ..gates.gating_strategy import GatingStrategy, GateTreeError
 from ..utils import (fetch_fluo_channels,
                     scatter_channels,
