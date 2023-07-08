@@ -39,14 +39,16 @@ def mock_anndata():
     concatenated = ad.concat([adata1, adata2, adata3])
     concatenated.var_names_make_unique()
     concatenated.obs_names_make_unique()
-    concatenated.uns = {"gating_cols": pd.Index(["root{GATE_SEPARATOR}singlets",
-                                                 "root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells",
-                                                 "root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live"])}
+    concatenated.uns = {"gating_cols": pd.Index([f"root{GATE_SEPARATOR}singlets",
+                                                 f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells",
+                                                 f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live"])}
     return concatenated
 
 
 def test_find_gate_path_of_gate(mock_anndata):
-    assert find_gate_path_of_gate(mock_anndata, "T_cells") == f"root{GATE_SEPARATOR}singlets"
-    assert find_gate_path_of_gate(mock_anndata, "live") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
-    assert find_gate_path_of_gate(mock_anndata, "singlets") == "root"
+    assert find_gate_path_of_gate(mock_anndata, "T_cells") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
+    assert find_gate_path_of_gate(mock_anndata, "live") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live"
+    assert find_gate_path_of_gate(mock_anndata, "singlets") == f"root{GATE_SEPARATOR}singlets"
 
+def test_find_gate_indices(mock_anndata):
+    assert find_gate_indices(mock_anndata, find_gate_path_of_gate(mock_anndata,"T_cells")) == [1]
