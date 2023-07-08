@@ -37,8 +37,10 @@ def mock_anndata():
             }
         )
     )
-
-    return adata1.concatenate([adata2, adata3])
+    concatenated = ad.concat([adata1, adata2, adata3])
+    concatenated.var_names_make_unique()
+    concatenated.obs_names_make_unique()
+    return concatenated
 
 def test_equalizing_sample_ID(mock_anndata):
     equalize_groups(mock_anndata, fraction = 0.1)
