@@ -4,17 +4,36 @@ import pandas as pd
 import scanpy as sc
 from scipy.sparse import csr_matrix
 from sklearn.model_selection import train_test_split
-import contextlib
+from sklearn.metrics import accuracy_score
+
+from sklearn.base import TransformerMixin
+
+from sklearn.preprocessing import (MinMaxScaler,
+                                   PowerTransformer,
+                                   QuantileTransformer,
+                                   RobustScaler,
+                                   StandardScaler,
+                                   MaxAbsScaler)
 
 from typing import Optional, Union, Literal
 
+from sklearn.utils.validation import check_is_fitted
+
 from .classifiers import DecisionTree, RandomForest, implemented_estimators
-from ..utils import create_gate_lut, find_parents_recursively
+from .utils import (implemented_transformers,
+                    implemented_scalers,
+                    cap_data,
+                    transform_data,
+                    scale_data,
+                    QuantileCapper)
 
 from ..utils import (contains_only_fluo,
                      subset_gate,
                      get_idx_loc,
-                     find_gate_indices)
+                     find_gate_indices,
+                     create_gate_lut,
+                     find_parents_recursively,
+                     find_current_population)
 from ..exceptions.exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
 
 """
@@ -61,28 +80,53 @@ class BaseGating:
                 gate_index,
             ] = predictions[:, i]
 
-class supervisedGating(BaseGating):
 
+class supervisedGating(BaseGating):
+    """
+    Class to unify functionality for supervised gating approaches.
+
+    The user inputs the anndata object containing the data as well 
+    as the workspace group (corresponding to the FlowJo groups) that
+    contains the gates.
+    This is meant to account for the fact that the same sample can
+    have multiple gating strategies, based on the experiment (which)
+    is potentially stored in different workspace groups.
+    The train sets (using .setup_anndata()) are created using the following logic:
+        - First, all different available gates are stored in a dictionary
+        - For each gate, a list is stored with samples that have already been
+          assigned a gate with that name (~ training samples)
+        - In general, as a presumption, one classifier is used for one gate
+        - Multiple gates can be unified into one classifier (which leads to
+          a multioutput-situation) if the training samples for two gates are 
+          the same. That way, one sample can contain multiple gating strategies
+          but multiple samples do not have to share all gating strategies
+        - 
+
+    Parameters
+    ----------
+
+    Examples
+    --------
+
+    """
     def __init__(self,
                  adata: AnnData,
                  wsp_group: str,
-                 estimator = Literal["DecisionTree", "RandomForest"]):
-        if "train_sets" not in adata.uns:
-            raise AnnDataSetupError()
-        self.train_sets = adata.uns["train_sets"][wsp_group]
-        self._estimator = estimator
+                 estimator: Literal["DecisionTree", "RandomForest"] = "DecisionTree",
+                 train_on: Optional[Union[Literal["all_gated"], list[str]]] = "all_gated"):
+        
         self.adata = adata
         self.wsp_group = wsp_group
-        
-        self.classifiers = {
-            gate_to_train: self._select_classifier(estimator)
-            for gate_to_train in self.train_sets
-        }
+        self.base_estimator = estimator
+        self.train_on = train_on
+        self.status = "untrained"
+        self.train_accuracy = {}
+        self.test_accuracy = {}
 
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(" + 
-            f"{self.classifiers}" +
+            f"{self.estimator}" +
             ")"
         )
 
@@ -90,44 +134,112 @@ class supervisedGating(BaseGating):
         raise NotImplementedError("Hyperparameter tuning is currently not supported. :(")
 
     def train(self,
+              on: Literal["compensated", "transformed"],
+              pp_transformator: Optional[Literal["PowerTransformer", "QuantileTransformer"]] = None,
+              pp_quantile_capping: Optional[float] = None,
+              pp_scaler: Optional[Literal["RobustScaler", "MaxAbsScaler", "StandardScaler", "MinMaxScaler"]] = None,
+              test_size: Optional[float] = 0.1,
               **kwargs):
+        """Method to train the classifier.
+        The training data are prepared by the following logic:
+            - the user selects if compensated or transformed data are used
+            - the user can select a transformation method
+            - the user can select if the data are quantile capped
+            - the user can select if the data are scaled to some extent
+        The selected preprocessing algorithms (fitted scaler/quantile_caps) are stored
+        The preprocessing is carried out:
+            - transformation
+            - quantile capping
+            - scaling
+            --- missing algorithms are ignored but the order stays the same
+        The classifier is then fit on the data as they are prepared.
+        Train and test accuracy are computed and stored for documentation purposes
         
-        for gate_to_train in self.train_sets:
-            print(f"Gating gate {gate_to_train}")
-            print("Preparing training data")
-            X_train, X_test, y_train, y_test = self.prepare_training_data(samples = self.train_sets[gate_to_train]["samples"],
-                                                                          gate_columns = self.train_sets[gate_to_train]["training_columns"],
+        """
+        self.on = on
+
+        self.classifiers = {
+            group: self._select_classifier(self.base_estimator)
+            for group in self.training_groups
+        }
+
+        for gate_group in self.training_groups:
+            print(f"Initializing Training on gates: {self.training_groups[gate_group]}")
+            print("... Preparing training data")
+            self.training_groups[gate_group]["preprocessing"] = {"transformation": pp_transformator,
+                                                                 "quantile_capping": pp_quantile_capping,
+                                                                 "scaling": pp_scaler}
+
+            X_train, X_test, y_train, y_test = self.prepare_training_data(samples = self.training_groups[gate_group]["samples"],
+                                                                          gate_columns = self.training_groups[gate_group]["gates"],
+                                                                          group_identifier = gate_group,
+                                                                          on = on,
+                                                                          test_size = test_size,
                                                                           **kwargs)
             print("Fitting classifier...")
-            self.classifiers[gate_to_train].fit(X_train, y_train)
-            # TODO: print some logging message... maybe even progressbar
-            # TODO: update stats, accuracy and such.
+            self.classifiers[gate_group] = self.classifiers[gate_group].fit(X_train, y_train)
+            print("Calculating accuracies...")
+            train_prediction = self.classifiers[gate_group].predict(X_train)
+            test_prediction = self.classifiers[gate_group].predict(X_test)
+            self.training_groups[gate_group]["metrics"] = {"train_accuracy": accuracy_score(y_train, train_prediction),
+                                                           "test_accuracy": accuracy_score(y_test, test_prediction)}
+        [check_is_fitted(self.classifiers[gate_group]) for gate_group in self.classifiers]
+        self.update_train_groups()
 
+    def update_train_groups(self):
+        self.adata.uns["train_sets"][self.wsp_group] = self.training_groups
 
-    def gate_dataset(self) -> None:
-        #self.adata.obsm["gating"] = self.adata.obsm["gating"].tolil()
-        self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
-        for gate_to_train in self.train_sets:
-            print(f"Gating {gate_to_train}")
-            non_gated_samples = [sample for sample in self.adata.obs["file_name"].unique()
-                                if sample not in self.train_sets[gate_to_train]]
-            gate_indices = find_gate_indices(self.adata,
-                                             gate_columns = self.train_sets[gate_to_train]["training_columns"])
-            for sample in non_gated_samples:
-                print(f"Gating sample {sample}...")
-                sample_view = self.subset_anndata_by_sample(samples = sample, copy = False)
-                predictions: np.ndarray = self.classifiers[gate_to_train].predict(sample_view.layers["compensated"])
-                self.add_gating_to_input_dataset(sample_view,
-                                                 predictions,
-                                                 gate_indices)
+    def _select_classifier(self,
+                           estimator: Literal["DecisionTree", "RandomForest"]):
+        if estimator == "DecisionTree":
+            return DecisionTree()
+        if estimator == "RandomForest":
+            return RandomForest()
+        else:
+            raise ClassifierNotImplementedError(estimator, implemented_estimators)
 
-        self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
+    def is_fit(self): pass
 
+    def preprocess_data(self,
+                        X: np.ndarray,
+                        group_identifier: Union[str, int]
+                        ) -> np.ndarray:
+        preprocessing_dict = self.training_groups[group_identifier]["preprocessing"]
+        if preprocessing_dict["transformation"] is not None:
+            transformator = preprocessing_dict["transformation"]
+            print(f"... transforming using {transformator}")
+            if isinstance(transformator, str):
+                X, transformer = transform_data(X, transformer = transformator)
+                self.training_groups[group_identifier]["preprocessing"]["transformation"] = transformer
+            else:
+                X = transformator.transform(X)
+        
+        if preprocessing_dict["quantile_capping"] is not None:
+            quantile_capping = preprocessing_dict["quantile_capping"]
+            print(f"... quantile capping {quantile_capping} percentile")
+            if isinstance(quantile_capping, float):
+                X, transformer = cap_data(X, quantile_cap = quantile_capping)
+                self.training_groups[group_identifier]["preprocessing"]["quantile_capping"] = transformer
+            else:
+                X = quantile_capping.transform(X)
+        
+        if preprocessing_dict["scaling"] is not None:
+            scaler = preprocessing_dict["scaling"]
+            print(f"... scaling using {scaler}")
+            if isinstance(scaler, str):
+                X, transformer = scale_data(X, scaler = scaler)
+                self.training_groups[group_identifier]["preprocessing"]["scaling"] = transformer
+            else:
+                X = scaler.transform(X)
+            
+        return X
 
 
     def prepare_training_data(self,
                               samples: list[str],
                               gate_columns: list[str],
+                              group_identifier: Union[str, int],
+                              on: Literal["compensated", "transformed"],
                               test_size: float = 0.1) -> tuple[np.ndarray,
                                                                np.ndarray,
                                                                np.ndarray,
@@ -139,6 +251,8 @@ class supervisedGating(BaseGating):
                                          gate_columns)
         X = adata_subset.layers["compensated"]
         y = adata_subset.obsm["gating"][:, gate_indices].toarray()
+        X = self.preprocess_data(X,
+                                 group_identifier)
         assert self.y_identities_correct(y = y,
                                          gates = adata_subset.obsm["gating"].toarray(),
                                          gate_indices = gate_indices)
@@ -149,6 +263,32 @@ class supervisedGating(BaseGating):
          y_test) = train_test_split(X, y, test_size = test_size)
         
         return X_train, X_test, y_train, y_test
+
+    def gate_dataset(self) -> None:
+        #self.adata.obsm["gating"] = self.adata.obsm["gating"].tolil()
+        self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
+        for gate_group in self.training_groups:
+            print(f"Gating gates {self.training_groups[gate_group]}")
+            non_gated_samples = [sample for sample in self.adata.obs["file_name"].unique()
+                                 if sample not in self.training_groups[gate_group]["samples"]]
+            gate_indices = find_gate_indices(self.adata,
+                                             gate_columns = self.training_groups[gate_group]["gates"])
+            for sample in non_gated_samples:
+                print(f"Gating sample {sample}...")
+                sample_view = self.subset_anndata_by_sample(samples = sample, copy = False)
+                X = sample_view.layers[self.on]
+                X = self.preprocess_data(X = X,
+                                         group_identifier = gate_group)
+                print("Predicting")
+                predictions: np.ndarray = self.classifiers[gate_group].predict(X)
+                print("adding gate to input dataset")
+                self.add_gating_to_input_dataset(sample_view,
+                                                 predictions,
+                                                 gate_indices)
+
+        self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
+
+
 
     def y_identities_correct(self,
                              y: np.ndarray,
@@ -161,84 +301,173 @@ class supervisedGating(BaseGating):
             )
             for i in range(y.shape[1])
         )
+
+    def get_gated_samples(self,
+                             gate_lut) -> list[str]:
+        """Function checks for all samples that have been gated in some sense
+
+        Parameters
+        ----------
+        gate_lut:
+            the gate lookup table in the form of {file_name: {gate1: gate description, ...}, ...}
+
+
+        Returns:
+        --------
+            list of samples that have an entry in the gate lookup table
+        """
+        return (
+            [sample for sample in gate_lut if gate_lut[sample]]
+            if self.train_on == "all_gated"
+            else self.train_on
+        )
     
-    def _select_classifier(self,
-                           estimator: Literal["DecisionTree", "RandomForest"]):
-        if estimator == "DecisionTree":
-            return DecisionTree()
-        if estimator == "RandomForest":
-            return RandomForest()
-        else:
-            raise ClassifierNotImplementedError(estimator, implemented_estimators)
+    def create_gate_lut(self) -> dict[str, dict]:
+        """Convenience wrapper around the fp.utils.create_gate_lut function.
+        Extracts the wsp_group that has been specified by the user and stored
+        in self.wsp_group and creates the corresponding lookup table
 
-    @classmethod
-    def setup_anndata(cls,
-                      dataset: AnnData,
-                      wsp_group: Optional[str],
-                      training_samples: Union[list[str],
-                                              Literal["all_gated"]] = "all_gated"
-                     ) -> None:
-        
-        workspace_subset: dict[str, dict] = dataset.uns["workspace"][wsp_group] 
+        Returns
+        -------
+        gate lookup table in format dict[str, dict]
+        """
+        workspace_subset = self.adata.uns["workspace"][self.wsp_group]
+        return create_gate_lut(workspace_subset)
 
-        gate_lut = create_gate_lut(workspace_subset)
+    def gather_gate_paths(self,
+                           gate_lut: dict[str: dict],
+                           training_samples: list[str]):
+        """Function collects all gates that are recorded for one sample
+        and creates a dictionary where the full gate path and the dimensions are stored
 
-        if training_samples == "all_gated":
-            training_samples = [
-                sample for sample in workspace_subset if
-                workspace_subset[sample]["gates"]
-            ]
-        else:
-            training_samples = training_samples
-        
-        training_gate_paths = {
+        Parameters
+        ----------
+        gate_lut: lookup table for all samples and their gates
+        training_samples: file names of the samples that have gates
+
+        Returns
+        -------
+        Dictionary with the full gate paths and their dimensions
+
+        """
+
+        return {
             gate_lut[sample][gate]["full_gate_path"]: gate_lut[sample][gate]["dimensions"]
             for sample in training_samples
             for gate in gate_lut[sample].keys()
         }
-        
+
+    def create_reverse_lut(cls,
+                           gate_lut: dict[str, dict],
+                           training_gate_paths: list[str]
+                           ) -> dict[str: dict]:
+        """ 
+        This function generates a dictionary of the form :
+        "root/singlets: {'dimensions': ["FSC-A", "FSC-H"],
+                         'samples': [filename1, filename2],
+                         'training_columns': ["root/singlets"],
+                         'parents': []}
+        it is supposed to be a lookup table to assemble the necessary
+        parameters that are needed to train a classifier for one gate.
+
+        Parameters
+        ----------
+        gate_lut: lookup table for all samples and their gates
+        training_gate_paths: gates with their full path
+
+        Returns
+        -------
+        dictionary as described above
+
+        """
         reverse_lut = {}
         for gate in training_gate_paths:
-            gate_name = gate.split("/")[-1]
+            gate_name = find_current_population(gate)
             parents = [parent for parent in find_parents_recursively(gate) if parent != "root"]
-            reverse_lut[gate] = {"dimensions": training_gate_paths[gate],
-                                 "samples": [sample for sample in gate_lut.keys() if gate_name in gate_lut[sample].keys()],
-                                 "training_columns": parents + [gate],
-                                 "parents": parents}
+            reverse_lut[gate] = {
+                "dimensions": training_gate_paths[gate],
+                "samples": [
+                    sample
+                    for sample in gate_lut
+                    if gate_name in gate_lut[sample].keys()
+                ],
+                "training_columns": parents + [gate],
+                "parents": parents,
+            }
 
-        for gate in list(reverse_lut.keys()):
-            with contextlib.suppress(KeyError): ## key errors are expected since we remove keys along the way
-                if any(
-                    k in reverse_lut
-                    for k in reverse_lut[gate]["training_columns"]
-                ):
-                    for k in reverse_lut[gate]["training_columns"]:
-                        if k == gate:
-                            continue
-                        del reverse_lut[k]
+        return reverse_lut
 
-        for gate in list(reverse_lut.keys()):
-            with contextlib.suppress(KeyError): ## key errors are expected since we remove keys along the way
-                parents = reverse_lut[gate]["parents"]
-                other_gates = list(reverse_lut.keys())
-                other_gates.remove(gate)
-                for other_gate in other_gates:
+    def get_gates_with_sample_sample_set(self,
+                                         reverse_lut: dict[str: dict],
+                                         current_gate: str):
+        return [
+            candidate_gate
+            for candidate_gate in reverse_lut
+            if set(reverse_lut[current_gate]["samples"])
+            == set(reverse_lut[candidate_gate]["samples"])
+        ]
 
-                    #if reverse_lut[other_gate]["dimensions"] == dimensions and reverse_lut[other_gate]["parents"] == parents:
-                    if reverse_lut[other_gate]["parents"] == parents:
-                        reverse_lut[gate]["training_columns"] += [other_gate]
-                        reverse_lut[gate]["samples"] += reverse_lut[other_gate]["samples"]
-                        reverse_lut.pop(other_gate)
+    def condense_gates(self,
+                       reverse_lut: dict[str: dict]) -> dict[str: dict]:
+        """
+        Gates can be condensed into a multi-output classification problem
+        if they share the same training examples (e.g. multiple files with the same gating)
+        """
 
-        for gate in list(reverse_lut.keys()):
-            reverse_lut[gate]["samples"] = list(set(reverse_lut[gate]["samples"]))
+        # tuple conversion necessary due to immutable character (10.07.2023, correspondence with giiiirl)
+        unique_sample_sets = set([tuple(reverse_lut[key]["samples"]) for key in reverse_lut])
+        training_groups = {}
+        for index, group_set in enumerate(unique_sample_sets):
+            training_groups[index] = {key: values for
+                                      key, values in reverse_lut.items() if
+                                      reverse_lut[key]["samples"] == list(group_set)
+                                      }
+        training_groups = self.tidy_training_groups(training_groups,
+                                                    unique_sample_sets)
+        return training_groups
 
-        if "train_sets" not in dataset.uns.keys():
-            dataset.uns["train_sets"] = {}
-        dataset.uns["train_sets"][wsp_group] = reverse_lut
+    def tidy_training_groups(self,
+                             training_groups: dict[int: dict],
+                             unique_sample_sets: set[list[str]]) -> dict[int: dict]:
+        """Tidies the gate lookup table to contain only relevant information.
+        For each training group (where potentially multiple gates are trained for at
+        the same time), the full gate names and the corresponding training samples
+        are stored.
+
+        Returns:
+            tidy_training_groups: dict of form {training_group: {gates: [list[gates], samples: list[file_names]]}}
+        """
+        tidy_dict = {}
+        for group in training_groups:
+            tidy_dict[group] = {"gates": list(training_groups[group].keys()),
+                                "samples": list(list(unique_sample_sets)[group])}
         
-        return
+        return tidy_dict
+
+    def append_classifiers(self,
+                           training_groups: dict[int: dict]) -> dict[int: dict]:
+        for group in training_groups:
+            training_groups[group]["classifier"] = self._select_classifier(self.base_estimator)
+        return training_groups
     
+    def setup_anndata(self):
+        
+        gate_lut = self.create_gate_lut()
+
+        training_samples = self.get_gated_samples(gate_lut)
+        
+        training_gate_paths = self.gather_gate_paths(gate_lut, training_samples)
+        
+        reverse_lut = self.create_reverse_lut(gate_lut, training_gate_paths)
+
+        training_groups = self.condense_gates(reverse_lut)
+
+        if "train_sets" not in self.adata.uns.keys():
+            self.adata.uns["train_sets"] = {}
+        
+        self.training_groups = training_groups
+
+        self.update_train_groups()
 
 class unsupervisedGating(BaseGating):
 
