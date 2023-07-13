@@ -217,10 +217,12 @@ class Transformer:
         if "cofactors" in dataset.var.columns:
             print("... replacing cofactors")
             dataset.var = dataset.var.drop("cofactors", axis = 1)
-        dataset_var = dataset.var.merge(cofactor_table.dataframe,
-                                        left_index = True,
-                                        right_on = "fcs_colname",
-                                        how = "left").set_index("fcs_colname")
+        dataset_var = pd.merge(dataset.var,
+                               cofactor_table.dataframe,
+                               left_on = "pnn",
+                               right_on = "fcs_colname",
+                               how = "left").set_index("pns")
+        dataset_var = dataset_var.drop("fcs_colname", axis = 1)
         dataset_var["cofactors"] = dataset_var["cofactors"].astype(np.float32)
         return dataset_var
 
@@ -245,7 +247,7 @@ class DatasetAssembler:
         
 
         file_list: list[FCSFile] = self.compensate_samples(file_list,
-                                                            workspace)
+                                                           workspace)
         
         gates = self.gate_samples(file_list,
                                   workspace)
