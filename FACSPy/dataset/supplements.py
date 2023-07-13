@@ -196,7 +196,7 @@ class Metadata(BaseSupplement):
         )
     
     def make_dataframe_categorical(self):
-        self.dataframe[self.dataframe.columns] = self.dataframe[self.dataframe.columns].astype("category")
+        self.dataframe = self.dataframe.astype("category")
     
     def append_metadata_from_folder(self,
                                     input_directory) -> None:
