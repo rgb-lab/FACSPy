@@ -242,7 +242,7 @@ def prepare_plot_data(adata: AnnData,
     
     adata_subset = gate_parent_in_adata(adata,
                                         parent_gating_path)
-    if adata_subset.shape[0] > sample_size:
+    if sample_size is not None and adata_subset.shape[0] > sample_size:
         sc.pp.subsample(adata_subset, n_obs = sample_size)
     gate_list = [find_gate_path_of_gate(adata, gate) for gate in gate_list]
     
@@ -315,7 +315,7 @@ def group_plot(adata: AnnData,
     plot_params = {
         "x": x_channel,
         "y": y_channel,
-        "s": 1,
+        "s": 5,
         "linewidth": 0,
         "ax": ax,
         "rasterized": True
@@ -359,7 +359,7 @@ def single_plot(adata: AnnData,
         "data": plot_data,
         "x": x_channel,
         "y": y_channel,
-        "s": 1,
+        "s": 5,
         "linewidth": 0,
         "ax": ax,
         "rasterized": True
@@ -381,10 +381,11 @@ def merge_plotting_parameters(facspy_plot_params: dict,
         facspy_plot_params[key] = user_plot_params[key]
     return facspy_plot_params
 
-def draw_gates(adata: AnnData,
-               ax: Axes,
-               gate_lut: dict,
-               gates: Union[str, list[str]]) -> Axes:
+def add_gates_to_plot(adata: AnnData,
+                      ax: Axes,
+                      gate_lut: dict,
+                      gates: Union[str, list[str]]) -> Axes:
+    
     gate_line_params = {
         "marker": ".",
         "markersize": 2,
@@ -481,7 +482,7 @@ def manage_axis_scale(adata: AnnData,
             ax.set_xscale("symlog", linthresh = 1)
     elif adata.var.loc[adata.var["pns"] == x_channel, "type"].iloc[0] == "fluo":
         try:
-            cofactor = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == x_channel, "pnn"].iloc[0])
+            cofactor = adata.var.loc[adata.var["pns"] == x_channel, "cofactors"].iloc[0]
         except IndexError:
             cofactor = 5
         ax.set_xscale("symlog", linthresh = cofactor)
@@ -491,8 +492,9 @@ def manage_axis_scale(adata: AnnData,
             ax.set_yscale("symlog", linthresh = 1)
     elif adata.var.loc[adata.var["pns"] == y_channel, "type"].iloc[0] == "fluo":
         try:
-            cofactor = adata.uns["cofactors"].get_cofactor(adata.var.loc[adata.var["pns"] == y_channel, "pnn"].iloc[0])
+            cofactor = adata.var.loc[adata.var["pns"] == y_channel, "cofactors"].iloc[0]
         except IndexError:
+            print("Index Error...")
             cofactor = 5
         ax.set_yscale("symlog", linthresh = cofactor)
     
@@ -504,6 +506,7 @@ def gating_strategy(adata: AnnData,
                     sample_ID: Optional[str] = None,
                     file_name: Optional[str] = None,
                     sample_size: Optional[int] = 5_000,
+                    draw_gates: bool = True,
                     return_fig: bool = False,
                     show: bool = True,
                     axis_kwargs: dict = {},
@@ -553,16 +556,17 @@ def gating_strategy(adata: AnnData,
                                )
             group_index = gate.split("-")[1]
             gate_list = gate_group_map[group_index]
-            for gate in gate_list:
-                ax[i] = draw_gates(adata = adata,
-                                   ax = ax[i],
-                                   gate_lut = gate_lut,
-                                   gates = gate
-                                )
+            if draw_gates:
+                for single_gate in gate_list:
+                    ax[i] = add_gates_to_plot(adata = adata,
+                                    ax = ax[i],
+                                    gate_lut = gate_lut,
+                                    gates = single_gate
+                                    )
             ax[i] = manage_axis_scale(adata = adata,
                                       ax = ax[i],
                                       gate_lut = gate_lut,
-                                      gates = gate,
+                                      gates = gate_list[0],
                                       axis_kwargs = axis_kwargs)
         else:
             ax[i] = single_plot(adata = adata,
@@ -575,20 +579,17 @@ def gating_strategy(adata: AnnData,
                                 ax = ax[i],
                                 user_plot_params = plot_kwargs
                                 )
-            ax[i] = draw_gates(adata = adata,
-                               ax = ax[i],
-                               gate_lut = gate_lut,
-                               gates = gate)        
+            if draw_gates:
+                ax[i] = add_gates_to_plot(adata = adata,
+                                          ax = ax[i],
+                                          gate_lut = gate_lut,
+                                          gates = gate)        
             ax[i] = manage_axis_scale(adata = adata,
                                       ax = ax[i],
                                       gate_lut = gate_lut,
                                       gates = gate,
                                       axis_kwargs = axis_kwargs)
         ax[i].set_title(gate)
-        # ax[i] = draw_gate_connections(adata = adata,
-        #                               ax = ax[i])
-
-    #ax = np.reshape(ax, (ncols, nrows))
 
     if return_fig:
         return fig
