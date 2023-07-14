@@ -12,6 +12,8 @@ from typing import Literal, Union, Optional
 
 from ..utils import flatten_nested_list
 
+from .utils import savefig_or_show
+
 from .cofactor_plots import calculate_histogram_data
 
 import warnings
@@ -64,7 +66,11 @@ def marker_density(adata: AnnData,
                    cmap: str = "Set1",
                    highlight: Optional[Union[str, list[str]]] = None,
                    linewidth: float = 0.5,
-                   on: Literal["compensated", "transformed", "raw"] = "transformed") -> Optional[Figure]:
+                   on: Literal["compensated", "transformed", "raw"] = "transformed",
+                   return_dataframe: bool = False,
+                   return_fig: bool = False,
+                   save: bool = None,
+                   show: bool = None) -> Optional[Figure]:
     """plots histograms per sample and colors by colorby variable"""
     if not isinstance(markers, list):
         markers = [markers]
@@ -186,8 +192,9 @@ def marker_density(adata: AnnData,
             ax.set_xlabel(f"{on} expression")
 
             #plt.tight_layout()
-            
-        plt.show()
+        if return_fig:
+            return fig
+        savefig_or_show(show = show, save = save)
         
 def map_pal_to_groupby(pal: dict,
                        data: pd.DataFrame,
