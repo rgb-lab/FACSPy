@@ -106,8 +106,8 @@ def cluster_heatmap(adata: AnnData,
                                    cmap = cmap,
                                    figsize = figsize,
                                    cbar_kws = {"label": "scaled expression", "orientation": 'vertical'},
-                                   vmin = 0 if scaling is not None else None,
-                                   vmax = 1 if scaling is not None else None
+                                   vmin = None,
+                                   vmax = None
                                    )
     
     indices = [t.get_text() for t in np.array(clustermap.ax_heatmap.get_xticklabels())]
