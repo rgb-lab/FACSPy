@@ -75,7 +75,7 @@ def samplewise_dr_plot(adata: AnnData,
         if len(groupby) > 1:
             ax[i] = create_scatterplot(ax = ax[i],
                                        plot_params = plot_params)
-            ax[i].set_title(f"{reduction} samplewise reduction\ngroupbyed by {grouping}")
+            ax[i].set_title(f"{reduction} samplewise reduction\ngrouped by {grouping}")
             #sns.move_legend(ax[i], "center right")
             if dataframe[grouping].dtype.__class__.__name__ == "CategoricalDtype":
                 handles, labels = ax[i].get_legend_handles_labels()
@@ -89,7 +89,7 @@ def samplewise_dr_plot(adata: AnnData,
         else:
             ax = create_scatterplot(ax = ax,
                                     plot_params = plot_params)
-            ax.set_title(f"{reduction} samplewise reduction\ngroupbyed by {grouping}")
+            ax.set_title(f"{reduction} samplewise reduction\ngrouped by {grouping}")
             #sns.move_legend(ax, "center right", bbox_to_anchor = (2,0.5))
             if dataframe[grouping].dtype.__class__.__name__ == "CategoricalDtype":
                 handles, labels = ax.get_legend_handles_labels()
