@@ -222,6 +222,7 @@ class Transformer:
                                left_on = "pnn",
                                right_on = "fcs_colname",
                                how = "left")
+        dataset_var["cofactors"] = dataset_var["cofactors"].astype("float") ## could crash, not tested, your fault if shitty
         dataset_var.index = dataset_var["pns"].to_list()
         dataset_var = dataset_var.drop("fcs_colname", axis = 1)
         dataset_var["cofactors"] = dataset_var["cofactors"].astype(np.float32)
