@@ -16,7 +16,8 @@ from .utils import (scale_data,
                     scale_cbar_to_heatmap,
                     add_categorical_legend_to_clustermap,
                     calculate_correlation_data,
-                    ANNOTATION_CMAPS)
+                    ANNOTATION_CMAPS,
+                    savefig_or_show)
 
 from ._clustermap import create_clustermap
 
@@ -47,12 +48,14 @@ def sample_correlation(adata: AnnData,
                        on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cmap: str = "inferno",
-                       return_fig: bool = False,
                        metaclusters: Optional[int] = None,
                        figsize: tuple[float, float] = (4,4),
                        label_metaclusters_in_dataset: bool = True,
                        label_metaclusters_key: Optional[str] = "metacluster_sc",
-                       return_dataframe: bool = False) -> Optional[Figure]:
+                       return_dataframe: bool = False,
+                       return_fig: bool = False,
+                       save: bool = None,
+                       show: bool = None) -> Optional[Figure]:
     
     if not isinstance(groupby, list):
         groupby = [groupby] 
@@ -114,4 +117,4 @@ def sample_correlation(adata: AnnData,
                                          groupby = groupby)
     if return_fig:
         return clustermap
-    plt.show()
+    savefig_or_show(save = save, show = show)
