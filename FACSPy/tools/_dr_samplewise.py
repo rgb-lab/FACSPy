@@ -34,7 +34,8 @@ def perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
 
 def perform_samplewise_dr(data: pd.DataFrame,
                           reduction: Literal["PCA", "MDS", "TSNE", "UMAP"],
-                          fluo_channels: Union[pd.Index, list[str]]):
+                          fluo_channels: Union[pd.Index, list[str]],
+                          scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]):
     return_data = data.copy()
     return_data = return_data.T
     data = data.loc[fluo_channels, :]
@@ -42,7 +43,7 @@ def perform_samplewise_dr(data: pd.DataFrame,
     gates = data.index.levels[1]
     for gate in gates:
         gate_specific_data = select_gate_from_multiindex_dataframe(data, gate)
-        gate_specific_data = scale_data(gate_specific_data, scaling = "MinMaxScaler")
+        gate_specific_data = scale_data(gate_specific_data, scaling = scaling)
         coords = perform_dr(reduction, gate_specific_data, n_components = 3)
         coord_columns = reduction_names[reduction]
         return_data.loc[(slice(None), gate), coord_columns] = coords
@@ -51,35 +52,43 @@ def perform_samplewise_dr(data: pd.DataFrame,
 
 def pca_samplewise(adata: AnnData,
                    on: Literal["mfi", "fop", "gate_frequency"],
-                   exclude: Optional[Union[str, list, str]] = []):
+                   exclude: Optional[Union[str, list, str]] = [],
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "StandardScaler"):
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
     adata.uns[on] = perform_samplewise_dr(adata.uns[on],
                                           reduction = "PCA",
-                                          fluo_channels = fluo_channels)
+                                          fluo_channels = fluo_channels,
+                                          scaling = scaling)
 
 
 def tsne_samplewise(adata: AnnData,
                    on: Literal["mfi", "fop", "gate_frequency"],
-                   exclude: Optional[Union[str, list, str]] = []):
+                   exclude: Optional[Union[str, list, str]] = [],
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "StandardScaler"):
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
     adata.uns[on] = perform_samplewise_dr(adata.uns[on],
                                           reduction = "TSNE",
-                                          fluo_channels = fluo_channels)
+                                          fluo_channels = fluo_channels,
+                                          scaling = scaling)
 
 def umap_samplewise(adata: AnnData,
                    on: Literal["mfi", "fop", "gate_frequency"],
-                   exclude: Optional[Union[str, list, str]] = []):
+                   exclude: Optional[Union[str, list, str]] = [],
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "StandardScaler"):
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
     
     adata.uns[on] = perform_samplewise_dr(adata.uns[on],
                                           reduction = "UMAP",
-                                          fluo_channels = fluo_channels)
+                                          fluo_channels = fluo_channels,
+                                          scaling = scaling)
 
 def mds_samplewise(adata: AnnData,
                    on: Literal["mfi", "fop", "gate_frequency"],
-                   exclude: Optional[Union[str, list, str]] = []):
+                   exclude: Optional[Union[str, list, str]] = [],
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "StandardScaler"):
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
     
     adata.uns[on] = perform_samplewise_dr(adata.uns[on],
                                           reduction = "MDS",
-                                          fluo_channels = fluo_channels)
+                                          fluo_channels = fluo_channels,
+                                          scaling = scaling)
