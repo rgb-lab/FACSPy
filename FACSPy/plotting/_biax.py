@@ -4,12 +4,14 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from matplotlib.axis import Axis
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from anndata import AnnData
 
 from typing import Union, Optional, Literal
+
+from .utils import savefig_or_show
 
 #TODO: add legend
 def biax(adata: AnnData,
@@ -17,7 +19,11 @@ def biax(adata: AnnData,
          y_channel: str,
          sample_ID: Union[str, list[str]], 
          layer: Literal["compensated", "raw", "transformed"] = "compensated",
-         add_cofactor: bool = False) -> Optional[Figure]:
+         add_cofactor: bool = False,
+         show: Optional[bool] = None,
+         save: Optional[Union[str, bool]] = None,
+         return_dataframe: bool = False,
+         return_fig: bool = False) -> Optional[Figure]:
     
     if not isinstance(sample_ID, list):
         sample_ID = [sample_ID]
@@ -28,6 +34,9 @@ def biax(adata: AnnData,
     
     dataframe = adata[adata.obs["sample_ID"].isin(sample_ID)].to_df(layer = layer)
     dataframe["sample_ID"] = adata[adata.obs["sample_ID"].isin(sample_ID)].obs["sample_ID"].to_list()
+
+    if return_dataframe:
+        return dataframe
 
     fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (3,3))
     plot_params = {
@@ -43,9 +52,8 @@ def biax(adata: AnnData,
                     ax = ax)
 
     if layer in ["compensated", "raw"]:
-        x_channel_cofactor = adata.uns["cofactors"].get_cofactor(x_channel)
-        y_channel_cofactor = adata.uns["cofactors"].get_cofactor(y_channel)
-        print(x_channel_cofactor, y_channel_cofactor)
+        x_channel_cofactor = float(adata.var.loc[adata.var["pns"] == x_channel, "cofactors"].iloc[0])
+        y_channel_cofactor = float(adata.var.loc[adata.var["pns"] == y_channel, "cofactors"].iloc[0])
         plt.xscale("symlog",
                    linthresh = x_channel_cofactor)
         ax.axvline(x_channel_cofactor)
@@ -57,4 +65,8 @@ def biax(adata: AnnData,
         ax.axvline(np.arcsinh(1))
     ax.set_title(f"{layer}\nexpression")
     plt.tight_layout()
-    plt.show()
+
+    if return_fig:
+        return fig
+
+    savefig_or_show(show = show, save = save)
