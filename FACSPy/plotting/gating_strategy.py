@@ -485,7 +485,7 @@ def manage_axis_scale(adata: AnnData,
             cofactor = adata.var.loc[adata.var["pns"] == x_channel, "cofactors"].iloc[0]
         except IndexError:
             cofactor = 5
-        ax.set_xscale("symlog", linthresh = cofactor)
+        ax.set_xscale("symlog", linthresh = float(cofactor))
     
     if y_channel in axis_kwargs:
         if axis_kwargs[y_channel] == "log":
@@ -496,7 +496,7 @@ def manage_axis_scale(adata: AnnData,
         except IndexError:
             print("Index Error...")
             cofactor = 5
-        ax.set_yscale("symlog", linthresh = cofactor)
+        ax.set_yscale("symlog", linthresh = float(cofactor))
     
     return ax
 
