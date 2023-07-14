@@ -68,4 +68,3 @@ def cluster_frequency(adata: AnnData,
     plt.tight_layout()
 
     savefig_or_show(save = save, show = show)
-    plt.show()
