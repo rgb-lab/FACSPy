@@ -122,8 +122,8 @@ def cluster_heatmap(adata: AnnData,
     #                   which = "x")
     # remove_ticks(ax = ax,
     #              which = "x")
-    
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "right")
+
+    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
     ax.yaxis.set_ticks_position("left")
     ax.set_yticklabels(ax.get_yticklabels(),
                        fontsize = y_label_fontsize)
