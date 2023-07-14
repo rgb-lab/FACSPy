@@ -1,13 +1,13 @@
 from typing import Optional, Union
 
 import pandas as pd
+import numpy as np
 import os
 from ..exceptions.supplements import (SupplementDataTypeError,
                                       SupplementFileNotFoundError,
                                       SupplementCreationError,
                                       SupplementColumnError,
                                       SupplementNoInputDirectoryError)
-
 
 class BaseSupplement:
     
@@ -212,6 +212,19 @@ class Metadata(BaseSupplement):
         if not isinstance(file_names, list):
             file_names = [file_names]
         self.dataframe.loc[self.dataframe["file_name"].isin(file_names), column] = value
+
+    def group_variable(self,
+                       factor: str,
+                       n_groups: int):
+        try:
+            self.dataframe[factor] = self.dataframe[factor].astype("float64")
+        except ValueError as e:
+            raise ValueError("Only numeric columns are supported") from e
+        column = self.dataframe[factor]
+        min_value = column.min()
+        max_value = column.max()
+        intervals = np.arange(min_value, max_value + min_value, (max_value - min_value) / n_groups)
+        self.dataframe[f"{factor}_grouped"] = pd.cut(column, intervals)
 
     def extract_metadata_factors(self):
         return [
