@@ -9,7 +9,7 @@ from matplotlib.figure import Figure
 
 from typing import Literal, Union, Optional
 
-from .utils import get_uns_dataframe, turn_off_missing_plots
+from .utils import get_uns_dataframe, turn_off_missing_plots, savefig_or_show
 from ..utils import find_gate_path_of_gate, reduction_names
 
 from ..exceptions.exceptions import AnalysisNotPerformedError
@@ -19,7 +19,10 @@ def samplewise_dr_plot(adata: AnnData,
                        dataframe: pd.DataFrame,
                        groupby: Optional[Union[str, list[str]]],
                        reduction: Literal["PCA", "MDS", "TSNE", "UMAP"],
-                       overview: bool = False):
+                       overview: bool = False,
+                       return_fig: bool = False,
+                       save: bool = None,
+                       show: bool = None):
     
     if not isinstance(groupby, list):
         groupby = [groupby]
@@ -101,8 +104,9 @@ def samplewise_dr_plot(adata: AnnData,
         ax = turn_off_missing_plots(ax)
     ax = np.reshape(ax, (ncols, nrows))
 
-    #plt.tight_layout()
-    plt.show()
+    if return_fig:
+        return fig
+    savefig_or_show(show = show, save = save)
             
 
 def get_plotting_dimensions(reduction: str):
@@ -119,7 +123,10 @@ def pca_samplewise(adata: AnnData,
                    gate: str, 
                    on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                    overview: bool = False,
-                   return_dataframe: bool = False
+                   return_dataframe: bool = False,
+                   return_fig: bool = False,
+                   save: bool = None,
+                   show: bool = None
                    ) -> Optional[Figure]:
     
     if gate is None:
@@ -137,14 +144,20 @@ def pca_samplewise(adata: AnnData,
                        dataframe = data,
                        reduction = "PCA",
                        groupby = groupby,
-                       overview = overview)
+                       overview = overview,
+                       return_fig = return_fig,
+                       save = save,
+                       show = show)
     
 def mds_samplewise(adata: AnnData,
                    groupby: str,
                    gate: str, 
                    on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                    overview: bool = False,
-                   return_dataframe: bool = False
+                   return_dataframe: bool = False,
+                   return_fig: bool = False,
+                   save: bool = None,
+                   show: bool = None
                    ) -> Optional[Figure]:
     
     if gate is None:
@@ -162,4 +175,7 @@ def mds_samplewise(adata: AnnData,
                        dataframe = data,
                        reduction = "MDS",
                        groupby = groupby,
-                       overview = overview)
+                       overview = overview,
+                       return_fig = return_fig,
+                       save = save,
+                       show = show)
