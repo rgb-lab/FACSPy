@@ -213,7 +213,6 @@ class Metadata(BaseSupplement):
             file_names = [file_names]
         self.dataframe.loc[self.dataframe["file_name"].isin(file_names), column] = value
 
-
     def extract_metadata_factors(self):
         return [
             col
