@@ -23,7 +23,7 @@ from ..utils import (create_gate_lut,
                      find_gate_indices,
                      find_gate_path_of_gate)
 
-from .utils import turn_off_missing_plot
+from .utils import turn_off_missing_plot, savefig_or_show
 
 
 class GatingStrategyGrid:
@@ -507,10 +507,12 @@ def gating_strategy(adata: AnnData,
                     file_name: Optional[str] = None,
                     sample_size: Optional[int] = 5_000,
                     draw_gates: bool = True,
-                    return_fig: bool = False,
-                    show: bool = True,
                     axis_kwargs: dict = {},
-                    plot_kwargs: dict = {}):
+                    plot_kwargs: dict = {},
+                    return_dataframe: bool = False,
+                    return_fig: bool = False,
+                    save: bool = None,
+                    show: bool = None):
 
     if sample_ID and not file_name:
         file_name = map_sample_ID_to_filename(adata, sample_ID)
@@ -594,8 +596,7 @@ def gating_strategy(adata: AnnData,
     if return_fig:
         return fig
     
-    if not show:
-        return ax
     
     plt.tight_layout()
-    plt.show()
+    
+    savefig_or_show(save = save, show = show)
