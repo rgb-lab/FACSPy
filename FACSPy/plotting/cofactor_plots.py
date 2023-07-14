@@ -9,7 +9,8 @@ from matplotlib.figure import Figure
 
 from .utils import (calculate_fig_size,
                     turn_off_missing_plots,
-                    calculate_nrows)
+                    calculate_nrows,
+                    savefig_or_show)
 
 from typing import Optional, Union, Literal
 
@@ -162,8 +163,10 @@ def transformation_plot(adata: AnnData,
                         markers: Optional[Union[str, list[str]]] = None,
                         scatter: str = "SSC-A",
                         sample_size: Optional[int] = 5_000,
+                        return_dataframe: bool = False,
                         return_fig: bool = False,
-                        show: bool = True
+                        save: bool = None,
+                        show: bool = None
                         ):
 
     if not isinstance(markers, list):
@@ -243,17 +246,20 @@ def transformation_plot(adata: AnnData,
         return ax
     
     plt.tight_layout()
-    plt.show()
+    
+    savefig_or_show(show = show, save = save)
     
 
 
 def cofactor_distribution(adata: AnnData,
                           groupby: Optional[str] = None,
                           channels: Optional[str] = None,
-                          return_fig: Optional[bool] = False,
                           ax: Optional[Axes] = None,
                           ncols: int = 4,
-                          show: bool = True) -> Union[Figure, Axes, None]:
+                          return_dataframe: bool = False,
+                          return_fig: bool = False,
+                          save: bool = None,
+                          show: bool = None) -> Union[Figure, Axes, None]:
     
     assert "raw_cofactors" in adata.uns, "raw cofactors not found..."
     cofactors = adata.uns["raw_cofactors"]
@@ -308,7 +314,8 @@ def cofactor_distribution(adata: AnnData,
         return ax
     
     plt.tight_layout()
-    plt.show()
+    
+    savefig_or_show(show = show, save = save)
     
 
 
