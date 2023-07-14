@@ -53,7 +53,7 @@ def perform_samplewise_dr(data: pd.DataFrame,
 def pca_samplewise(adata: AnnData,
                    on: Literal["mfi", "fop", "gate_frequency"],
                    exclude: Optional[Union[str, list, str]] = [],
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "StandardScaler"):
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
     adata.uns[on] = perform_samplewise_dr(adata.uns[on],
                                           reduction = "PCA",
@@ -64,7 +64,7 @@ def pca_samplewise(adata: AnnData,
 def tsne_samplewise(adata: AnnData,
                    on: Literal["mfi", "fop", "gate_frequency"],
                    exclude: Optional[Union[str, list, str]] = [],
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "StandardScaler"):
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
     adata.uns[on] = perform_samplewise_dr(adata.uns[on],
                                           reduction = "TSNE",
@@ -74,7 +74,7 @@ def tsne_samplewise(adata: AnnData,
 def umap_samplewise(adata: AnnData,
                    on: Literal["mfi", "fop", "gate_frequency"],
                    exclude: Optional[Union[str, list, str]] = [],
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "StandardScaler"):
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
     
     adata.uns[on] = perform_samplewise_dr(adata.uns[on],
@@ -85,7 +85,7 @@ def umap_samplewise(adata: AnnData,
 def mds_samplewise(adata: AnnData,
                    on: Literal["mfi", "fop", "gate_frequency"],
                    exclude: Optional[Union[str, list, str]] = [],
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "StandardScaler"):
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
     
     adata.uns[on] = perform_samplewise_dr(adata.uns[on],
