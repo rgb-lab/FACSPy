@@ -77,5 +77,3 @@ def fold_change(adata: AnnData,
               return fig
 
        savefig_or_show(save = save, show = show)
-       
-       plt.show()
