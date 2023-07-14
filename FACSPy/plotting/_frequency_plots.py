@@ -10,6 +10,8 @@ from matplotlib import pyplot as plt
 
 from typing import Optional
 
+from .utils import savefig_or_show
+
 
 
 def prep_dataframe_cluster_freq(adata: AnnData,
@@ -39,7 +41,9 @@ def cluster_frequency(adata: AnnData,
                       cluster_key: str = "leiden",
                       normalize: bool = True,
                       return_dataframe: bool = False,
-                      return_fig: bool = False) -> Optional[Figure]:
+                      return_fig: bool = False,
+                      save: bool = None,
+                      show: bool = None) -> Optional[Figure]:
     
     dataframe = prep_dataframe_cluster_freq(adata, groupby, cluster_key, normalize)
     
@@ -62,4 +66,6 @@ def cluster_frequency(adata: AnnData,
     if return_fig:
         return fig
     plt.tight_layout()
+
+    savefig_or_show(save = save, show = show)
     plt.show()
