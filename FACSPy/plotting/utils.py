@@ -2,6 +2,7 @@ from matplotlib.axes import Axes
 from matplotlib.patches import Patch
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.transforms import Bbox
+from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -326,3 +327,25 @@ def turn_off_missing_plots(ax: Axes) -> Axes:
         if not axs.lines and not axs.collections:
             turn_off_missing_plot(axs)
     return ax
+
+def savefig_or_show(show: Optional[bool] = None,
+                    dpi: Optional[int] = 300,
+                    ext: str = None,
+                    save: Union[bool, str, None] = None):
+    """
+    simple save or show function
+    """
+    if show is None:
+        show = True
+    
+    if save:
+        assert isinstance(save, str)
+        plt.savefig(save,
+                    dpi = dpi,
+                    bbox_inches = "tight")
+    
+    if show:
+        plt.show()
+    
+    if save:
+        plt.close()
