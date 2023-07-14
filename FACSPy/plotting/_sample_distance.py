@@ -19,7 +19,8 @@ from .utils import (scale_data,
                     scale_cbar_to_heatmap,
                     add_categorical_legend_to_clustermap,
                     get_uns_dataframe,
-                    ANNOTATION_CMAPS)
+                    ANNOTATION_CMAPS,
+                    savefig_or_show)
 
 from ._clustermap import create_clustermap
 
@@ -48,11 +49,13 @@ def sample_distance(adata: AnnData,
                     on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     cmap: str = "inferno",
                     figsize: tuple[float, float] = (4,4),
-                    return_fig: bool = False,
                     return_dataframe: bool = False,
                     metaclusters: Optional[int] = None,
                     label_metaclusters_in_dataset: bool = True,
-                    label_metaclusters_key: Optional[str] = "sample_distance_metaclusters") -> Optional[Figure]:
+                    label_metaclusters_key: Optional[str] = "sample_distance_metaclusters",
+                    return_fig: bool = False,
+                    save: bool = None,
+                    show: bool = None) -> Optional[Figure]:
     
     """ plots sample distance metrics as a heatmap """
     
@@ -115,5 +118,5 @@ def sample_distance(adata: AnnData,
     
     if return_fig:
         return clustermap
-    
+    savefig_or_show(save = save, show = show)
     plt.show()
