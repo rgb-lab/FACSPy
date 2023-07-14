@@ -207,14 +207,11 @@ def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
                                     group,
                                     ANNOTATION_CMAPS[i],
                                     return_mapping = True)
-        print(group_lut.keys())
         if isinstance(data[group].dtype, pd.CategoricalDtype) and isinstance(data[group].cat.categories, pd.IntervalIndex):
             sorted_index = list(data[group].cat.categories.values)
-            print(sorted_index)
             if np.nan in group_lut.keys():
                 sorted_index = [np.nan] + sorted_index
             group_lut = {key: group_lut[key] for key in sorted_index}
-        print(f"AFTER\n{group_lut.keys()}")
         handles = [Patch(facecolor = group_lut[name]) for name in group_lut]
         legend_space = 0.1 * (len(handles) + 1)
         group_legend = heatmap.legend(handles,
