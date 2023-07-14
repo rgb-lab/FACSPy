@@ -19,7 +19,8 @@ from ..exceptions.exceptions import AnalysisNotPerformedError
 
 from .utils import (create_boxplot,
                     turn_off_missing_plots,
-                    get_uns_dataframe)
+                    get_uns_dataframe,
+                    savefig_or_show)
 ### mfi plot
 
 
@@ -31,7 +32,10 @@ def fop(adata: AnnData,
         order: list[str] = None,
         gate: str = None,
         overview: bool = False,
-        return_dataframe: bool = False):
+        return_dataframe: bool = False,
+        return_fig: bool = False,
+        save: bool = None,
+        show: bool = None):
     
     data = get_uns_dataframe(adata = adata,
                              gate = gate,
@@ -49,7 +53,10 @@ def fop(adata: AnnData,
                      gate = gate,
                      assay = "fop",
                      overview = overview,
-                     order = order)
+                     order = order,
+                     return_fig = return_fig,
+                     save = save,
+                     show = show)
 
 def mfi(adata: AnnData,
         marker: Union[str, list[str]],
@@ -58,7 +65,10 @@ def mfi(adata: AnnData,
         groupby: Union[str, list[str]] = None,
         gate: str = None,
         overview: bool = False,
-        return_dataframe: bool = False):
+        return_dataframe: bool = False,
+        return_fig: bool = False,
+        save: bool = None,
+        show: bool = None):
 
     data = get_uns_dataframe(adata = adata,
                              gate = gate,
@@ -76,7 +86,10 @@ def mfi(adata: AnnData,
                      gate = gate,
                      assay = "mfi",
                      overview = overview,
-                     order = order)
+                     order = order,
+                     return_fig = return_fig,
+                     save = save,
+                     show = show)
 
 def mfi_fop_baseplot(adata: AnnData,
                      dataframe: pd.DataFrame,
@@ -86,7 +99,10 @@ def mfi_fop_baseplot(adata: AnnData,
                      assay: Literal["mfi", "fop"],
                      order: list[str] = None,
                      gate: str = None,
-                     overview: bool = False):
+                     overview: bool = False,
+                     return_fig: bool = False,
+                     save: bool = None,
+                     show: bool = None):
     
     if gate is None:
         raise TypeError("A Gate has to be provided")
@@ -175,7 +191,9 @@ def mfi_fop_baseplot(adata: AnnData,
         ax = np.reshape(ax, (ncols, nrows))
 
         plt.tight_layout()
-        plt.show()
+        if return_fig:
+            return fig
+        savefig_or_show(save = save, show = show)
 
 def adjust_legend(ax: Axes) -> Axes:
     ax.legend(loc = "upper left",
