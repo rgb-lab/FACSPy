@@ -35,6 +35,7 @@ def prepare_plot_data(adata: AnnData,
     plot_data = pd.DataFrame(data = correlations,
                              columns = raw_data.index.to_list(),
                              index = raw_data.index)
+    plot_data = plot_data.fillna(0)
     plot_data = append_metadata(adata, plot_data)
 
     return plot_data
