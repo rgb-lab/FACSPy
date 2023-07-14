@@ -153,8 +153,6 @@ def cluster_heatmap(adata: AnnData,
         return clustermap
 
     savefig_or_show(show = show, save = save)
-    
-    plt.show()
 
 
 
