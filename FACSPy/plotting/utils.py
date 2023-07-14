@@ -52,6 +52,9 @@ def label_metaclusters_in_dataset(adata: AnnData,
     if "metacluster" in adata.uns["metadata"].dataframe:
         print("warninig... overwriting metaclusters")
         adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
+    
+    
+    adata.uns["metadata"].dataframe["sample_ID"] = adata.uns["metadata"].dataframe["sample_ID"].astype("str")
     adata.uns["metadata"].dataframe = pd.merge(adata.uns["metadata"].dataframe,
                                                 data[["sample_ID", "metacluster"]],
                                                 on = "sample_ID")
@@ -80,13 +83,14 @@ def add_metaclusters(adata: AnnData,
     metaclusters = calculate_metaclusters(row_linkage, n_clusters = n_clusters)
     metacluster_mapping = map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
     data = merge_metaclusters_into_dataframe(data, metacluster_mapping)
-    
-    
+
     if label_metaclusters:
         label_metaclusters_in_dataset(adata = adata,
                                       data = data,
                                       label_metaclusters_key = label_metaclusters_key)
-    data = data.set_index("sample_ID")
+    
+    #data = data.set_index("sample_ID")
+    
     return data
 
 
@@ -135,10 +139,8 @@ def get_uns_dataframe(adata: AnnData,
                                  data,
                                  column_identifier_name)
     data = select_gate_from_singleindex_dataframe(data, find_gate_path_of_gate(adata, gate))
-
     if column_identifier_name == "sample_ID":
         data = append_metadata(adata, data)
-    
     data = data.set_index(column_identifier_name)
     return data
 
