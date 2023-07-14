@@ -157,7 +157,7 @@ def select_gate_from_singleindex_dataframe(dataframe: pd.DataFrame,
     return dataframe[dataframe["gate_path"] == gate]
 
 def scale_data(dataframe: pd.DataFrame,
-               scaling: Literal["MinMaxScaler", "RobustScaler"]) -> np.ndarray:
+               scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]) -> np.ndarray:
     if scaling == "MinMaxScaler":
         return MinMaxScaler().fit_transform(dataframe)
     if scaling == "RobustScaler":
