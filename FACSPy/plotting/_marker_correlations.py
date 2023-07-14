@@ -10,7 +10,8 @@ from .utils import (scale_data,
                     remove_ticklabels,
                     remove_ticks,
                     scale_cbar_to_heatmap,
-                    calculate_correlation_data)
+                    calculate_correlation_data,
+                    savefig_or_show)
 
 from ._clustermap import create_clustermap
 
@@ -41,7 +42,9 @@ def marker_correlation(adata: AnnData,
                        cmap: str = "inferno",
                        figsize: tuple[float, float] = (4,4),
                        return_fig: bool = False,
-                       return_dataframe: bool = False) -> Optional[Figure]:
+                       return_dataframe: bool = False,
+                       save: bool = None,
+                       show: bool = None) -> Optional[Figure]:
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
@@ -77,4 +80,5 @@ def marker_correlation(adata: AnnData,
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = 5)
     if return_fig:
         return clustermap
-    plt.show()
+
+    savefig_or_show(save = save, show = show)
