@@ -21,7 +21,8 @@ from .utils import (scale_data,
                     remove_dendrogram,
                     add_annotation_plot,
                     get_uns_dataframe,
-                    ANNOTATION_CMAPS)
+                    ANNOTATION_CMAPS,
+                    savefig_or_show)
 
 from ._clustermap import create_clustermap
 
@@ -45,13 +46,15 @@ def expression_heatmap(adata: AnnData,
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cluster_method: Literal["correlation", "distance"] = "distance",
                        cmap: str = "RdBu_r",
-                       return_fig: bool = False,
                        metaclusters: Optional[int] = None,
                        label_metaclusters_in_dataset: bool = True,
                        label_metaclusters_key: Optional[str] = "metacluster_sc",
                        figsize: Optional[tuple[int, int]] = (5,3.8),
                        y_label_fontsize: Optional[Union[int, float]] = 4,
-                       return_dataframe: bool = False) -> Optional[Figure]:
+                       return_dataframe: bool = False,
+                       return_fig: bool = False,
+                       save: bool = None,
+                       show: bool = None) -> Optional[Figure]:
 
     if not isinstance(groupby, list):
         groupby = [groupby]    
@@ -135,4 +138,7 @@ def expression_heatmap(adata: AnnData,
 
     if return_fig:
         return clustermap
+    
+    savefig_or_show(save = save, show = show)
+    
     plt.show()
