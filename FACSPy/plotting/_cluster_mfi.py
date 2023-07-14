@@ -19,7 +19,8 @@ from .utils import (scale_data,
                     scale_cbar_to_heatmap,
                     calculate_correlation_data,
                     remove_dendrogram,
-                    add_annotation_plot)
+                    add_annotation_plot,
+                    savefig_or_show)
 
 
 from ._clustermap import create_clustermap
@@ -71,11 +72,13 @@ def cluster_heatmap(adata: AnnData,
                     cluster_method: Literal["correlation", "distance"] = "distance",
                     annotate: Optional[Union[Literal["frequency"], str]] = None,
                     cmap: str = "inferno",
-                    return_fig: bool = False,
                     annotation_kwargs: dict = {},
                     figsize: Optional[tuple[int, int]] = (5,3.8),
                     y_label_fontsize: Optional[Union[int, float]] = 4,
-                    return_dataframe: bool = False) -> Optional[Figure]:
+                    return_dataframe: bool = False,
+                    return_fig: bool = False,
+                    save: bool = None,
+                    show: bool = None) -> Optional[Figure]:
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
@@ -148,6 +151,8 @@ def cluster_heatmap(adata: AnnData,
                             )
     if return_fig:
         return clustermap
+
+    savefig_or_show(show = show, save = save)
     
     plt.show()
 
