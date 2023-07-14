@@ -105,7 +105,8 @@ def cluster_heatmap(adata: AnnData,
                                    col_linkage = col_linkage,
                                    cmap = cmap,
                                    figsize = figsize,
-                                   cbar_kws = {"label": "scaled expression", "orientation": 'vertical'},
+                                   cbar_kws = {"label": "scaled expression" if scaling else "expression",
+                                               "orientation": 'vertical'},
                                    vmin = None,
                                    vmax = None
                                    )
