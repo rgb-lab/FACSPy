@@ -12,7 +12,9 @@ from anndata import AnnData
 
 from typing import Literal, Union, Optional
 
-from sklearn.preprocessing import MinMaxScaler, RobustScaler
+from sklearn.preprocessing import (MinMaxScaler,
+                                   RobustScaler,
+                                   StandardScaler)
 
 from ..exceptions.exceptions import AnalysisNotPerformedError
 
@@ -160,6 +162,8 @@ def scale_data(dataframe: pd.DataFrame,
         return MinMaxScaler().fit_transform(dataframe)
     if scaling == "RobustScaler":
         return RobustScaler().fit_transform(dataframe)
+    if scaling == "StandardScaler":
+        return StandardScaler().fit_transform(dataframe)
     return
 
 def calculate_correlation_data(data: pd.DataFrame,
