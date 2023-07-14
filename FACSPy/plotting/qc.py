@@ -12,7 +12,7 @@ from matplotlib.axis import Axis
 
 from ..exceptions.exceptions import HierarchyError
 
-from .utils import create_boxplot
+from .utils import create_boxplot, savefig_or_show
 
 from ..utils import (GATE_SEPARATOR,
                      find_gate_path_of_gate,
@@ -64,7 +64,11 @@ def prepare_dataframe_gate_frequency(adata: AnnData,
 def gate_frequency(adata: AnnData,
                    gate: Union[str, list[str]],
                    freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent", "all"]]] = None,
-                   groupby: Optional[Union[str, list[str]]] = None):
+                   groupby: Optional[Union[str, list[str]]] = None,
+                   return_dataframe: bool = False,
+                   return_fig: bool = False,
+                   save: bool = None,
+                   show: bool = None):
     
     if not isinstance(groupby, list):
         groupby = [groupby]
@@ -73,6 +77,9 @@ def gate_frequency(adata: AnnData,
                                           gate,
                                           freq_of,
                                           groupby)
+
+    if return_dataframe:
+        return df
 
     ncols = 1
     nrows = len(groupby)
@@ -105,9 +112,10 @@ def gate_frequency(adata: AnnData,
                                       gate,
                                       find_y_label(adata, freq_of, gate)
                                       )
-        
+    if return_fig:
+        return fig    
     plt.tight_layout()
-    plt.show()
+    savefig_or_show(show = show, save = save)
 
 def label_cell_count_plot(ax: Axis,
                           grouping: str,
@@ -140,8 +148,12 @@ def label_frequency_plot(ax: Axis,
 
 def cell_counts(adata: AnnData,
                 groupby: Optional[Union[str, list[str]]] = None,
-                population: Optional[str] = None):
-    
+                population: Optional[str] = None,
+                return_dataframe: bool = False,
+                return_fig: bool = False,
+                save: bool = None,
+                show: bool = None):
+
     if population is not None:
         adata = subset_gate(adata, gate = population, copy = False, as_view = True)
 
@@ -149,6 +161,9 @@ def cell_counts(adata: AnnData,
         groupby = [groupby]
     
     df = prepare_dataframe_cell_counts(adata, groupby)
+    
+    if return_dataframe:
+        return df 
     
     ncols = 1,
     nrows = len(groupby)
@@ -179,7 +194,9 @@ def cell_counts(adata: AnnData,
                                        grouping = grouping,
                                        population = population)
         
-        
+    if return_fig:
+        return fig
+    
     plt.tight_layout()
-    plt.show()
+    savefig_or_show(save = save, show = show)
         
