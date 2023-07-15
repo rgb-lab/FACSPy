@@ -3,7 +3,7 @@ import pandas as pd
 
 from anndata import AnnData
 
-from typing import Union, Literal
+from typing import Union, Literal, Optional
 
 from ..exceptions.exceptions import NotSupportedStatisticalTestError
 
