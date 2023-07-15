@@ -30,7 +30,7 @@ from ..exceptions.exceptions import AnalysisNotPerformedError
 def cluster_mfi(adata: AnnData,
                 marker: Union[str, list[str]],
                 groupby: Union[str, list[str]] = None,
-                on: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
+                metric: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
                 colorby: Optional[str] = None,
                 order: list[str] = None,
                 gate: str = None,
@@ -38,11 +38,11 @@ def cluster_mfi(adata: AnnData,
                 return_dataframe: bool = False) -> Optional[Figure]:
 
     try:
-        data = adata.uns[on]
+        data = adata.uns[metric]
         data = select_gate_from_multiindex_dataframe(data.T, find_gate_path_of_gate(adata, gate))
 
     except KeyError as e:
-        raise AnalysisNotPerformedError(on) from e
+        raise AnalysisNotPerformedError(metric) from e
 
     data.index = data.index.set_names(["cluster", "gate"])
     raw_data = data.reset_index()
@@ -64,17 +64,23 @@ def prepare_plot_data(adata: AnnData,
     return plot_data
 
 def cluster_heatmap(adata: AnnData,
-                    groupby: Optional[Union[str, list[str]]],
                     gate: str,
-                    scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
-                    on: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
+                    
+                    groupby: Optional[Union[str, list[str]]] = "leiden",
+                    metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    data_origin: Literal["compensated", "transformed"] = "transformed",
+                    
+                    scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                     cluster_method: Literal["correlation", "distance"] = "distance",
+                    
                     annotate: Optional[Union[Literal["frequency"], str]] = None,
-                    cmap: str = "inferno",
                     annotation_kwargs: dict = {},
-                    figsize: Optional[tuple[int, int]] = (5,3.8),
+                    
+                    cmap: str = "inferno",
+                    figsize: Optional[tuple[float, float]] = (5,3.8),
                     y_label_fontsize: Optional[Union[int, float]] = 4,
+                    
                     return_dataframe: bool = False,
                     return_fig: bool = False,
                     save: bool = None,
@@ -82,7 +88,7 @@ def cluster_heatmap(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = on,
+                                 table_identifier = f"{metric}_{groupby}_{data_origin}",
                                  column_identifier_name = "cluster")
     
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
