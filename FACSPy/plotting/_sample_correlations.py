@@ -48,8 +48,8 @@ def sample_correlation(adata: AnnData,
 
                        annotate: Optional[Union[str, list[str]]],
 
-                       groupby: Optional[Union[str, list[str]]] = "sample_ID",
-                       metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                       data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                       data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        data_origin: Literal["compensated", "transformed"] = "transformed",
 
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
@@ -69,7 +69,7 @@ def sample_correlation(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = f"{metric}_{groupby}_{data_origin}",
+                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}",
                                  column_identifier_name = "sample_ID")
     
     plot_data = prepare_plot_data(adata = adata,
