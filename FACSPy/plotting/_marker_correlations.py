@@ -36,7 +36,7 @@ def prepare_plot_data(adata: AnnData,
 
 def marker_correlation(adata: AnnData,
                        gate: str,
-                       scaling: Literal["MinMaxScaler", "RobustScaler"] = "MinMaxScaler",
+                       scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
                        on: Literal["mfi", "fop", "gate_frequency", "all_cells"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cmap: str = "inferno",
