@@ -192,7 +192,7 @@ class Metadata(BaseSupplement):
         return (
             f"{self.__class__.__name__}(" +
             f"{len(self.dataframe)} entries with factors " +
-            f"{self.factors})"
+            f"{self.extract_metadata_factors()})"
         )
     
     def make_dataframe_categorical(self):
