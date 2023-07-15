@@ -25,6 +25,8 @@ from ..utils import (fetch_fluo_channels,
                     time_channels,
                     cytof_technical_channels)
 
+from ..synchronization._synchronize import hash_dataset
+
 class Transformer:
 
     def __init__(self,
@@ -270,7 +272,7 @@ class DatasetAssembler:
         self.dataset = self.append_gates(dataset,
                                          gates)
 
-        self.dataset.obs = self.dataset.obs.astype("category")
+        #self.dataset.obs = self.dataset.obs.astype("category")
 
     def fill_empty_gates(self,
                          file_list: list[FCSFile],
@@ -358,7 +360,8 @@ class DatasetAssembler:
         metadata_frame = pd.DataFrame(np.repeat(file_row.values,
                                                 cell_number,
                                                 axis = 0),
-                                      columns = file_row.columns)
+                                      columns = file_row.columns,
+                                      dtype = "category")
         metadata_frame.index = metadata_frame.index.astype("str")
         return metadata_frame
 
