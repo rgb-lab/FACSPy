@@ -15,7 +15,8 @@ def calculate_asinh_fold_change(data: pd.DataFrame,
                                 groupby: str,
                                 group1: list[Union[str, int]],
                                 group2: list[Union[str, int]],
-                                fluo_columns: list[str]) -> pd.DataFrame:
+                                fluo_columns: list[str],
+                                cofactors: list[float]) -> pd.DataFrame:
     """ 
     calculates the asinh fold change by getting subtracting the arcsinh MFIs
     If multiple groups have been defined, the mean of both is used for calculation
@@ -57,7 +58,11 @@ def calculate_pvalue(group1: np.ndarray,
                      group2: np.ndarray,
                      test: str) -> float:
     if test == "Kruskal":
-        return kruskal(group1, group2).pvalue
+        try:
+            return kruskal(group1, group2).pvalue
+        except ValueError:
+            print("Warning! Had a kruskal error message, potentially for all values are the same!")
+            return 1
     if test == "Wilcoxon":
         return wilcoxon(group1, group2).pvalue
     available_tests = ["Kruskal", "Wilcoxon"]
@@ -68,7 +73,9 @@ def calculate_fold_changes(adata: AnnData,
                            group1: Union[str, list[Union[str, int]]],
                            group2: Union[str, list[Union[str, int]]],
                            gate: str,
-                           on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                           groupby: Optional[Union[str, list[str]]] = "sample_ID",
+                           metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                           data_origin: Literal["compensated", "transformed"] = "compensated",
                            test: Literal["Kruskal", "t-test"] = "Kruskal"
                            ) -> pd.DataFrame:
     
@@ -81,15 +88,18 @@ def calculate_fold_changes(adata: AnnData,
     
     data = get_uns_dataframe(adata = adata,
                              gate = gate,
-                             table_identifier = "mfi",
+                             table_identifier = f"{metric}_{groupby}_{data_origin}",
                              column_identifier_name = "sample_ID")
     fluo_columns = [col for col in data.columns if col in adata.var_names]
+    cofactors = adata.var.loc[fluo_columns, "cofactors"].astype("float32")
+    data[fluo_columns] = data[fluo_columns].divide(cofactors)
 
     asinh_fc = calculate_asinh_fold_change(data,
                                            groupby,
                                            group1,
                                            group2,
-                                           fluo_columns)
+                                           fluo_columns,
+                                           cofactors)
     p_values = calculate_p_values(data,
                                   groupby,
                                   group1,
