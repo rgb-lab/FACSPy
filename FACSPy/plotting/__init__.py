@@ -12,3 +12,4 @@ from .qc import cell_counts, gate_frequency
 from ._expression_heatmap import expression_heatmap
 from ._cluster_mfi import cluster_heatmap, cluster_mfi
 from ._marker_correlations import marker_correlation
+from ._metadata import metadata
