@@ -587,6 +587,7 @@ def add_metadata_to_obs(adata: AnnData,
                         copy: bool = False) -> Optional[AnnData]:
     adata = adata.copy() if copy else adata
     metadata = adata.uns["metadata"].dataframe.copy()
+    metadata["sample_ID"] = metadata["sample_ID"].astype(adata.obs["sample_ID"].cat.categories.dtype)
     metadata = metadata.set_index("sample_ID")
     mapping = metadata.to_dict()
     specific_mapping = mapping[metadata_column]
