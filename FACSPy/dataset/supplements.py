@@ -185,7 +185,7 @@ class Metadata(BaseSupplement):
                 raise SupplementNoInputDirectoryError
         
         self.factors = self.extract_metadata_factors()
-
+        self.manage_dtypes()
         self.make_dataframe_categorical()
 
     def __repr__(self):
@@ -194,6 +194,10 @@ class Metadata(BaseSupplement):
             f"{len(self.dataframe)} entries with factors " +
             f"{self.extract_metadata_factors()})"
         )
+    
+    def manage_dtypes(self):
+        """collection of statements that manage dtypes. sample_IDs are strings"""
+        self.dataframe["sample_ID"] = self.dataframe["sample_ID"].astype("str")
     
     def make_dataframe_categorical(self):
         self.dataframe = self.dataframe.astype("category")
@@ -217,7 +221,7 @@ class Metadata(BaseSupplement):
                        factor: str,
                        n_groups: int):
         try:
-            self.dataframe[factor] = self.dataframe[factor].astype("float64")
+            self.dataframe[factor] = self.dataframe[factor].astype("float32")
         except ValueError as e:
             raise ValueError("Only numeric columns are supported") from e
         column = self.dataframe[factor]
@@ -236,8 +240,8 @@ class Metadata(BaseSupplement):
                        replacement: Union[Mapping, list[Union[str, float, int]]]) -> None:
         
         if isinstance(replacement, dict):
-            self.dataframe[column] = self.dataframe[column].replace(replacement,
-                                                                    inplace = True)
+            self.dataframe[column].replace(replacement,
+                                           inplace = True)
         else:
             self.dataframe[column] = replacement
 
