@@ -227,8 +227,14 @@ class Metadata(BaseSupplement):
         self.dataframe[f"{factor}_grouped"] = pd.cut(column, intervals)
     
     def rename(self,
-               column: Union[str, pd.Index],
-               replacement: Union[Mapping, list[Union[str, float, int]]]) -> None:
+               current_name: str,
+               new_name: str) -> None:
+        self.dataframe[new_name] = self.dataframe[current_name]
+        self.dataframe = self.dataframe.drop(current_name, axis = 1)
+
+    def rename_factors(self,
+                       column: Union[str, pd.Index],
+                       replacement: Union[Mapping, list[Union[str, float, int]]]) -> None:
         
         if isinstance(replacement, dict):
             self.dataframe[column] = self.dataframe[column].replace(replacement,
