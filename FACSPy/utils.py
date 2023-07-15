@@ -291,10 +291,37 @@ def transform_gates_according_to_gate_transform(vertices: np.ndarray,
             transform = [transform for transform in channel_transforms if "Comp-" in transform.id][0]
         else:
             transform = channel_transforms[0]
-        vertices[i] = transform.inverse(vertices[i])
+        vertices[i] = transform.apply(vertices[i])
     return vertices
 
 def transform_vertices_according_to_gate_transform(vertices: np.ndarray,
+                                                   transforms: dict,
+                                                   gate_channels: list[str]) -> np.ndarray:
+    
+    
+    for i, gate_channel in enumerate(gate_channels):
+        channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
+        if len(channel_transforms) > 1:
+            transform = [transform for transform in channel_transforms if "Comp-" in transform.id][0]
+        else:
+            transform = channel_transforms[0]
+        vertices[:,i] = transform.apply(vertices[:,i])
+    return vertices
+
+def inverse_transform_gates_according_to_gate_transform(vertices: np.ndarray,
+                                                transforms: dict,
+                                                gate_channels: list[str]) -> np.ndarray:
+    
+    for i, gate_channel in enumerate(gate_channels):
+        channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
+        if len(channel_transforms) > 1:
+            transform = [transform for transform in channel_transforms if "Comp-" in transform.id][0]
+        else:
+            transform = channel_transforms[0]
+        vertices[i] = transform.inverse(vertices[i])
+    return vertices
+
+def inverse_transform_vertices_according_to_gate_transform(vertices: np.ndarray,
                                                    transforms: dict,
                                                    gate_channels: list[str]) -> np.ndarray:
     
@@ -351,16 +378,16 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
             gate_dimensions = np.array([(dim.min, dim.max)
                                          for dim in wsp_dict[file]["gates"][i]["gate"].dimensions],
                                          dtype = np.float32)
-            gate_dimensions = transform_gates_according_to_gate_transform(gate_dimensions,
-                                                                          wsp_dict[file]["transforms"],
-                                                                          gate_channels)
+            gate_dimensions = inverse_transform_gates_according_to_gate_transform(gate_dimensions,
+                                                                                  wsp_dict[file]["transforms"],
+                                                                                  gate_channels)
             
             try:
                 vertices = np.array(wsp_dict[file]["gates"][i]["gate"].vertices)
                 vertices = close_polygon_gate_coordinates(vertices)
-                vertices = transform_vertices_according_to_gate_transform(vertices,
-                                                                       wsp_dict[file]["transforms"],
-                                                                       gate_channels)
+                vertices = inverse_transform_vertices_according_to_gate_transform(vertices,
+                                                                                  wsp_dict[file]["transforms"],
+                                                                                  gate_channels)
             except AttributeError:
                 vertices = gate_dimensions
 
