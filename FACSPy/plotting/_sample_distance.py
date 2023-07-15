@@ -45,10 +45,15 @@ def prepare_plot_data(adata: AnnData,
     return plot_data
 
 def sample_distance(adata: AnnData,
-                    groupby: Optional[Union[str, list[str]]],
                     gate: str,
+                    annotate: Union[str, list[str]],
+
+                    groupby: Optional[Union[str, list[str]]] = "sample_ID",
+                    metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    data_origin: Literal["compensated", "transformed"] = "transformed",
+                    
+                    
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
-                    on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     cmap: str = "inferno",
                     figsize: tuple[float, float] = (4,4),
                     return_dataframe: bool = False,
@@ -61,12 +66,12 @@ def sample_distance(adata: AnnData,
     
     """ plots sample distance metrics as a heatmap """
     
-    if not isinstance(groupby, list):
-        groupby = [groupby] 
+    if not isinstance(annotate, list):
+        annotate = [annotate] 
     
     raw_data = get_uns_dataframe(adata = adata,
                              gate = gate,
-                             table_identifier = on,
+                             table_identifier = f"{metric}_{groupby}_{data_origin}",
                              column_identifier_name = "sample_ID")
     
     plot_data = prepare_plot_data(adata = adata,
@@ -80,7 +85,7 @@ def sample_distance(adata: AnnData,
     row_linkage = calculate_linkage(plot_data[plot_data["sample_ID"].to_list()])
 
     if metaclusters is not None:
-        groupby += ["metacluster"]
+        annotate += ["metacluster"]
         plot_data = add_metaclusters(adata = adata,
                                      data = plot_data,
                                      row_linkage = row_linkage,
@@ -95,14 +100,14 @@ def sample_distance(adata: AnnData,
                                                        group,
                                                        CONTINUOUS_CMAPS[i] if has_interval_index(plot_data[group]) else ANNOTATION_CMAPS[i]
                                                        )
-                                       for i, group in enumerate(groupby)
+                                       for i, group in enumerate(annotate)
                                    ],
                                    col_colors = [
                                        map_obs_to_cmap(plot_data,
                                                        group,
                                                        CONTINUOUS_CMAPS[i] if has_interval_index(plot_data[group]) else ANNOTATION_CMAPS[i]
                                                                         )
-                                       for i, group in enumerate(groupby)
+                                       for i, group in enumerate(annotate)
                                    ],
                                    row_linkage = row_linkage,
                                    col_linkage = row_linkage,
@@ -122,7 +127,7 @@ def sample_distance(adata: AnnData,
     add_categorical_legend_to_clustermap(clustermap,
                                          heatmap = ax,
                                          data = plot_data,
-                                         groupby = groupby)
+                                         annotate = annotate)
     
     if return_fig:
         return clustermap
