@@ -581,3 +581,14 @@ def convert_gates_to_obs(adata: AnnData,
                             find_current_population(gate),
                             copy = False)
     return adata if copy else None
+
+def add_metadata_to_obs(adata: AnnData,
+                        metadata_column: str,
+                        copy: bool = False) -> Optional[AnnData]:
+    adata = adata.copy() if copy else adata
+    metadata = adata.uns["metadata"].dataframe.copy()
+    metadata = metadata.set_index("sample_ID")
+    mapping = metadata.to_dict()
+    specific_mapping = mapping[metadata_column]
+    adata.obs[metadata_column] = adata.obs["sample_ID"].map(specific_mapping)
+    return adata if copy else None
