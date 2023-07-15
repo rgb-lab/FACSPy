@@ -4,11 +4,9 @@ from anndata import AnnData
 from typing import Union, Optional, Literal
 
 import pandas as pd
-import numpy as np
 from matplotlib import pyplot as plt
-import seaborn as sns
 
-from matplotlib.axis import Axis
+from matplotlib.axes import Axes
 
 from ..exceptions.exceptions import HierarchyError
 
@@ -117,9 +115,9 @@ def gate_frequency(adata: AnnData,
     plt.tight_layout()
     savefig_or_show(show = show, save = save)
 
-def label_cell_count_plot(ax: Axis,
+def label_cell_count_plot(ax: Axes,
                           grouping: str,
-                          population: str) -> Axis:
+                          population: str) -> Axes:
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
     ax.set_title(f"cell counts per {grouping or 'sample_ID'}\npopulation: {population or 'All cells'}")
     ax.set_ylabel("counts per sample")
@@ -136,10 +134,10 @@ def find_y_label(adata: AnnData,
         return find_grandparent_population(find_gate_path_of_gate(adata, gate))
     return "All Cells" if freq_of in ["root", "all"] else freq_of
 
-def label_frequency_plot(ax: Axis,
+def label_frequency_plot(ax: Axes,
                          grouping: str,
                          gate: str,
-                         freq_of: str) -> Axis:
+                         freq_of: str) -> Axes:
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
     ax.set_title(f"gate frequency per {grouping}\ngate: {gate}")
     ax.set_ylabel(f"freq. of\n{freq_of}")
