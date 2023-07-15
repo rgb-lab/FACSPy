@@ -53,7 +53,7 @@ def perform_samplewise_dr(data: pd.DataFrame,
 def pca_samplewise(adata: AnnData,
                    groupby: Optional[Union[str, list[str]]] = "sample_ID",
                    metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   data_origin: Literal["compensated", "transformed"] = "transformed",
+                   data_origin: Literal["compensated", "transformed"] = "compensated",
                    exclude: Optional[Union[str, list, str]] = None,
                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
     exclude = [] if exclude is None else exclude
@@ -68,7 +68,7 @@ def pca_samplewise(adata: AnnData,
 def tsne_samplewise(adata: AnnData,
                     groupby: Optional[Union[str, list[str]]] = "sample_ID",
                     metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    data_origin: Literal["compensated", "transformed"] = "transformed",
+                    data_origin: Literal["compensated", "transformed"] = "compensated",
                     exclude: Optional[Union[str, list, str]] = None,
                     scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
     exclude = [] if exclude is None else exclude
@@ -90,7 +90,7 @@ def tsne_samplewise(adata: AnnData,
 def umap_samplewise(adata: AnnData,
                     groupby: Optional[Union[str, list[str]]] = "sample_ID",
                     metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    data_origin: Literal["compensated", "transformed"] = "transformed",
+                    data_origin: Literal["compensated", "transformed"] = "compensated",
                     exclude: Optional[Union[str, list, str]] = None,
                     scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
     exclude = [] if exclude is None else exclude
@@ -113,7 +113,7 @@ def umap_samplewise(adata: AnnData,
 def mds_samplewise(adata: AnnData,
                    groupby: Optional[Union[str, list[str]]] = "sample_ID",
                    metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   data_origin: Literal["compensated", "transformed"] = "transformed",
+                   data_origin: Literal["compensated", "transformed"] = "compensated",
                    exclude: Optional[Union[str, list, str]] = None,
                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
     exclude = [] if exclude is None else exclude
