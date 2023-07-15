@@ -27,6 +27,7 @@ from scipy.cluster import hierarchy
 from scipy.spatial import distance_matrix
 
 ANNOTATION_CMAPS = ["Set1", "Set2", "tab10", "hls", "Paired"]
+CONTINUOUS_CMAPS = ["YlOrRd", "Reds", "YlOrBr", "PuRd", "Oranges", "Greens"]
 
 def remove_ticks(ax: Axes,
                  which: Literal["x", "y", "both"]) -> None:
@@ -197,6 +198,9 @@ def add_annotation_plot(adata: AnnData,
     ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1] * 1.4)
     ax.set_xlabel("")
 
+def has_interval_index(column: pd.Series) -> bool:
+    return isinstance(column.dtype, pd.CategoricalDtype) and isinstance(column.cat.categories, pd.IntervalIndex)
+
 def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
                                          heatmap: Axes,
                                          data: pd.DataFrame,
@@ -205,9 +209,10 @@ def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
     for i, group in enumerate(groupby):
         group_lut = map_obs_to_cmap(data,
                                     group,
-                                    ANNOTATION_CMAPS[i],
+                                    CONTINUOUS_CMAPS[i] if has_interval_index(data[group])
+                                                        else ANNOTATION_CMAPS[i],
                                     return_mapping = True)
-        if isinstance(data[group].dtype, pd.CategoricalDtype) and isinstance(data[group].cat.categories, pd.IntervalIndex):
+        if has_interval_index(data[group]):
             sorted_index = list(data[group].cat.categories.values)
             if np.nan in group_lut.keys():
                 sorted_index = [np.nan] + sorted_index
@@ -247,7 +252,12 @@ def map_obs_to_cmap(data: pd.DataFrame,
                     cmap: str = "Set1",
                     return_mapping: bool = False,
                     as_series: bool = True) -> dict[str, tuple[float, float, float]]:
-    obs = data[parameter_to_map].unique()
+    if has_interval_index(data[parameter_to_map]):
+        obs = list(data[parameter_to_map].cat.categories.values)
+        if np.nan in data[parameter_to_map].unique():
+            obs = [np.nan] + obs
+    else:    
+        obs = data[parameter_to_map].unique()
     cmap = sns.color_palette(cmap, len(obs))
     mapping = {obs_entry: cmap[i] for i, obs_entry in enumerate(obs)}
     if return_mapping:
