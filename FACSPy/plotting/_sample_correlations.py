@@ -17,7 +17,9 @@ from .utils import (scale_data,
                     add_categorical_legend_to_clustermap,
                     calculate_correlation_data,
                     ANNOTATION_CMAPS,
-                    savefig_or_show)
+                    CONTINUOUS_CMAPS,
+                    savefig_or_show,
+                    has_interval_index)
 
 from ._clustermap import create_clustermap
 
@@ -88,11 +90,17 @@ def sample_correlation(adata: AnnData,
     
     clustermap = create_clustermap(data = plot_data[plot_data["sample_ID"]],
                                    row_colors = [
-                                       map_obs_to_cmap(plot_data, group, ANNOTATION_CMAPS[i])
+                                       map_obs_to_cmap(plot_data,
+                                                       group,
+                                                       CONTINUOUS_CMAPS[i] if has_interval_index(plot_data[group]) else ANNOTATION_CMAPS[i]
+                                                       )
                                        for i, group in enumerate(groupby)
                                    ],
                                    col_colors = [
-                                       map_obs_to_cmap(plot_data, group, ANNOTATION_CMAPS[i])
+                                       map_obs_to_cmap(plot_data,
+                                                       group,
+                                                       CONTINUOUS_CMAPS[i] if has_interval_index(plot_data[group]) else ANNOTATION_CMAPS[i]
+                                                                        )
                                        for i, group in enumerate(groupby)
                                    ],
                                    row_linkage = row_linkage,
