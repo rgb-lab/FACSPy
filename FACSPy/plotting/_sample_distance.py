@@ -48,8 +48,8 @@ def sample_distance(adata: AnnData,
                     gate: str,
                     annotate: Union[str, list[str]],
 
-                    groupby: Optional[Union[str, list[str]]] = "sample_ID",
-                    metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     data_origin: Literal["compensated", "transformed"] = "transformed",
                     
                     
@@ -64,14 +64,14 @@ def sample_distance(adata: AnnData,
                     save: bool = None,
                     show: bool = None) -> Optional[Figure]:
     
-    """ plots sample distance metrics as a heatmap """
+    """ plots sample distance data_metrics as a heatmap """
     
     if not isinstance(annotate, list):
         annotate = [annotate] 
     
     raw_data = get_uns_dataframe(adata = adata,
                              gate = gate,
-                             table_identifier = f"{metric}_{groupby}_{data_origin}",
+                             table_identifier = f"{data_metric}_{data_group}_{data_origin}",
                              column_identifier_name = "sample_ID")
     
     plot_data = prepare_plot_data(adata = adata,
