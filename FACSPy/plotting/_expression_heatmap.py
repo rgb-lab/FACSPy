@@ -38,11 +38,17 @@ def prepare_plot_data(adata: AnnData,
     return plot_data
 
 def expression_heatmap(adata: AnnData,
-                       groupby: Optional[Union[str, list[str]]],
                        gate: str,
-                       annotate: Optional[str] = None,
+                       
+                       annotate: Optional[Union[str, list[str]]],
+
+                       groupby: Optional[Union[str, list[str]]] = "sample_ID",
+                       metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                       data_origin: Literal["compensated", "transformed"] = "transformed",
+                       
+                       
+                       plot_annotate: Optional[str] = None,
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
-                       on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cluster_method: Literal["correlation", "distance"] = "distance",
                        cmap: str = "RdBu_r",
@@ -56,12 +62,12 @@ def expression_heatmap(adata: AnnData,
                        save: bool = None,
                        show: bool = None) -> Optional[Figure]:
 
-    if not isinstance(groupby, list):
-        groupby = [groupby]    
+    if not isinstance(annotate, list):
+        annotate = [annotate]    
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = on,
+                                 table_identifier = f"{metric}_{groupby}_{data_origin}",
                                  column_identifier_name = "sample_ID")
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     plot_data = prepare_plot_data(adata = adata,
@@ -80,7 +86,7 @@ def expression_heatmap(adata: AnnData,
         col_linkage = calculate_linkage(calculate_sample_distance(plot_data[fluo_columns]))
 
     if metaclusters is not None:
-        groupby += ["metacluster"]
+        annotate += ["metacluster"]
         plot_data = add_metaclusters(adata = adata,
                                      data = plot_data,
                                      row_linkage = col_linkage,
@@ -93,7 +99,7 @@ def expression_heatmap(adata: AnnData,
     clustermap = create_clustermap(data = plot_data[fluo_columns].T,
                                    col_colors = [
                                        map_obs_to_cmap(plot_data, group, ANNOTATION_CMAPS[i])
-                                       for i, group in enumerate(groupby)
+                                       for i, group in enumerate(annotate)
                                    ],
                                    row_cluster = True,
                                    col_linkage = col_linkage,
@@ -122,19 +128,19 @@ def expression_heatmap(adata: AnnData,
     add_categorical_legend_to_clustermap(clustermap,
                                          heatmap = ax,
                                          data = plot_data,
-                                         groupby = groupby,)
+                                         annotate = annotate)
 
-    if annotate is not None:
-        if annotate in adata.var_names:
-            annot_frame = raw_data[annotate]
+    if plot_annotate is not None:
+        if plot_annotate in adata.var_names:
+            annot_frame = raw_data[plot_annotate]
         
         add_annotation_plot(adata = adata,
-                            annotate = annotate,
+                            annotate = plot_annotate,
                             annot_frame = annot_frame,
                             indices = indices,
                             clustermap = clustermap,
                             y_label_fontsize = y_label_fontsize,
-                            y_label = on)
+                            y_label = metric)
 
     if return_fig:
         return clustermap
