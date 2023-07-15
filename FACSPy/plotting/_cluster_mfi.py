@@ -29,8 +29,8 @@ from ..exceptions.exceptions import AnalysisNotPerformedError
 
 def cluster_mfi(adata: AnnData,
                 marker: Union[str, list[str]],
-                groupby: Union[str, list[str]] = None,
-                metric: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
+                data_group: Union[str, list[str]] = None,
+                data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
                 colorby: Optional[str] = None,
                 order: list[str] = None,
                 gate: str = None,
@@ -38,11 +38,11 @@ def cluster_mfi(adata: AnnData,
                 return_dataframe: bool = False) -> Optional[Figure]:
 
     try:
-        data = adata.uns[metric]
+        data = adata.uns[data_metric]
         data = select_gate_from_multiindex_dataframe(data.T, find_gate_path_of_gate(adata, gate))
 
     except KeyError as e:
-        raise AnalysisNotPerformedError(metric) from e
+        raise AnalysisNotPerformedError(data_metric) from e
 
     data.index = data.index.set_names(["cluster", "gate"])
     raw_data = data.reset_index()
@@ -66,8 +66,8 @@ def prepare_plot_data(adata: AnnData,
 def cluster_heatmap(adata: AnnData,
                     gate: str,
                     
-                    groupby: Optional[Union[str, list[str]]] = "leiden",
-                    metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    data_group: Optional[Union[str, list[str]]] = "leiden",
+                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     data_origin: Literal["compensated", "transformed"] = "transformed",
                     
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
@@ -88,7 +88,7 @@ def cluster_heatmap(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = f"{metric}_{groupby}_{data_origin}",
+                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}",
                                  column_identifier_name = "cluster")
     
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
@@ -141,7 +141,7 @@ def cluster_heatmap(adata: AnnData,
         if annotate == "frequency":
             annot_frame = prep_dataframe_cluster_freq(
                 adata,
-                groupby = annotation_kwargs.get("groupby", "sample_ID"),
+                data_group = annotation_kwargs.get("data_group", "sample_ID"),
                 cluster_key = annotation_kwargs.get("cluster_key", "leiden"),
                 normalize = annotation_kwargs.get("normalize", True),
             )
