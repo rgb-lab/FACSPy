@@ -272,6 +272,7 @@ class DatasetAssembler:
         self.dataset = self.append_gates(dataset,
                                          gates)
 
+        hash_dataset(self.dataset)
         #self.dataset.obs = self.dataset.obs.astype("category")
 
     def fill_empty_gates(self,
