@@ -1,43 +1,67 @@
 from typing import Union, Optional, Literal
-import anndata as ad
+
 import numpy as np
 import pandas as pd
+from anndata import AnnData
+
+from .utils import reindex_dictionary, convert_to_dataframe
 
 def calculate_positives(data: np.ndarray,
                         cofactors: np.ndarray) -> np.ndarray:
     positives = data > cofactors
     return positives.sum(axis = 0) / positives.shape[0]
 
-def fop(dataset: ad.AnnData,
-        population: Optional[Union[list[str], str]] = None,
-        on: Literal["raw", "compensated", "transformed"] = "compensated",
-        copy: bool = False):
-    
-    gates = dataset.uns["gating_cols"]
-    cofactors = dataset.var["cofactors"].to_numpy(dtype = np.float64)
+def calculate_fop(adata: AnnData,
+                  gates: Union[pd.Index, list[str]],
+                  on: Literal["raw", "compensated", "transformed"],
+                  cofactors: Optional[Union[np.ndarray, list[int], list[str]]]) -> dict[str, np.ndarray]:
+    return {
+        gate: calculate_positives(np.array(adata[adata.obsm["gating"][:,i] == 1,:].layers[on]),
+                                    cofactors)
+        for i, gate in enumerate(gates)
+    }
 
+def calculate_fops(adata: AnnData,
+                   gates: Union[pd.Index, list[str]],
+                   on: Literal["raw", "compensated", "transformed"],
+                   groupby: Union[Literal["sample_ID"], str],
+                   cofactors: Union[np.ndarray, list[int], list[str]]) -> dict:
+    
     fops = {}
-    for sample_id in dataset.obs["sample_ID"].unique():
-        tmp = dataset[dataset.obs["sample_ID"] == sample_id, :]
-        fops[str(sample_id)] = {
-                                    gate: calculate_positives(np.array(tmp[tmp.obsm["gating"][:,i] == 1,:].layers[on]),
-                                                              cofactors)
-                                    for i, gate in enumerate(gates)
-                                }
+    for identifier in adata.obs[groupby].unique():
+        tmp = adata[adata.obs[groupby] == identifier, :]
+        fops[str(identifier)] = calculate_fop(adata = tmp,
+                                              gates = gates,
+                                              on = on,
+                                              cofactors = cofactors)
     
-    ### reindexing the dictionary for multi-index in pandas    
-    fops = {(outer_key, inner_key): values
-            for outer_key, inner_dict in fops.items()
-            for inner_key, values in inner_dict.items()}
-    
-    fop_frame = pd.DataFrame(
-            data = fops,
-            index = dataset.var.index,
-            dtype = np.float16
-        )
-    
-    fop_frame.source = f"{on} events"
+    return fops
 
-    dataset.uns["fop"] = fop_frame
+def fop(adata: AnnData,
+        groupby: Union[Literal["sample_ID"], str] = "sample_ID",
+        cutoff: Optional[Union[int, float, list[int], list[float]]] = None,
+        copy: bool = False):
+    print("calculating fops")
+    adata = adata.copy() if copy else adata
+    gates = adata.uns["gating_cols"]
+    cofactors = adata.var["cofactors"].to_numpy(dtype = np.float64) if cutoff is None else cutoff
 
-    return dataset if copy else None
+    fops = calculate_fops(adata,
+                          gates,
+                          on = "compensated",
+                          groupby = groupby,
+                          cofactors = cofactors)
+    adata.uns[f"fop_{groupby}_compensated"] = convert_to_dataframe(reindex_dictionary(fops), adata)
+
+    if "transformed" in adata.layers:
+        tfops = calculate_fops(adata,
+                               gates,
+                               on = "transformed",
+                               groupby = groupby,
+                               cofactors = cofactors)
+        
+
+        adata.uns[f"fop_{groupby}_transformed"] = convert_to_dataframe(reindex_dictionary(tfops), adata)
+
+
+    return adata if copy else None
