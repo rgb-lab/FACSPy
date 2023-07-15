@@ -39,39 +39,53 @@ def calculate_mfis(adata: AnnData,
     return mfis
 
 def mfi(adata: AnnData,
-        population: Optional[Union[list[str], str]] = None,
         groupby: Union[Literal["sample_ID"], str] = "sample_ID",
-        on: Literal["raw", "compensated", "transformed"] = "compensated",
-        copy: bool = False):
+        copy: bool = False) -> Optional[AnnData]:
     
+    adata = adata.copy() if copy else adata
     gates = adata.uns["gating_cols"]
 
-    if groupby == "sample_ID":
-        mfis = calculate_mfis(adata,
-                              gates,
-                              on = "compensated",
-                              groupby = groupby)
-        
+    mfis = calculate_mfis(adata,
+                          gates,
+                          on = "compensated",
+                          groupby = groupby)
+    adata.uns[f"mfi_{groupby}_compensated"] = convert_to_dataframe(reindex_dictionary(mfis), adata)
 
+    if "transformed" in adata.layers:
         tmfis = calculate_mfis(adata,
                             gates,
                             on = "transformed",
                             groupby = groupby)
         
 
-        adata.uns["tmfi"] = convert_to_dataframe(reindex_dictionary(tmfis), adata)
-        adata.uns["mfi"] = convert_to_dataframe(reindex_dictionary(mfis), adata)
+        adata.uns[f"mfi_{groupby}_transformed"] = convert_to_dataframe(reindex_dictionary(tmfis), adata)
+
+    # if groupby == "sample_ID":
+    #     mfis = calculate_mfis(adata,
+    #                           gates,
+    #                           on = "compensated",
+    #                           groupby = groupby)
+        
+
+    #     tmfis = calculate_mfis(adata,
+    #                            gates,
+    #                            on = "transformed",
+    #                            groupby = groupby)
+        
+
+    #     adata.uns["tmfi"] = convert_to_dataframe(reindex_dictionary(tmfis), adata)
+    #     adata.uns["mfi"] = convert_to_dataframe(reindex_dictionary(mfis), adata)
     
-    else:
-        mfis_c = calculate_mfis(adata,
-                                gates,
-                                on = "compensated",
-                                groupby = groupby)
-        tmfis_c = calculate_mfis(adata,
-                                 gates,
-                                 on = "transformed",
-                                 groupby = groupby)
-        adata.uns["tmfi_c"] = convert_to_dataframe(reindex_dictionary(tmfis_c), adata)
-        adata.uns["mfi_c"] = convert_to_dataframe(reindex_dictionary(mfis_c), adata)  
+    # else:
+    #     mfis_c = calculate_mfis(adata,
+    #                             gates,
+    #                             on = "compensated",
+    #                             groupby = groupby)
+    #     tmfis_c = calculate_mfis(adata,
+    #                              gates,
+    #                              on = "transformed",
+    #                              groupby = groupby)
+    #     adata.uns["tmfi_c"] = convert_to_dataframe(reindex_dictionary(tmfis_c), adata)
+    #     adata.uns["mfi_c"] = convert_to_dataframe(reindex_dictionary(mfis_c), adata)  
     
     return adata if copy else None
