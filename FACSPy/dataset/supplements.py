@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, Mapping
 
 import pandas as pd
 import numpy as np
@@ -174,8 +174,8 @@ class Metadata(BaseSupplement):
                          data = metadata,
                          from_fcs = from_fcs)
 
-        self.dataframe = self.validate_user_supplied_table(self.dataframe,
-                                                           ["sample_ID", "file_name"])
+        self.dataframe: pd.DataFrame = self.validate_user_supplied_table(self.dataframe,
+                                                                         ["sample_ID", "file_name"])
 
         if from_fcs:
             if input_directory:
@@ -225,6 +225,16 @@ class Metadata(BaseSupplement):
         max_value = column.max()
         intervals = np.arange(min_value, max_value + min_value, (max_value - min_value) / n_groups)
         self.dataframe[f"{factor}_grouped"] = pd.cut(column, intervals)
+    
+    def rename(self,
+               column: Union[str, pd.Index],
+               replacement: Union[Mapping, list[Union[str, float, int]]]) -> None:
+        
+        if isinstance(replacement, dict):
+            self.dataframe[column] = self.dataframe[column].replace(replacement,
+                                                                    inplace = True)
+        else:
+            self.dataframe[column] = replacement
 
     def extract_metadata_factors(self):
         return [
