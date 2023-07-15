@@ -15,7 +15,7 @@ def metadata(adata: AnnData,
              return_dataframe: bool = False,
              return_fig: bool = False,
              save: Optional[str] = None,
-             show: bool = False
+             show: bool = None
              ):
     if not isinstance(groupby, list):
         groupby = [groupby]
