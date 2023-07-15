@@ -204,9 +204,9 @@ def has_interval_index(column: pd.Series) -> bool:
 def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
                                          heatmap: Axes,
                                          data: pd.DataFrame,
-                                         groupby: list[str]) -> None:
+                                         annotate: list[str]) -> None:
     next_legend = 0
-    for i, group in enumerate(groupby):
+    for i, group in enumerate(annotate):
         group_lut = map_obs_to_cmap(data,
                                     group,
                                     CONTINUOUS_CMAPS[i] if has_interval_index(data[group])
