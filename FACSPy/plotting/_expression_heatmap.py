@@ -42,8 +42,8 @@ def expression_heatmap(adata: AnnData,
                        
                        annotate: Optional[Union[str, list[str]]],
 
-                       groupby: Optional[Union[str, list[str]]] = "sample_ID",
-                       metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                       data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                       data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        data_origin: Literal["compensated", "transformed"] = "transformed",
                        
                        
@@ -67,7 +67,7 @@ def expression_heatmap(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = f"{metric}_{groupby}_{data_origin}",
+                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}",
                                  column_identifier_name = "sample_ID")
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     plot_data = prepare_plot_data(adata = adata,
@@ -140,7 +140,7 @@ def expression_heatmap(adata: AnnData,
                             indices = indices,
                             clustermap = clustermap,
                             y_label_fontsize = y_label_fontsize,
-                            y_label = metric)
+                            y_label = data_metric)
 
     if return_fig:
         return clustermap
