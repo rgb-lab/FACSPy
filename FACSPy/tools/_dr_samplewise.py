@@ -51,44 +51,101 @@ def perform_samplewise_dr(data: pd.DataFrame,
     return return_data.T
 
 def pca_samplewise(adata: AnnData,
-                   on: Literal["mfi", "fop", "gate_frequency"],
-                   exclude: Optional[Union[str, list, str]] = [],
+                   groupby: Optional[Union[str, list[str]]] = "sample_ID",
+                   metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                   data_origin: Literal["compensated", "transformed"] = "transformed",
+                   exclude: Optional[Union[str, list, str]] = None,
                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
+    exclude = [] if exclude is None else exclude
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
-    adata.uns[on] = perform_samplewise_dr(adata.uns[on],
-                                          reduction = "PCA",
-                                          fluo_channels = fluo_channels,
-                                          scaling = scaling)
+    table_identifier = f"{metric}_{groupby}_{data_origin}"
+    adata.uns[table_identifier] = perform_samplewise_dr(adata.uns[table_identifier],
+                                                        reduction = "PCA",
+                                                        fluo_channels = fluo_channels,
+                                                        scaling = scaling)
 
 
 def tsne_samplewise(adata: AnnData,
-                   on: Literal["mfi", "fop", "gate_frequency"],
-                   exclude: Optional[Union[str, list, str]] = [],
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
+                    groupby: Optional[Union[str, list[str]]] = "sample_ID",
+                    metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    data_origin: Literal["compensated", "transformed"] = "transformed",
+                    exclude: Optional[Union[str, list, str]] = None,
+                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
+    exclude = [] if exclude is None else exclude
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
-    adata.uns[on] = perform_samplewise_dr(adata.uns[on],
-                                          reduction = "TSNE",
-                                          fluo_channels = fluo_channels,
-                                          scaling = scaling)
+    table_identifier = f"{metric}_{groupby}_{data_origin}"
+    adata.uns[table_identifier] = perform_samplewise_dr(adata.uns[table_identifier],
+                                                        reduction = "TSNE",
+                                                        fluo_channels = fluo_channels,
+                                                        scaling = scaling)
+    
+    save_samplewise_dr_settings(adata = adata,
+                                groupby = groupby,
+                                metric = metric,
+                                data_origin = data_origin,
+                                exclude = exclude,
+                                scaling = scaling,
+                                reduction = "mds")
 
 def umap_samplewise(adata: AnnData,
-                   on: Literal["mfi", "fop", "gate_frequency"],
-                   exclude: Optional[Union[str, list, str]] = [],
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
+                    groupby: Optional[Union[str, list[str]]] = "sample_ID",
+                    metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    data_origin: Literal["compensated", "transformed"] = "transformed",
+                    exclude: Optional[Union[str, list, str]] = None,
+                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
+    exclude = [] if exclude is None else exclude
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
+    table_identifier = f"{metric}_{groupby}_{data_origin}"
     
-    adata.uns[on] = perform_samplewise_dr(adata.uns[on],
-                                          reduction = "UMAP",
-                                          fluo_channels = fluo_channels,
-                                          scaling = scaling)
+    adata.uns[table_identifier] = perform_samplewise_dr(adata.uns[table_identifier],
+                                                        reduction = "UMAP",
+                                                        fluo_channels = fluo_channels,
+                                                        scaling = scaling)
+    
+    save_samplewise_dr_settings(adata = adata,
+                                groupby = groupby,
+                                metric = metric,
+                                data_origin = data_origin,
+                                exclude = exclude,
+                                scaling = scaling,
+                                reduction = "mds")
 
 def mds_samplewise(adata: AnnData,
-                   on: Literal["mfi", "fop", "gate_frequency"],
-                   exclude: Optional[Union[str, list, str]] = [],
+                   groupby: Optional[Union[str, list[str]]] = "sample_ID",
+                   metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                   data_origin: Literal["compensated", "transformed"] = "transformed",
+                   exclude: Optional[Union[str, list, str]] = None,
                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler"):
+    exclude = [] if exclude is None else exclude
     fluo_channels = [channel for channel in adata.var_names.to_list() if channel not in exclude]
+    table_identifier = f"{metric}_{groupby}_{data_origin}"
+    adata.uns[table_identifier] = perform_samplewise_dr(adata.uns[table_identifier],
+                                                        reduction = "MDS",
+                                                        fluo_channels = fluo_channels,
+                                                        scaling = scaling)
     
-    adata.uns[on] = perform_samplewise_dr(adata.uns[on],
-                                          reduction = "MDS",
-                                          fluo_channels = fluo_channels,
-                                          scaling = scaling)
+    save_samplewise_dr_settings(adata = adata,
+                                groupby = groupby,
+                                metric = metric,
+                                data_origin = data_origin,
+                                exclude = exclude,
+                                scaling = scaling,
+                                reduction = "mds")
+
+def save_samplewise_dr_settings(adata: AnnData,
+                                groupby,
+                                metric,
+                                data_origin,
+                                exclude,
+                                scaling,
+                                reduction):
+    if "settings" not in adata.uns:
+        adata.uns["settings"] = {}
+
+    adata.uns["settings"][f"_{reduction}_samplewise"] = {
+        "groupby": groupby,
+        "metric": metric,
+        "data_origin": data_origin,
+        "exclude": exclude,
+        "scaling": scaling,
+    }
