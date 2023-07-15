@@ -221,8 +221,7 @@ class Metadata(BaseSupplement):
         except ValueError as e:
             raise ValueError("Only numeric columns are supported") from e
         column = self.dataframe[factor]
-        min_value = column.min()
-        max_value = column.max()
+        min_value, max_value = column.min(), column.max()
         intervals = np.arange(min_value, max_value + min_value, (max_value - min_value) / n_groups)
         self.dataframe[f"{factor}_grouped"] = pd.cut(column, intervals)
     
