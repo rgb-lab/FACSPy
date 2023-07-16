@@ -7,10 +7,16 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from ..exceptions.exceptions import HierarchyError
 
-from .utils import create_boxplot, savefig_or_show
+from .utils import savefig_or_show
+from ._baseplot import (stripboxplot,
+                        barplot,
+                        label_plot_basic,
+                        adjust_legend)
+from ._basestats import add_statistic
 
 from ..utils import (GATE_SEPARATOR,
                      find_gate_path_of_gate,
@@ -18,22 +24,24 @@ from ..utils import (GATE_SEPARATOR,
                      find_grandparent_gate,
                      subset_gate,
                      find_parent_population,
-                     find_grandparent_population)
+                     find_grandparent_population,
+                     convert_gate_to_obs)
 
-def prepare_dataframe_cell_counts(adata: AnnData,
-                      groupby: Optional[Union[str, list[str]]]):
+def find_y_label(adata: AnnData,
+                 freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent"]]],
+                 gate: Union[str, list[str]]):
     
-    groupings = ["sample_ID"] + groupby if "sample_ID" not in groupby else groupby
-    if groupby == [None]:
-        return adata.obs["sample_ID"].value_counts().to_frame(name = "counts").reset_index(names = "sample_ID")
-
-    return adata.obs[groupings].value_counts().to_frame(name = "counts").reset_index()
-
+    if freq_of == "parent":
+        return find_parent_population(find_gate_path_of_gate(adata, gate))
+    if freq_of == "grandparent":
+        return find_grandparent_population(find_gate_path_of_gate(adata, gate))
+    return "All Cells" if freq_of in ["root", "all"] else freq_of
 
 def prepare_dataframe_gate_frequency(adata: AnnData,
                                      gate: Union[str, list[str]],
                                      freq_of: Optional[Union[str, list[str]]],
-                                     groupby: Optional[Union[str, list[str]]]) -> pd.DataFrame:
+                                     groupby: Optional[Union[str, list[str]]],
+                                     colorby: Optional[str]) -> pd.DataFrame:
     
     df = adata.uns["gate_frequencies"].reset_index()
     
@@ -54,15 +62,17 @@ def prepare_dataframe_gate_frequency(adata: AnnData,
 
     df = df.loc[(df["gate"] == gate) & (df["freq_of"] == freq_of)]
     
-    obs = prepare_dataframe_cell_counts(adata, groupby)
+    obs = prepare_dataframe_cell_counts(adata, groupby, colorby = colorby)
     obs = obs.drop("counts", axis = 1)
     return obs.merge(df, on = "sample_ID")
 
 
 def gate_frequency(adata: AnnData,
                    gate: Union[str, list[str]],
+                   colorby: Optional[str],
                    freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent", "all"]]] = None,
-                   groupby: Optional[Union[str, list[str]]] = None,
+                   groupby: Optional[str] = None,
+                   figsize: tuple[float, float] = (4,3),
                    return_dataframe: bool = False,
                    return_fig: bool = False,
                    save: bool = None,
@@ -71,126 +81,146 @@ def gate_frequency(adata: AnnData,
     if not isinstance(groupby, list):
         groupby = [groupby]
 
+    if not isinstance(colorby, list):
+        colorby = [colorby]
+
     df = prepare_dataframe_gate_frequency(adata,
                                           gate,
                                           freq_of,
-                                          groupby)
+                                          groupby,
+                                          colorby)
 
     if return_dataframe:
         return df
 
     ncols = 1
-    nrows = len(groupby)
-    figsize = (len(df) / 10, 3 * len(groupby)) 
-    
+    nrows = 1
+    figsize = figsize
+
+    plot_params = {
+        "x": groupby[0],
+        "y": "freq",
+        "hue": colorby[0],
+        "data": df
+    }
+
     fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
+    if groupby == ["sample_ID"]:
+        ax = barplot(ax,
+                     plot_params = plot_params)
 
-    for i, grouping in enumerate(groupby):
-        plot_params = {
-            "x": "sample_ID" if grouping is None else grouping,
-            "y": "freq",
-            "data": df
-        }
+    else:
+        ax = stripboxplot(ax,
+                          plot_params = plot_params)
+        try:
+            ax = add_statistic(ax = ax,
+                                test = "Kruskal",
+                                dataframe = df,
+                                groupby = groupby[0],
+                                plot_params = plot_params)
+        except ValueError as e:
+            if str(e) != "All numbers are identical in kruskal":
+                raise ValueError from e
+            else:
+                print("warning... Values were uniform, no statistics to plot.")
 
-        if len(groupby) > 1:
-            ax[i] = create_boxplot(ax[i],
-                                   grouping,
-                                   plot_params)
-            ax[i] = label_frequency_plot(ax[i],
-                                         grouping,
-                                         gate,
-                                         find_y_label(adata, freq_of, gate)
-                                         )
-        else:
-            ax = create_boxplot(ax,
-                                grouping,
-                                plot_params)
-            ax = label_frequency_plot(ax,
-                                      grouping,
-                                      gate,
-                                      find_y_label(adata, freq_of, gate)
-                                      )
+    ax = label_plot_basic(ax = ax,
+                          title = f"gate frequency per {groupby[0]}\ngate: {gate}",
+                          y_label = f"freq. of\n{find_y_label(adata, freq_of, gate)}",
+                          x_label = "")
+    
+    ax = adjust_legend(ax)
+    
+    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
+
     if return_fig:
         return fig    
     plt.tight_layout()
     savefig_or_show(show = show, save = save)
 
-def label_cell_count_plot(ax: Axes,
-                          grouping: str,
-                          population: str) -> Axes:
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
-    ax.set_title(f"cell counts per {grouping or 'sample_ID'}\npopulation: {population or 'All cells'}")
-    ax.set_ylabel("counts per sample")
-    ax.set_xlabel("")
-    return ax
+def prepare_dataframe_cell_counts(adata: AnnData,
+                                  groupby: Optional[str],
+                                  colorby: Optional[str]):
+    import copy
+    groupings = ["sample_ID"] + copy.copy(groupby) if "sample_ID" not in groupby else copy.copy(groupby)
+    if colorby != [None]:
+        groupings += colorby
+    groupings = list(set(groupings)) ## in case the user chooses groupby and colorby as the same
+    if groupby == [None]:
+        return adata.obs["sample_ID"].value_counts().to_frame(name = "counts").reset_index(names = "sample_ID")
 
-def find_y_label(adata: AnnData,
-                 freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent"]]],
-                 gate: Union[str, list[str]]):
-    
-    if freq_of == "parent":
-        return find_parent_population(find_gate_path_of_gate(adata, gate))
-    if freq_of == "grandparent":
-        return find_grandparent_population(find_gate_path_of_gate(adata, gate))
-    return "All Cells" if freq_of in ["root", "all"] else freq_of
+    return adata.obs[groupings].value_counts().to_frame(name = "counts").reset_index()
 
-def label_frequency_plot(ax: Axes,
-                         grouping: str,
-                         gate: str,
-                         freq_of: str) -> Axes:
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
-    ax.set_title(f"gate frequency per {grouping}\ngate: {gate}")
-    ax.set_ylabel(f"freq. of\n{freq_of}")
-    ax.set_xlabel("")
-    return ax
 
 def cell_counts(adata: AnnData,
-                groupby: Optional[Union[str, list[str]]] = None,
-                population: Optional[str] = None,
+                groupby: Optional[Union[str, list[str]]],
+                gate: str,
+                colorby: Optional[str] = None,
+                figsize: tuple[float, float] = (4,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
                 save: bool = None,
-                show: bool = None):
+                show: bool = None) -> Optional[Union[Figure, Axes]]:
 
-    if population is not None:
-        adata = subset_gate(adata, gate = population, copy = False, as_view = True)
+    if gate is not None:
+        if gate not in adata.obs.columns:
+            convert_gate_to_obs(adata, gate)
+        adata = subset_gate(adata,
+                            gate = gate,
+                            copy = False,
+                            as_view = True)
 
     if not isinstance(groupby, list):
         groupby = [groupby]
     
-    df = prepare_dataframe_cell_counts(adata, groupby)
+    if not isinstance(colorby, list):
+        colorby = [colorby]
+    
+    df = prepare_dataframe_cell_counts(adata, groupby, colorby)
     
     if return_dataframe:
         return df 
     
-    ncols = 1,
-    nrows = len(groupby)
-    figsize = (len(df) / 10, 3 * len(groupby)) 
-    
-    fig, ax = plt.subplots(ncols = 1, nrows = nrows, figsize = figsize)
+    ncols = 1
+    nrows = 1
+    figsize = figsize
 
+    plot_params = {
+        "data": df,
+        "x": groupby[0],
+        "y": "counts",
+        "hue": colorby[0],
+
+    }
+
+    fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
+    if groupby == ["sample_ID"]:
+        ax = barplot(ax,
+                     plot_params = plot_params)
+
+    else:
+        ax = stripboxplot(ax,
+                          plot_params = plot_params)
+        try:
+            ax = add_statistic(ax = ax,
+                                test = "Kruskal",
+                                dataframe = df,
+                                groupby = groupby[0],
+                                plot_params = plot_params)
+        except ValueError as e:
+            if str(e) != "All numbers are identical in kruskal":
+                raise ValueError from e
+            else:
+                print("warning... Values were uniform, no statistics to plot.")
+
+    ax = label_plot_basic(ax = ax,
+                          title = f"cell counts\ngrouped by {groupby[0]}",
+                          y_label = "counts",
+                          x_label = "")
     
-    for i, grouping in enumerate(groupby):
-        plot_params = {
-            "x": "sample_ID" if grouping is None else grouping,
-            "y": "counts",
-            "data": df
-        }
-        
-        if len(groupby) > 1:
-            ax[i] = create_boxplot(ax[i],
-                                   grouping,
-                                   plot_params)
-            ax[i] = label_cell_count_plot(ax = ax[i],
-                                          grouping = grouping,
-                                          population = population)
-        else:
-            ax = create_boxplot(ax,
-                                grouping,
-                                plot_params)
-            ax = label_cell_count_plot(ax = ax,
-                                       grouping = grouping,
-                                       population = population)
+    ax = adjust_legend(ax)
+    
+    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
         
     if return_fig:
         return fig
