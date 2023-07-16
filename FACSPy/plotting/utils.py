@@ -3,6 +3,7 @@ from matplotlib.patches import Patch
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.transforms import Bbox
 from matplotlib import pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 
@@ -138,7 +139,7 @@ def get_uns_dataframe(adata: AnnData,
     if table_identifier not in adata.uns:
         raise AnalysisNotPerformedError(table_identifier)
     
-    data = adata.uns[table_identifier]
+    data = adata.uns[table_identifier].copy()
     data = extract_uns_dataframe(adata,
                                  data,
                                  column_identifier_name)
@@ -183,20 +184,25 @@ def add_annotation_plot(adata: AnnData,
     annot_frame = annot_frame.loc[indices]
     divider = make_axes_locatable(clustermap.ax_heatmap)
     ax: Axes = divider.append_axes("top", size = "20%", pad = 0.05)
-
     annot_frame.plot(kind = "bar",
-                        stacked = annotate == "frequency",
-                        legend = True,
-                        ax = ax,
-                        subplots = False,
-                        )
+                     stacked = annotate == "frequency",
+                     legend = True,
+                     ax = ax,
+                     subplots = False,
+                     )
     ax.legend(bbox_to_anchor = (1.01, 0.5), loc = "center left")
     ax.set_ylabel(y_label)
-    ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)
+
     remove_ticklabels(ax, which = "x")
     remove_ticks(ax, which = "x")
     ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1] * 1.4)
     ax.set_xlabel("")
+
+    ticks_loc = ax.get_yticks().tolist()
+    ax.yaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+    label_format = '{:,.2f}'
+    ax.yaxis.set_ticklabels([label_format.format(x) for x in ticks_loc],
+                            fontsize = y_label_fontsize)
 
 def has_interval_index(column: pd.Series) -> bool:
     return isinstance(column.dtype, pd.CategoricalDtype) and isinstance(column.cat.categories, pd.IntervalIndex)
