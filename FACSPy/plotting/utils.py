@@ -300,29 +300,6 @@ def merge_metaclusters_into_dataframe(data, metacluster_mapping) -> pd.DataFrame
         data = data.drop(["metacluster"], axis = 1)
     return pd.merge(data, metacluster_mapping, on = "sample_ID")
 
-
-def create_boxplot(ax: Axes,
-                   grouping: str,
-                   plot_params: dict) -> Axes:
-    
-    if grouping is None or grouping == "sample_ID":
-        sns.barplot(**plot_params,
-                    ax = ax)
-    
-    else:
-        sns.stripplot(**plot_params,
-                      dodge = False,
-                      jitter = True,
-                      linewidth = 1,
-                      ax = ax)
-        plot_params["hue"] = None
-        sns.boxplot(**plot_params,
-                    boxprops = dict(facecolor = "white"),
-                    whis = (0,100),
-                    ax = ax)
-    
-    return ax
-
 def calculate_nrows(ncols: int, 
                     dataset: pd.DataFrame):
     return int(
