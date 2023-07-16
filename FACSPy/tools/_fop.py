@@ -41,7 +41,7 @@ def fop(adata: AnnData,
         groupby: Union[Literal["sample_ID"], str] = "sample_ID",
         cutoff: Optional[Union[int, float, list[int], list[float]]] = None,
         copy: bool = False):
-    print("calculating fops")
+    
     adata = adata.copy() if copy else adata
     gates = adata.uns["gating_cols"]
     cofactors = adata.var["cofactors"].to_numpy(dtype = np.float64) if cutoff is None else cutoff
