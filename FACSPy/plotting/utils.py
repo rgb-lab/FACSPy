@@ -201,7 +201,7 @@ def add_annotation_plot(adata: AnnData,
     ticks_loc = ax.get_yticks().tolist()
     ax.yaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
     label_format = '{:,.2f}'
-    ax.yaxis.set_ticklabels([label_format.format(x) for x in ticks_loc],
+    ax.yaxis.set_ticklabels(ax.yaxis.get_ticklabels(),
                             fontsize = y_label_fontsize)
 
 def has_interval_index(column: pd.Series) -> bool:
