@@ -11,7 +11,7 @@ from typing import Optional, Union, Literal
 
 from ..utils import reduction_names
 
-from ..plotting.utils import select_gate_from_multiindex_dataframe, scale_data
+from ..plotting.utils import scale_data
 
 def perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
                data: np.ndarray,
@@ -149,7 +149,7 @@ def save_samplewise_dr_settings(adata: AnnData,
                                 reduction):
     if "settings" not in adata.uns:
         adata.uns["settings"] = {}
-        
+
     adata.uns["settings"][f"_{reduction}_samplewise"] = {
         "data_group": data_group,
         "data_metric": data_metric,
