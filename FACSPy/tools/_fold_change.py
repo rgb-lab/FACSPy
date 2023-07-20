@@ -73,8 +73,8 @@ def calculate_fold_changes(adata: AnnData,
                            group1: Union[str, list[Union[str, int]]],
                            group2: Union[str, list[Union[str, int]]],
                            gate: str,
-                           groupby: Optional[Union[str, list[str]]] = "sample_ID",
-                           metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                           data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                           data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                            data_origin: Literal["compensated", "transformed"] = "compensated",
                            test: Literal["Kruskal", "t-test"] = "Kruskal"
                            ) -> pd.DataFrame:
@@ -88,8 +88,9 @@ def calculate_fold_changes(adata: AnnData,
     
     data = get_uns_dataframe(adata = adata,
                              gate = gate,
-                             table_identifier = f"{metric}_{groupby}_{data_origin}",
-                             column_identifier_name = "sample_ID")
+                             table_identifier = f"{data_metric}_{data_group}_{data_origin}",
+                             column_identifier_name = data_group)
+    
     fluo_columns = [col for col in data.columns if col in adata.var_names]
     cofactors = adata.var.loc[fluo_columns, "cofactors"].astype("float32")
     data[fluo_columns] = data[fluo_columns].divide(cofactors)
