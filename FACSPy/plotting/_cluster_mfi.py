@@ -10,12 +10,9 @@ from typing import Literal, Optional, Union
 
 from ..utils import find_gate_path_of_gate
 from .utils import (scale_data,
-                    select_gate_from_multiindex_dataframe,
                     calculate_sample_distance,
                     calculate_linkage,
-                    remove_ticklabels,
                     get_uns_dataframe,
-                    remove_ticks,
                     scale_cbar_to_heatmap,
                     calculate_correlation_data,
                     remove_dendrogram,
@@ -25,32 +22,31 @@ from .utils import (scale_data,
 
 from ._clustermap import create_clustermap
 from ._frequency_plots import prep_dataframe_cluster_freq
-from ..exceptions.exceptions import AnalysisNotPerformedError
 
-def cluster_mfi(adata: AnnData,
-                marker: Union[str, list[str]],
-                data_group: Union[str, list[str]] = None,
-                data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
-                colorby: Optional[str] = None,
-                order: list[str] = None,
-                gate: str = None,
-                overview: bool = False,
-                return_dataframe: bool = False) -> Optional[Figure]:
+# def cluster_mfi(adata: AnnData,
+#                 marker: Union[str, list[str]],
+#                 data_group: Union[str, list[str]] = None,
+#                 data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
+#                 colorby: Optional[str] = None,
+#                 order: list[str] = None,
+#                 gate: str = None,
+#                 overview: bool = False,
+#                 return_dataframe: bool = False) -> Optional[Figure]:
 
-    try:
-        data = adata.uns[data_metric]
-        data = select_gate_from_multiindex_dataframe(data.T, find_gate_path_of_gate(adata, gate))
+#     try:
+#         data = adata.uns[data_metric]
+#         data = select_gate_from_multiindex_dataframe(data.T, find_gate_path_of_gate(adata, gate))
 
-    except KeyError as e:
-        raise AnalysisNotPerformedError(data_metric) from e
+#     except KeyError as e:
+#         raise AnalysisNotPerformedError(data_metric) from e
 
-    data.index = data.index.set_names(["cluster", "gate"])
-    raw_data = data.reset_index()
+#     data.index = data.index.set_names(["cluster", "gate"])
+#     raw_data = data.reset_index()
 
-    sns.barplot(data = raw_data,
-                x = "cluster",
-                y = marker)
-    plt.show()
+#     sns.barplot(data = raw_data,
+#                 x = "cluster",
+#                 y = marker)
+#     plt.show()
 
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,
@@ -141,7 +137,7 @@ def cluster_heatmap(adata: AnnData,
         if annotate == "frequency":
             annot_frame = prep_dataframe_cluster_freq(
                 adata,
-                data_group = annotation_kwargs.get("data_group", "sample_ID"),
+                groupby = annotation_kwargs.get("groupby", "sample_ID"),
                 cluster_key = annotation_kwargs.get("cluster_key", "leiden"),
                 normalize = annotation_kwargs.get("normalize", True),
             )
