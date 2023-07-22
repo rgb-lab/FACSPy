@@ -4,6 +4,7 @@ from . import tools as tl
 from . import plotting as pl
 from . import model as ml
 from . import dataset as dt
+from . import clustering as cl
 
 from .utils import (subset_gate,
                     subset_fluo_channels,
@@ -16,4 +17,4 @@ from .io.io import save_dataset, read_dataset
 
 import sys
 
-sys.modules.update({f'{__name__}.{m}': globals()[m] for m in ['tl', 'pl', 'ml', 'dt']})
+sys.modules.update({f'{__name__}.{m}': globals()[m] for m in ['tl', 'pl', 'ml', 'dt', 'cl']})
