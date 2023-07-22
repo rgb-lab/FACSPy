@@ -26,7 +26,6 @@ from .utils import (scale_data,
 
 from ._clustermap import create_clustermap
 
-
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,
                       scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]],
@@ -38,8 +37,10 @@ def prepare_plot_data(adata: AnnData,
         plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
     sample_distances = calculate_sample_distance(plot_data[fluo_columns])
     plot_data = pd.DataFrame(data = sample_distances,
-                             columns = raw_data.index.to_list(),
-                             index = raw_data.index)
+                             columns = raw_data["sample_ID"].to_list(),
+                             index = raw_data["sample_ID"].to_list())
+    plot_data = plot_data.fillna(0)
+    plot_data["sample_ID"] = raw_data["sample_ID"].to_list()
     plot_data = append_metadata(adata, plot_data)
 
     return plot_data
@@ -71,8 +72,7 @@ def sample_distance(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                              gate = gate,
-                             table_identifier = f"{data_metric}_{data_group}_{data_origin}",
-                             column_identifier_name = "sample_ID")
+                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
     
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
