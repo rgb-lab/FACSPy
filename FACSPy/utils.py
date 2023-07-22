@@ -593,3 +593,13 @@ def add_metadata_to_obs(adata: AnnData,
     specific_mapping = mapping[metadata_column]
     adata.obs[metadata_column] = adata.obs["sample_ID"].map(specific_mapping)
     return adata if copy else None
+
+def remove_channel(adata: AnnData,
+                   channel: Union[str, list[str]],
+                   copy: bool = False) -> Optional[AnnData]:
+    if not isinstance(channel, list):
+        channel = [channel]
+    adata = adata.copy() if copy else adata
+    adata._inplace_subset_var([var for var in adata.var_names if not var in channel])
+
+    return adata if copy else None
