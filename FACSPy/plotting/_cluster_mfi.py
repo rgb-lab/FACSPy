@@ -23,6 +23,8 @@ from .utils import (scale_data,
 from ._clustermap import create_clustermap
 from ._frequency_plots import prep_dataframe_cluster_freq
 
+def cluster_mfi(): return None
+
 # def cluster_mfi(adata: AnnData,
 #                 marker: Union[str, list[str]],
 #                 data_group: Union[str, list[str]] = None,
@@ -84,15 +86,14 @@ def cluster_heatmap(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}",
-                                 column_identifier_name = "cluster")
+                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}")
     
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
                                   copy = True,
                                   scaling = scaling)
-
+    plot_data = plot_data.set_index(data_group)
     if return_dataframe:
         return plot_data
 
@@ -142,7 +143,7 @@ def cluster_heatmap(adata: AnnData,
                 normalize = annotation_kwargs.get("normalize", True),
             )
         elif annotate in adata.var_names:
-            #raw_data = raw_data.set_index("cluster")
+            raw_data = raw_data.set_index(data_group)
             annot_frame = raw_data[annotate]
 
         add_annotation_plot(adata = adata,
