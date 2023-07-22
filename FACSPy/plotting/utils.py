@@ -57,12 +57,10 @@ def label_metaclusters_in_dataset(adata: AnnData,
     if "metacluster" in adata.uns["metadata"].dataframe:
         print("warninig... overwriting metaclusters")
         adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
-    
-    
-    adata.uns["metadata"].dataframe["sample_ID"] = adata.uns["metadata"].dataframe["sample_ID"].astype("str")
+
     adata.uns["metadata"].dataframe = pd.merge(adata.uns["metadata"].dataframe,
-                                                data[["sample_ID", "metacluster"]],
-                                                on = "sample_ID")
+                                               data[["sample_ID", "metacluster"]],
+                                               on = "sample_ID")
     if label_metaclusters_key is not None:
         adata.uns["metadata"].dataframe[label_metaclusters_key] = adata.uns["metadata"].dataframe["metacluster"]
         adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
@@ -88,14 +86,13 @@ def add_metaclusters(adata: AnnData,
     metaclusters = calculate_metaclusters(row_linkage, n_clusters = n_clusters)
     metacluster_mapping = map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
     data = merge_metaclusters_into_dataframe(data, metacluster_mapping)
-
+    
     if label_metaclusters:
         label_metaclusters_in_dataset(adata = adata,
                                       data = data,
                                       label_metaclusters_key = label_metaclusters_key)
     
     #data = data.set_index("sample_ID")
-    
     return data
 
 
@@ -115,48 +112,50 @@ def remove_unused_categories(dataframe: pd.DataFrame) -> pd.DataFrame:
         dataframe[col] = dataframe[col].cat.remove_unused_categories()
     return dataframe
 
-def extract_uns_dataframe(adata: AnnData,
-                       data: pd.DataFrame,
-                       column_identifier_name: str) -> pd.DataFrame:
-    data = data.T
-    data.index = data.index.set_names([column_identifier_name, "gate_path"])
-    data = data.reset_index()
-    data[column_identifier_name] = data[column_identifier_name].astype("str")
-    return data
-
 def append_metadata(adata: AnnData,
                     dataframe_to_merge: pd.DataFrame) -> pd.DataFrame:
+    
     metadata = adata.uns["metadata"].to_df().copy()
-    metadata["sample_ID"] = metadata["sample_ID"].astype("str")
 
-    return remove_unused_categories(pd.merge(dataframe_to_merge, metadata, on = "sample_ID"))
+    return remove_unused_categories(
+        pd.merge(dataframe_to_merge.reset_index(),
+                 metadata,
+                 on = "sample_ID",
+                 how = "outer"
+        )
+    )
 
 def get_uns_dataframe(adata: AnnData,
                       gate: str,
-                      table_identifier: str,
-                      column_identifier_name: Literal["sample_ID", "cluster"]) -> pd.DataFrame:
+                      table_identifier: str) -> pd.DataFrame:
     
     if table_identifier not in adata.uns:
         raise AnalysisNotPerformedError(table_identifier)
     
-    data = adata.uns[table_identifier].copy()
-    data = extract_uns_dataframe(adata,
-                                 data,
-                                 column_identifier_name)
-    data = select_gate_from_singleindex_dataframe(data, find_gate_path_of_gate(adata, gate))
-    if column_identifier_name == "sample_ID":
+    data: pd.DataFrame = adata.uns[table_identifier].copy()
+    data = data.loc[data.index.get_level_values("gate") == find_gate_path_of_gate(adata, gate),:]
+    data = data.reset_index()
+    if "sample_ID" in data.columns:
         data = append_metadata(adata, data)
-    data = data.set_index(column_identifier_name)
     return data
+
+# def extract_uns_dataframe(adata: AnnData,
+#                        data: pd.DataFrame,
+#                        column_identifier_name: str) -> pd.DataFrame:
+#     data = data.T
+#     data.index = data.index.set_names([column_identifier_name, "gate_path"])
+#     data = data.reset_index()
+#     data[column_identifier_name] = data[column_identifier_name].astype("str")
+#     return data
 
 
 def select_gate_from_multiindex_dataframe(dataframe: pd.DataFrame,
-                               gate: str) -> pd.DataFrame:
-    return dataframe.loc[(slice(None), gate), :]
+                                          gate: str) -> pd.DataFrame:
+    return dataframe.loc[dataframe.index.get_level_values("gate") == gate,:]
 
-def select_gate_from_singleindex_dataframe(dataframe: pd.DataFrame,
-                               gate: str) -> pd.DataFrame:
-    return dataframe[dataframe["gate_path"] == gate]
+# def select_gate_from_singleindex_dataframe(dataframe: pd.DataFrame,
+#                                gate: str) -> pd.DataFrame:
+#     return dataframe[dataframe["gate_path"] == gate]
 
 def scale_data(dataframe: pd.DataFrame,
                scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]) -> np.ndarray:
