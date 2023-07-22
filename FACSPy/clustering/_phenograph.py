@@ -1,20 +1,35 @@
-from typing import Optional, Literal
+from typing import Optional, Literal, Union
 
 import phenograph
 import anndata as ad
-from ..utils import subset_fluo_channels
+from ..utils import contains_only_fluo
 
-def phenograph(dataset: ad.AnnData,
-               key_added: str = "phenograph",
-               algorithm: Literal["leiden", "louvain"] = "leiden",
-               copy: bool = False) -> Optional[ad.AnnData]:
-    
-    fluo_dataset = subset_fluo_channels(dataset)
-    communities, graph, Q = phenograph.cluster(fluo_dataset.layers["transformed"],
-                                               clustering_algo = algorithm)
+def phenograph_cluster(adata: ad.AnnData,
+                       key_added: str = "phenograph",
+                       on: Literal["compensated", "transformed"] = "transformed",
+                       algorithm: Literal["leiden", "louvain"] = "leiden",
+                       exclude: Optional[Union[str, list[str]]] = None,
+                       copy: bool = False,
+                       phenograph_kwargs = None) -> Optional[ad.AnnData]:
 
-    dataset.obs[f"{key_added}_{algorithm}"] = communities
-    dataset.uns[f"{key_added}_{algorithm}_graph"] = graph
-    dataset.uns[f"{key_added}_{algorithm}_Q"] = Q
+    if phenograph_kwargs is None:
+        phenograph_kwargs = {}
+    cluster_set = adata.copy() if copy else adata
 
-    return dataset if copy else None
+    assert contains_only_fluo(cluster_set)
+
+    if exclude:
+        cluster_set = adata[:, [var for var in adata.var_names if var not in exclude]]
+        assert adata.isview
+
+
+    communities, graph, Q = phenograph.cluster(cluster_set.layers[on],
+                                               clustering_algo = algorithm,
+                                               **phenograph_kwargs)
+
+    adata.obs[f"{key_added}_{algorithm}"] = communities
+    adata.obs[f"{key_added}_{algorithm}"] = adata.obs[f"{key_added}_{algorithm}"].astype("category")
+    adata.uns[f"{key_added}_{algorithm}_graph"] = graph
+    adata.uns[f"{key_added}_{algorithm}_Q"] = Q
+
+    return adata if copy else None
