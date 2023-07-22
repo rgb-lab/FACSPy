@@ -9,7 +9,7 @@ import pandas as pd
 from itertools import combinations
 import bisect
 
-from minisom import MiniSom
+#from minisom import MiniSom
 from ..utils import subset_fluo_channels
 
 
@@ -140,31 +140,31 @@ def flowsom(dataset: ad.AnnData,
             random_state: int = 42,
             copy: bool = False) -> Optional[ad.AnnData]:
     
+    pass
+    # data = subset_fluo_channels(dataset)
 
-    data = subset_fluo_channels(dataset)
+    # som = MiniSom(x = x,
+    #                 y = y,
+    #                 input_len = data.shape[1],
+    #                 sigma = sigma,
+    #                 learning_rate = learning_rate,
+    #                 neighborhood_function = neighborhood_function,
+    #                 random_seed = random_state
+    #                 )
+    # som.pca_weights_init(data)
+    # som.train_batch(data, batch_size, verbose = True)
+    # weights = som.get_weights().reshape(x * y, data.shape[1])
 
-    som = MiniSom(x = x,
-                    y = y,
-                    input_len = data.shape[1],
-                    sigma = sigma,
-                    learning_rate = learning_rate,
-                    neighborhood_function = neighborhood_function,
-                    random_seed = random_state
-                    )
-    som.pca_weights_init(data)
-    som.train_batch(data, batch_size, verbose = True)
-    weights = som.get_weights().reshape(x * y, data.shape[1])
-
-    for meta_cluster in [] 
-    cluster = ConsensusCluster(metaclustering_algorithm,
-                               meta_cluster,
-                               meta_cluster + 1,
-                               3,
-                               resample_proportion = 0.5)
+    # for meta_cluster in [] 
+    # cluster = ConsensusCluster(metaclustering_algorithm,
+    #                            meta_cluster,
+    #                            meta_cluster + 1,
+    #                            3,
+    #                            resample_proportion = 0.5)
     
-    cluster.fit(weights, verbose = True)
-    map_class = cluster.predict_data(weights).reshape(x, y)
-    dataset.obs[key_added] = [map_class[som.winner(data[row,:])] for row in range(data.shape[0])]
+    # cluster.fit(weights, verbose = True)
+    # map_class = cluster.predict_data(weights).reshape(x, y)
+    # dataset.obs[key_added] = [map_class[som.winner(data[row,:])] for row in range(data.shape[0])]
 
 
 
