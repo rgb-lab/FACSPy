@@ -120,8 +120,10 @@ def create_scatterplot(ax: Axis,
 
 def pca_samplewise(adata: AnnData,
                    groupby: str,
-                   gate: str, 
-                   on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                   gate: str,
+                   data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                   data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                   data_origin: Literal["compensated", "transformed"] = "compensated",
                    overview: bool = False,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
@@ -134,8 +136,7 @@ def pca_samplewise(adata: AnnData,
     
     data = get_uns_dataframe(adata = adata,
                              gate = gate,
-                             table_identifier = on,
-                             column_identifier_name = "sample_ID")
+                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
 
     if return_dataframe:
         return data
@@ -152,7 +153,9 @@ def pca_samplewise(adata: AnnData,
 def mds_samplewise(adata: AnnData,
                    groupby: str,
                    gate: str, 
-                   on: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                   data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                   data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                   data_origin: Literal["compensated", "transformed"] = "compensated",
                    overview: bool = False,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
@@ -165,8 +168,7 @@ def mds_samplewise(adata: AnnData,
     
     data = get_uns_dataframe(adata = adata,
                              gate = gate,
-                             table_identifier = on,
-                             column_identifier_name = "sample_ID")
+                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
 
     if return_dataframe:
         return data
