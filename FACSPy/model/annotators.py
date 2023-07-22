@@ -5,8 +5,9 @@ import scanpy as sc
 from scipy.sparse import csr_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-
-from sklearn.base import TransformerMixin
+from scipy.spatial import ConvexHull
+from ..utils import transform_gates_according_to_gate_transform, transform_vertices_according_to_gate_transform
+from ..utils import find_parent_gate, GATE_SEPARATOR
 
 from sklearn.preprocessing import (MinMaxScaler,
                                    PowerTransformer,
@@ -126,7 +127,7 @@ class supervisedGating(BaseGating):
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(" + 
-            f"{self.estimator}" +
+            f"{self.train_on}" +
             ")"
         )
 
@@ -134,7 +135,7 @@ class supervisedGating(BaseGating):
         raise NotImplementedError("Hyperparameter tuning is currently not supported. :(")
 
     def train(self,
-              on: Literal["compensated", "transformed"],
+              on: Literal["compensated", "transformed"] = "transformed",
               pp_transformator: Optional[Literal["PowerTransformer", "QuantileTransformer"]] = None,
               pp_quantile_capping: Optional[float] = None,
               pp_scaler: Optional[Literal["RobustScaler", "MaxAbsScaler", "StandardScaler", "MinMaxScaler"]] = None,
@@ -173,7 +174,6 @@ class supervisedGating(BaseGating):
             X_train, X_test, y_train, y_test = self.prepare_training_data(samples = self.training_groups[gate_group]["samples"],
                                                                           gate_columns = self.training_groups[gate_group]["gates"],
                                                                           group_identifier = gate_group,
-                                                                          on = on,
                                                                           test_size = test_size,
                                                                           **kwargs)
             print("Fitting classifier...")
@@ -183,7 +183,7 @@ class supervisedGating(BaseGating):
             test_prediction = self.classifiers[gate_group].predict(X_test)
             self.training_groups[gate_group]["metrics"] = {"train_accuracy": accuracy_score(y_train, train_prediction),
                                                            "test_accuracy": accuracy_score(y_test, test_prediction)}
-        [check_is_fitted(self.classifiers[gate_group]) for gate_group in self.classifiers]
+        _ = [check_is_fitted(self.classifiers[gate_group]) for gate_group in self.classifiers]
         self.update_train_groups()
 
     def update_train_groups(self):
@@ -239,7 +239,6 @@ class supervisedGating(BaseGating):
                               samples: list[str],
                               gate_columns: list[str],
                               group_identifier: Union[str, int],
-                              on: Literal["compensated", "transformed"],
                               test_size: float = 0.1) -> tuple[np.ndarray,
                                                                np.ndarray,
                                                                np.ndarray,
@@ -249,7 +248,7 @@ class supervisedGating(BaseGating):
         assert adata_subset.is_view ##TODO: delete later
         gate_indices = find_gate_indices(self.adata,
                                          gate_columns)
-        X = adata_subset.layers["compensated"]
+        X = adata_subset.layers[self.on]
         y = adata_subset.obsm["gating"][:, gate_indices].toarray()
         X = self.preprocess_data(X,
                                  group_identifier)
@@ -264,8 +263,67 @@ class supervisedGating(BaseGating):
         
         return X_train, X_test, y_train, y_test
 
+
+    def merge_current_and_reference_gates(self,
+                                          current_gates: list[str],
+                                          reference_gates: list[dict]) -> list[dict]:
+        merged_gates = []
+        for gate in current_gates:
+            gate_name = find_current_population(gate)
+            parent_gate = find_parent_gate(gate)
+            split_gate_path = tuple(parent_gate.split(GATE_SEPARATOR))
+            merged_gates.extend(
+                ref_gate
+                for ref_gate in reference_gates
+                if (ref_gate["gate"].gate_name == gate_name)
+                and (ref_gate["gate_path"] == split_gate_path)
+            )
+        return merged_gates
+
+    def add_gating_to_workspace(self,
+                                adata: AnnData,
+                                group_identifier: Union[str, int, float],
+                                current_sample: str) -> None:
+
+        gated_samples = self.training_groups[group_identifier]["samples"]
+        current_gates = self.training_groups[group_identifier]["gates"]
+        reference_gates = adata.uns["workspace"][self.wsp_group][gated_samples[0]]["gates"]
+        gate_template = self.merge_current_and_reference_gates(current_gates, reference_gates)
+        for gate in gate_template:
+            gate_path = GATE_SEPARATOR.join(list(gate["gate_path"]))
+            full_gate_path = GATE_SEPARATOR.join([gate_path, gate["gate"].gate_name])
+            gate_index = find_gate_indices(adata, full_gate_path)
+            gate_information = adata.obsm["gating"][:, gate_index].toarray()
+            dimensions = [gate["gate"].dimensions[i].id for i, _ in enumerate(gate["gate"].dimensions)]
+            dimensions_indices = [adata.var.loc[adata.var["pnn"] == dim, "pns"].iloc[0] for dim in dimensions]
+            fluorescence_data = adata[:, dimensions_indices].layers["compensated"]
+            fluorescence_data = np.hstack([fluorescence_data, gate_information])
+            fluorescence_data = fluorescence_data[fluorescence_data[:,2] == True]
+            transformations = adata.uns["workspace"][self.wsp_group][current_sample]["transforms"]
+            if fluorescence_data.shape[0] != 0:
+                hull = ConvexHull(fluorescence_data[:, [0,1]])
+                vertices = fluorescence_data[hull.vertices][:,[0,1]]
+            else:
+                print("WARNING NO HULL")
+                vertices = np.zeros(shape = (2,2))
+            if gate["gate"].gate_type == "PolygonGate":
+                gate["gate"].vertices = transform_vertices_according_to_gate_transform(vertices,
+                                                                                       transforms = transformations,
+                                                                                       gate_channels = dimensions)
+            if gate["gate"].gate_type == "RectangleGate":
+                gate_dimensions = np.array([[np.min(vertices[:,0]), np.max(vertices[:,0])],
+                                            [np.min(vertices[:,1]), np.max(vertices[:,1])]])
+                print(gate, "\n", vertices,"\n", gate_dimensions, "\n", dimensions, "\n", dimensions_indices)
+                gate_dimensions = transform_gates_according_to_gate_transform(gate_dimensions,
+                                                                              transforms = transformations,
+                                                                              gate_channels = dimensions)
+                gate["gate"].dimensions[0].min = gate_dimensions[0,0]
+                gate["gate"].dimensions[0].max = gate_dimensions[0,1]
+                gate["gate"].dimensions[1].min = gate_dimensions[1,0]
+                gate["gate"].dimensions[1].max = gate_dimensions[1,1]
+        self.adata.uns["workspace"][self.wsp_group][current_sample]["gates"] = gate_template
+
     def gate_dataset(self) -> None:
-        #self.adata.obsm["gating"] = self.adata.obsm["gating"].tolil()
         self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
         for gate_group in self.training_groups:
             print(f"Gating gates {self.training_groups[gate_group]}")
@@ -281,10 +339,12 @@ class supervisedGating(BaseGating):
                                          group_identifier = gate_group)
                 print("Predicting")
                 predictions: np.ndarray = self.classifiers[gate_group].predict(X)
-                print("adding gate to input dataset")
                 self.add_gating_to_input_dataset(sample_view,
                                                  predictions,
                                                  gate_indices)
+                self.add_gating_to_workspace(sample_view,
+                                             group_identifier = gate_group,
+                                             current_sample = sample)
 
         self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
 
@@ -466,6 +526,7 @@ class supervisedGating(BaseGating):
             self.adata.uns["train_sets"] = {}
         
         self.training_groups = training_groups
+        self.gate_lut = gate_lut
 
         self.update_train_groups()
 
