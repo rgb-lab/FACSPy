@@ -13,7 +13,7 @@ def synchronize_vars(adata: AnnData,
 
     """
 
-    current_var_names = adata.var_names
+    current_var_names = adata.var_names.to_list()
 
     mfi_frames = [key for key in adata.uns if "mfi" in key]
     fop_frames = [key for key in adata.uns if "fop" in key]
@@ -23,12 +23,12 @@ def synchronize_vars(adata: AnnData,
             _placeholder()
         _synchronize_uns_frame(adata,
                                 identifier = uns_frame,
-                                first_level_subset = current_var_names)
+                                var_names = current_var_names)
 
 
 def _placeholder(): pass
 
 def _synchronize_uns_frame(adata: AnnData,
                            identifier: str,
-                           first_level_subset: Optional[Union[pd.Series, pd.Index]] = None) -> None:
-    adata.uns[identifier] = adata.uns[identifier].loc[first_level_subset,:]
+                           var_names = None) -> None:
+    adata.uns[identifier] = adata.uns[identifier].loc[:, var_names]
