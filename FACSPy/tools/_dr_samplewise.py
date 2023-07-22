@@ -11,7 +11,7 @@ from typing import Optional, Union, Literal
 
 from ..utils import reduction_names
 
-from ..plotting.utils import scale_data
+from ..plotting.utils import scale_data, select_gate_from_multiindex_dataframe
 
 def perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
                data: np.ndarray,
@@ -37,18 +37,16 @@ def perform_samplewise_dr(data: pd.DataFrame,
                           fluo_channels: Union[pd.Index, list[str]],
                           scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]):
     return_data = data.copy()
-    return_data = return_data.T
-    data = data.loc[fluo_channels, :]
-    data = data.T
-    gates = data.index.levels[1]
+    data = data.loc[:, fluo_channels]
+    gates = data.index.get_level_values("gate").unique()
     for gate in gates:
         gate_specific_data = select_gate_from_multiindex_dataframe(data, gate)
         gate_specific_data = scale_data(gate_specific_data, scaling = scaling)
         coords = perform_dr(reduction, gate_specific_data, n_components = 3)
         coord_columns = reduction_names[reduction]
-        return_data.loc[(slice(None), gate), coord_columns] = coords
+        return_data.loc[return_data.index.get_level_values("gate") == gate, coord_columns] = coords
 
-    return return_data.T
+    return return_data
 
 def pca_samplewise(adata: AnnData,
                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
