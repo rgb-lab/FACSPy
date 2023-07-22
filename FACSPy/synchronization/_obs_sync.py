@@ -22,34 +22,40 @@ def synchronize_samples(adata: AnnData,
 
     current_obs_sample_IDs = adata.obs["sample_ID"].unique()
 
+    print("... Synchronizing metadata")
     _synchronize_metadata(adata,
                           current_obs_sample_IDs)
 
     for uns_frame in ["mfi_sample_ID_compensated",
                       "mfi_sample_ID_transformed",
                       "fop_sample_ID_compensated",
-                      "fop_sample_ID_transformed"]:
+                      "fop_sample_ID_transformed",
+                      "gate_frequencies"]:
         if uns_frame in adata.uns:
+            print(f"... Synchronizing dataframe {uns_frame}")
             if recalculate:
                 _placeholder()
             _synchronize_uns_frame(adata,
                                    identifier = uns_frame,
-                                   first_level_subset = current_obs_sample_IDs)
+                                   sample_IDs = current_obs_sample_IDs)
 
 
 def _placeholder(): pass
 
+def extract_data_group_from_identifier(identifier):
+    data_metric = identifier.split("_")[0]
+    if "compensated" in identifier:
+        return identifier.split(f"{data_metric}_")[1].split("_compensated")[0]
+    if "transformed" in identifier:
+        return identifier.split(f"{data_metric}_")[1].split("_transformed")[0]
 
 def _synchronize_uns_frame(adata: AnnData,
                            identifier: str,
-                           first_level_subset: Optional[pd.Series] = None,
-                           second_level_subset: Optional[list[str]] = None) -> None:
-    df: pd.DataFrame = adata.uns[identifier]
-    if first_level_subset is None:
-        first_level_subset = slice(None)
-    if second_level_subset is None:
-        second_level_subset = slice(None)
-    adata.uns[identifier] = df.T.loc[(first_level_subset, second_level_subset),:].T
+                           sample_IDs: list[str]) -> None:
+    data_group = extract_data_group_from_identifier(identifier)
+    if data_group is None or "sample_ID" in data_group:
+        df: pd.DataFrame = adata.uns[identifier]
+        adata.uns[identifier] = df.loc[df.index.get_level_values("sample_ID").isin(sample_IDs),:]
 
 def _synchronize_metadata(adata: AnnData,
                           current_obs_sample_IDs: pd.Series) -> None:
