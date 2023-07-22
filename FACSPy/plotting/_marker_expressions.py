@@ -67,6 +67,7 @@ def marker_density(adata: AnnData,
                    highlight: Optional[Union[str, list[str]]] = None,
                    linewidth: float = 0.5,
                    on: Literal["compensated", "transformed", "raw"] = "transformed",
+                   xlim: Optional[tuple[float, float]] = None,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
                    save: bool = None,
@@ -164,6 +165,8 @@ def marker_density(adata: AnnData,
             
             g.fig.add_artist(group_legend)
             g.set_xlabels(f'{marker}\n{on}\nexpression', fontsize = 10)
+            if xlim is not None:
+                g.set(xlim = xlim)
             
             # TODO: REMOVE uncomment if in bad mood :)
             #print("Nico war hier möhöhöhö")
