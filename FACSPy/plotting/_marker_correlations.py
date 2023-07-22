@@ -3,7 +3,7 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 
 from matplotlib.figure import Figure
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 from .utils import (scale_data,
                     get_uns_dataframe,
@@ -37,7 +37,11 @@ def prepare_plot_data(adata: AnnData,
 def marker_correlation(adata: AnnData,
                        gate: str,
                        scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                       on: Literal["mfi", "fop", "gate_frequency", "all_cells"] = "mfi",
+
+                       data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                       data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                       data_origin: Literal["compensated", "transformed"] = "transformed",
+
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cmap: str = "inferno",
                        figsize: tuple[float, float] = (4,4),
@@ -48,8 +52,7 @@ def marker_correlation(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = on,
-                                 column_identifier_name = "sample_ID")
+                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}")
     
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
