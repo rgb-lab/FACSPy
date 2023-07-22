@@ -1,6 +1,5 @@
 import pandas as pd
 from anndata import AnnData
-from matplotlib import pyplot as plt
 
 from matplotlib.figure import Figure
 from typing import Literal, Union, Optional
@@ -35,12 +34,12 @@ def prepare_plot_data(adata: AnnData,
         plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
     correlations = calculate_correlation_data(plot_data[fluo_columns].T,
                                               corr_method = corr_method)
-    plot_data = pd.DataFrame(data = correlations,
-                             columns = raw_data.index.to_list(),
-                             index = raw_data.index)
+    plot_data = pd.DataFrame(data = correlations.values,
+                             columns = raw_data["sample_ID"].to_list(),
+                             index = raw_data["sample_ID"].to_list())
     plot_data = plot_data.fillna(0)
+    plot_data["sample_ID"] = raw_data["sample_ID"].to_list()
     plot_data = append_metadata(adata, plot_data)
-
     return plot_data
 
 def sample_correlation(adata: AnnData,
@@ -69,15 +68,14 @@ def sample_correlation(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}",
-                                 column_identifier_name = "sample_ID")
+                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    
     
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
                                   copy = False,
                                   scaling = scaling,
                                   corr_method = corr_method)
-    
     if return_dataframe:
         return plot_data
 
@@ -93,7 +91,7 @@ def sample_correlation(adata: AnnData,
                                      label_metaclusters = label_metaclusters_in_dataset,
                                      label_metaclusters_key = label_metaclusters_key)
     
-    clustermap = create_clustermap(data = plot_data[plot_data["sample_ID"]],
+    clustermap = create_clustermap(data = plot_data[plot_data["sample_ID"].to_list()],
                                    row_colors = [
                                        map_obs_to_cmap(plot_data,
                                                        group,
