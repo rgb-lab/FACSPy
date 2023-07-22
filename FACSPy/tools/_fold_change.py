@@ -88,8 +88,7 @@ def calculate_fold_changes(adata: AnnData,
     
     data = get_uns_dataframe(adata = adata,
                              gate = gate,
-                             table_identifier = f"{data_metric}_{data_group}_{data_origin}",
-                             column_identifier_name = data_group)
+                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
     
     fluo_columns = [col for col in data.columns if col in adata.var_names]
     cofactors = adata.var.loc[fluo_columns, "cofactors"].astype("float32")
