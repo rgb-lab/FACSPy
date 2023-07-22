@@ -68,5 +68,7 @@ def synchronize_dataset(adata: AnnData,
         print("synchronizing vars")
         synchronize_vars(adata)
 
+    hash_dataset(adata)
+
 
 
