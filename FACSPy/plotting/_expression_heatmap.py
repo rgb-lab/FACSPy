@@ -67,18 +67,14 @@ def expression_heatmap(adata: AnnData,
     
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
-                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}",
-                                 column_identifier_name = "sample_ID")
+                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
                                   copy = True,
                                   scaling = scaling)
 
-    if return_dataframe:
-        return plot_data
-    
-    
     if cluster_method == "correlation":
         col_linkage = calculate_linkage(calculate_correlation_data(plot_data[fluo_columns].T, corr_method))
     
@@ -91,10 +87,13 @@ def expression_heatmap(adata: AnnData,
                                      data = plot_data,
                                      row_linkage = col_linkage,
                                      n_clusters = metaclusters,
-                                     sample_IDs = raw_data.index,
+                                     sample_IDs = raw_data["sample_ID"],
                                      label_metaclusters = label_metaclusters_in_dataset,
                                      label_metaclusters_key = label_metaclusters_key)
 
+    plot_data = plot_data.set_index(data_group)
+    if return_dataframe:
+        return plot_data
     ### for the heatmap, the dataframe is transposed so that sample_IDs are the columns
     clustermap = create_clustermap(data = plot_data[fluo_columns].T,
                                    col_colors = [
@@ -132,8 +131,9 @@ def expression_heatmap(adata: AnnData,
 
     if plot_annotate is not None:
         if plot_annotate in adata.var_names:
+            raw_data = raw_data.set_index(data_group)
             annot_frame = raw_data[plot_annotate]
-        
+
         add_annotation_plot(adata = adata,
                             annotate = plot_annotate,
                             annot_frame = annot_frame,
