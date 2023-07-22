@@ -8,7 +8,7 @@ from matplotlib.patches import Patch
 
 from ..tools._fold_change import calculate_fold_changes
 
-from typing import Literal, Union
+from typing import Literal, Union, Optional
 
 from ..utils import ifelse
 
@@ -19,9 +19,13 @@ def fold_change(adata: AnnData,
                 group1: Union[str, list[Union[str, int]]],
                 group2: Union[str, list[Union[str, int]]],
                 gate: str,
+                data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                data_origin: Literal["compensated", "transformed"] = "compensated",
                 stat: Literal["p", "p_adj"] = "p",
                 cmap: str = "Reds_r",
                 test: str = "Kruskal",
+                figsize: tuple[float, float] = (4,10),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
                 save: bool = None,
@@ -29,19 +33,21 @@ def fold_change(adata: AnnData,
                 ):
        
        fold_changes = calculate_fold_changes(adata = adata,
-                                                 groupby = groupby,
-                                                 group1 = group1,
-                                                 group2 = group2,
-                                                 gate = gate,
-                                                 test = test)
-       
+                                             groupby = groupby,
+                                             group1 = group1,
+                                             group2 = group2,
+                                             gate = gate,
+                                             data_group = data_group,
+                                             data_metric = data_metric,
+                                             data_origin = data_origin,
+                                             test = test)
        fold_changes = fold_changes.sort_values("asinh_fc", ascending = False)
        fold_changes = fold_changes.reset_index()
 
        if return_dataframe:
               return fold_changes
 
-       fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = (3, len(fold_changes)/5))
+       fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = figsize)
        cmap_colors = sns.color_palette(cmap, 4)
        p_color = [ifelse(x < 0.0001, cmap_colors[0],
                             ifelse(x < 0.001, cmap_colors[1],
@@ -68,6 +74,7 @@ def fold_change(adata: AnnData,
        handles = [Patch(facecolor = group_lut[name]) for name in group_lut]
        ax.legend(handles,
                      group_lut,
+                     loc = "center left",
                      bbox_to_anchor = (1.1,0.5),
                      title = "p_signif."
                      )
