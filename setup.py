@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(name='FACSPy',
-version='0.1',
+version='0.11',
 description='An example package',
 url='#',
 author='max',
