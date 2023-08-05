@@ -5,6 +5,7 @@ from . import plotting as pl
 from . import model as ml
 from . import dataset as dt
 from . import clustering as cl
+from . import synchronization as sync
 
 from .utils import (subset_gate,
                     subset_fluo_channels,
