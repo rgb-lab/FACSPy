@@ -22,7 +22,6 @@ def phenograph_cluster(adata: ad.AnnData,
         cluster_set = adata[:, [var for var in adata.var_names if var not in exclude]]
         assert adata.isview
 
-
     communities, graph, Q = phenograph.cluster(cluster_set.layers[on],
                                                clustering_algo = algorithm,
                                                **phenograph_kwargs)
