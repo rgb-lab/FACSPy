@@ -71,6 +71,6 @@ def read_dataset(input_dir: str,
     import scanpy as sc
     adata = sc.read(os.path.join(input_dir, f"{file_name}.h5ad"))
     with open(os.path.join(input_dir, f"{file_name}.uns"), "rb") as uns_metadata:
-        uns = pickle.load(uns_metadata)
+        uns = pd.read_pickle(uns_metadata)
     adata.uns = uns
     return adata
