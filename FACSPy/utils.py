@@ -28,6 +28,7 @@ cytof_technical_channels = ["event_length", "Event_length",
 
 scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
 time_channels = ["time", "Time"]
+spectral_flow_technical_channels = ["AF"]
 
 def find_current_population(gate: str) -> str:
     """Finds current population of a specified gating path
@@ -426,7 +427,7 @@ def subset_channels(adata: AnnData,
     
     if keep_state_channels:
         state_channels = [channel for channel in adata.var_names if any(k in channel.lower()
-                                                                        for k in scatter_channels + time_channels + cytof_technical_channels)]
+                                                                        for k in scatter_channels + time_channels + cytof_technical_channels + spectral_flow_technical_channels)]
         channels += state_channels
 
     adata = adata.copy() if copy else adata
