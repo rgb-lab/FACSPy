@@ -23,7 +23,8 @@ from ..gates.gating_strategy import GatingStrategy, GateTreeError
 from ..utils import (fetch_fluo_channels,
                     scatter_channels,
                     time_channels,
-                    cytof_technical_channels)
+                    cytof_technical_channels,
+                    spectral_flow_technical_channels)
 
 from ..synchronization._synchronize import hash_dataset
 
@@ -107,7 +108,8 @@ class Transformer:
 
         if peaks.shape[0] >= 2: ## more than two peaks have been found it needs to be subset
             peaks, peak_characteristics = self.subset_two_highest_peaks(peak_output)
-        
+
+        # sourcery skip: use-named-expression
         right_indents = self.find_curve_indent_right_side(curve, peak_output, x)
         
         if right_indents:
@@ -221,7 +223,7 @@ class Transformer:
             dataset.var = dataset.var.drop("cofactors", axis = 1)
         dataset_var = pd.merge(dataset.var,
                                cofactor_table.dataframe,
-                               left_on = "pnn",
+                               left_on = "pns",
                                right_on = "fcs_colname",
                                how = "left")
         dataset_var["cofactors"] = dataset_var["cofactors"].astype("float") ## could crash, not tested, your fault if shitty
@@ -417,7 +419,7 @@ class DatasetAssembler:
         
         fcs_panel_df["type"] = ["scatter" if any(k in channel for k in scatter_channels)
                                 else "time" if any(k in channel for k in time_channels)
-                                else "technical" if any(k in channel for k in cytof_technical_channels)
+                                else "technical" if any(k in channel for k in cytof_technical_channels + spectral_flow_technical_channels)
                                 else "fluo"
                                 for channel in fcs_panel_df.index]
         fcs_panel_df["pnn"] = fcs_panel_df.index.to_list()
@@ -487,11 +489,14 @@ class DatasetAssembler:
                                metadata_fcs_files: list[str],
                                subsample_fcs_to: Optional[int]) -> list[FCSFile]:
         return [FCSFile(input_directory, file_name, subsample = subsample_fcs_to) for file_name in metadata_fcs_files]
+        
     
     def fetch_fcs_files(self,
                         input_directory: str,
                         metadata: Metadata,
                         subsample_fcs_to: Optional[int]) -> list[FCSFile]:
+        
+        # sourcery skip: use-named-expression
         metadata_fcs_files = metadata.dataframe["file_name"].to_list()
         
         if metadata_fcs_files:
