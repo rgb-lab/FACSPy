@@ -70,7 +70,7 @@ def find_corresponding_control_samples(adata: AnnData,
     control_samples = get_control_samples(metadata_frame,
                                           by = by)
     for sample in stained_samples:
-        if not metadata_factors:
+        if not metadata_factors or not control_samples:
             corresponding_controls[sample] = control_samples
             continue
         sample_metadata = metadata_frame.loc[metadata_frame[by] == sample, metadata.get_factors()]
