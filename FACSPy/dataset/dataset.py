@@ -108,7 +108,6 @@ class Transformer:
 
         if peaks.shape[0] >= 2: ## more than two peaks have been found it needs to be subset
             peaks, peak_characteristics = self.subset_two_highest_peaks(peak_output)
-
         # sourcery skip: use-named-expression
         right_indents = self.find_curve_indent_right_side(curve, peak_output, x)
         
@@ -213,7 +212,7 @@ class Transformer:
         Missing cofactors can indicate Scatter-Channels and Time Channels
         or not-measured channels. In any case, cofactor is set to 1 for now.
         """
-        return dataframe.fillna(1)
+        return dataframe["cofactors"].fillna(1)
 
     def merge_cofactors_into_dataset_var(self,
                                          dataset: AnnData,
