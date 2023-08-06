@@ -198,6 +198,7 @@ class Transformer:
                           dataset: AnnData,
                           cofactor_table: CofactorTable) -> AnnData:
         dataset.var = self.merge_cofactors_into_dataset_var(dataset, cofactor_table)
+        print(dataset.var.dtypes)
         dataset.var = self.replace_missing_cofactors(dataset.var)
         dataset.layers["transformed"] = transform_data_array(compensated_data = dataset.layers["compensated"],
                                                              cofactors = dataset.var["cofactors"].values)
@@ -212,7 +213,8 @@ class Transformer:
         Missing cofactors can indicate Scatter-Channels and Time Channels
         or not-measured channels. In any case, cofactor is set to 1 for now.
         """
-        return dataframe["cofactors"].fillna(1)
+        dataframe[["cofactors"]] = dataframe[["cofactors"]].fillna(1)
+        return dataframe
 
     def merge_cofactors_into_dataset_var(self,
                                          dataset: AnnData,
