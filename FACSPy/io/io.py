@@ -49,9 +49,15 @@ def save_dataset(adata: AnnData,
     adata = make_var_valid(adata) 
 
     ### implement "check if file exists"
-    adata.write(os.path.join(output_dir, f"{file_name}.h5ad"))
-    with open(os.path.join(output_dir, f"{file_name}.uns"), "wb") as uns_metadata:
-        pickle.dump(uns, uns_metadata)
+    try:
+        adata.write(os.path.join(output_dir, f"{file_name}.h5ad"))
+        with open(os.path.join(output_dir, f"{file_name}.uns"), "wb") as uns_metadata:
+            pickle.dump(uns, uns_metadata)
+    except Exception as e:
+        ## if something fails, the adata object gets the uns slot back
+        ## so that the user does not have to get the dataset again
+        adata.uns = uns
+        raise e
 
     adata.uns = uns
 
