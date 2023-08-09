@@ -614,8 +614,6 @@ def rename_channel(adata: AnnData,
 
     return adata if copy else None
 
-
-
 def remove_channel(adata: AnnData,
                    channel: Union[str, list[str]],
                    copy: bool = False) -> Optional[AnnData]:
