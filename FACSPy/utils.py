@@ -603,13 +603,13 @@ def rename_channel(adata: AnnData,
     # we need to rename it in the panel, the cofactors and var
     current_var_names = adata.var_names
     new_var_names = [var if var != old_channel_name else new_channel_name for var in current_var_names]
-    adata.var = adata.var.rename(index = new_var_names)
+    adata.var.index = new_var_names
     adata.var["pns"] = adata.var.index.to_list()
 
-    if "panel" in adata.uns and len(adata.uns["panel"]) > 0:
+    if "panel" in adata.uns and len(adata.uns["panel"].dataframe) > 0:
         adata.uns["panel"].rename_channel(old_channel_name, new_channel_name)
     
-    if "cofactors" in adata.uns and len(adata.uns["cofactors"] > 0):
+    if "cofactors" in adata.uns and len(adata.uns["cofactors"].dataframe) > 0:
         adata.uns["cofactors"].rename_channel(old_channel_name, new_channel_name)
 
     return adata if copy else None
