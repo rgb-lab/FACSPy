@@ -1,9 +1,11 @@
 from matplotlib.axes import Axes
 import seaborn as sns
-
-def adjust_legend(ax: Axes) -> Axes:
+from typing import Optional
+def adjust_legend(ax: Axes,
+                  title: Optional[str] = None) -> Axes:
     ax.legend(loc = "center left",
-              bbox_to_anchor = (1.01, 0.5))
+              bbox_to_anchor = (1.01, 0.5),
+              title = title)
     return ax
 
 
