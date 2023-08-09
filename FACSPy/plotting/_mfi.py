@@ -1,24 +1,18 @@
 from anndata import AnnData
 import pandas as pd
-import numpy as np
 from typing import Union, Literal, Optional
 
-from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
 from matplotlib import pyplot as plt
-import seaborn as sns
 
 from ._basestats import add_statistic
 from ._baseplot import adjust_legend
 
-from ..exceptions.exceptions import AnalysisNotPerformedError
-
+from ._basestats import add_statistic
+from ._baseplot import barplot, stripboxplot, label_plot_basic
 from .utils import (get_uns_dataframe,
                     savefig_or_show)
-### mfi plot
-
-
 
 def fop(adata: AnnData,
         marker: Union[str, list[str]],
@@ -94,8 +88,6 @@ def mfi(adata: AnnData,
                      save = save,
                      show = show)
 
-from ._baseplot import barplot, stripboxplot, label_plot_basic
-from ._basestats import add_statistic
 def mfi_fop_baseplot(adata: AnnData,
                      dataframe: pd.DataFrame,
                      marker: Union[str, list[str]],
@@ -164,7 +156,8 @@ def mfi_fop_baseplot(adata: AnnData,
                           y_label = f"{marker[0]}",
                           x_label = "")
     
-    ax = adjust_legend(ax)
+    ax = adjust_legend(ax,
+                       title = colorby[0] or None)
     
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
         
@@ -173,83 +166,6 @@ def mfi_fop_baseplot(adata: AnnData,
 
     plt.tight_layout()
     savefig_or_show(save = save, show = show)
-
-    # for grouping in groupby:
-    #     ncols = 4 if overview else 1
-    #     nrows = int(np.ceil(len(marker) / 4)) if overview else len(marker)
-    #     figsize = (12 if overview
-    #                else 3 if colorby is None else 4,
-    #                int(np.ceil(len(marker) / 4)) * 3 if overview
-    #                else 4 * len(marker))
-        
-    #     fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
-        
-    #     if len(marker) > 1:
-    #         ax = ax.flatten()
-        
-    #     for i, _marker in enumerate(marker):
-    #         print(f"plotting statistics for {_marker}")
-    #         if grouping is None:
-    #             print("... warning: You are computing statistics for each sample... this takes a while")
-    #         plot_params = {
-    #             "x": "sample_ID" if grouping is None else grouping,
-    #             "y": _marker,
-    #             "data": dataframe,
-    #             "order": order,
-    #             "hue": colorby
-    #         }
-    #         if len(marker)>1:
-    #             ax[i] = create_boxplot(ax = ax[i],
-    #                                    grouping = grouping,
-    #                                    plot_params = plot_params)
-    #             ax[i] = label_plot(ax = ax[i],
-    #                                marker = _marker,
-    #                                grouping = grouping,
-    #                                assay = assay)
-    #             if colorby is not None:
-    #                 ax[i] = adjust_legend(ax[i])
-    #             try:
-    #                 ax[i] = add_statistic(ax = ax[i],
-    #                                       test = "Kruskal",
-    #                                       dataframe = dataframe,
-    #                                       groupby = "sample_ID" if grouping is None else grouping,
-    #                                       plot_params = plot_params)
-    #             except ValueError as e:
-    #                 if str(e) != "All numbers are identical in kruskal":
-    #                     raise ValueError from e
-    #                 else:
-    #                     print("warning... Values were uniform, no statistics to plot.")
-    #         else:
-    #             ax = create_boxplot(ax = ax,
-    #                                 grouping = grouping,
-    #                                 plot_params = plot_params)
-    #             ax = label_plot(ax = ax,
-    #                             marker = _marker,
-    #                             grouping = grouping,
-    #                             assay = assay)
-    #             if colorby is not None:
-    #                 ax = adjust_legend(ax)
-    #             try:
-    #                 ax = add_statistic(ax = ax,
-    #                                    test = "Kruskal",
-    #                                    dataframe = dataframe,
-    #                                    groupby = "sample_ID" if grouping is None else grouping,
-    #                                    plot_params = plot_params)
-    #             except ValueError as e:
-    #                 if str(e) != "All numbers are identical in kruskal":
-    #                     raise ValueError from e
-    #                 else:
-    #                     print("warning... Values were uniform, no statistics to plot.")
-
-                
-    #     if len(marker) > 1:
-    #         ax = turn_off_missing_plots(ax)
-    #     ax = np.reshape(ax, (ncols, nrows))
-
-    # plt.tight_layout()
-    # if return_fig:
-    #     return fig
-    # savefig_or_show(save = save, show = show)
 
 def label_plot(ax: Axes,
                marker: str,
