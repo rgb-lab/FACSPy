@@ -663,13 +663,25 @@ class unsupervisedGating(BaseGating):
         )
         return " & ".join(query_strings)
     
+    def clean_marker_names(self,
+                           markers: list[str]) -> list[str]:
+        """This function checks for disallowed characters that would otherwise mess up the pd.query function"""
+        disallowed_characters = ["/", "[", "{", "(", ")", "}", "]"]
+        for i, marker in enumerate(markers):
+            if any(k in marker for k in disallowed_characters):
+                markers[i] = marker.translate(None, disallowed_characters)
+        return markers
+            
     def identify_clusters_of_interest(self,
                                       dataset: AnnData,
                                       markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
         df = dataset.to_df(layer = "transformed")
+        df.columns = self.clean_marker_names(df.columns)
+        markers_of_interest = self.clean_marker_names(markers_of_interest)
         df[self.cluster_key] = dataset.obs[self.cluster_key].to_list()
         medians = df.groupby(self.cluster_key).median()
-        cells_of_interest: pd.DataFrame = medians.query(self.convert_markers_to_query_string(markers_of_interest))
+        query = self.convert_markers_to_query_string(markers_of_interest)
+        cells_of_interest: pd.DataFrame = medians.query(query) 
         return cells_of_interest.index
 
     def cluster_dataset(self,
