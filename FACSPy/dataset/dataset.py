@@ -402,7 +402,6 @@ class DatasetAssembler:
         """Logic to compare FCS metadata and the provided panel"""
         panel_df = panel.to_df()
         fcs_panel_df = file.channels
-
         panel_channels = panel_df["fcs_colname"].to_list()
         for channel in fcs_panel_df.index:
             fcs_antigen = self.fetch_fcs_antigen(fcs_panel_df, channel)
