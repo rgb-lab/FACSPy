@@ -595,12 +595,35 @@ def add_metadata_to_obs(adata: AnnData,
     adata.obs[metadata_column] = adata.obs["sample_ID"].map(specific_mapping)
     return adata if copy else None
 
+def rename_channel(adata: AnnData,
+                   old_channel_name: str,
+                   new_channel_name: str,
+                   copy: bool = False) -> Optional[AnnData]:
+    adata = adata.copy() if copy else adata
+    # we need to rename it in the panel, the cofactors and var
+    current_var_names = adata.var_names
+    new_var_names = [var if var != old_channel_name else new_channel_name for var in current_var_names]
+    adata.var = adata.var.rename(index = new_var_names)
+    adata.var["pns"] = adata.var.index.to_list()
+
+    if "panel" in adata.uns and len(adata.uns["panel"]) > 0:
+        adata.uns["panel"].rename_channel(old_channel_name, new_channel_name)
+    
+    if "cofactors" in adata.uns and len(adata.uns["cofactors"] > 0):
+        adata.uns["cofactors"].rename_channel(old_channel_name, new_channel_name)
+
+    return adata if copy else None
+
+
+
 def remove_channel(adata: AnnData,
                    channel: Union[str, list[str]],
                    copy: bool = False) -> Optional[AnnData]:
     if not isinstance(channel, list):
         channel = [channel]
     adata = adata.copy() if copy else adata
-    adata._inplace_subset_var([var for var in adata.var_names if not var in channel])
+    adata._inplace_subset_var(
+        [var for var in adata.var_names if var not in channel]
+    )
 
     return adata if copy else None
