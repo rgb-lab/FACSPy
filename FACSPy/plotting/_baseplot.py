@@ -1,6 +1,7 @@
 from matplotlib.axes import Axes
 import seaborn as sns
 from typing import Optional
+
 def adjust_legend(ax: Axes,
                   title: Optional[str] = None) -> Axes:
     ax.legend(loc = "center left",
@@ -16,7 +17,6 @@ def label_plot_basic(ax: Axes,
     ax.set_title(title)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-
     return ax
 
 def barplot(ax: Axes,
@@ -38,5 +38,4 @@ def stripboxplot(ax: Axes,
                 boxprops = dict(facecolor = "white"),
                 whis = (0,100),
                 ax = ax)
-    
     return ax
