@@ -1,6 +1,3 @@
- 
-from ..utils import subset_fluo_channels
-
 import scanpy as sc
 from anndata import AnnData
 
@@ -13,7 +10,7 @@ def leiden_cluster(adata: AnnData,
                    on: Literal["compensated", "transformed"] = "transformed",
                    exclude: Optional[Union[str, list[str]]] = None,
                    copy: bool = False,
-                   leiden_kwargs=None) -> Optional[AnnData]:
+                   leiden_kwargs = None) -> Optional[AnnData]:
     
     if leiden_kwargs is None:
         leiden_kwargs = {}
