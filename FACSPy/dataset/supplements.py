@@ -113,6 +113,12 @@ class BaseSupplement:
                 return pd.DataFrame(columns = ["sample_ID", "file_name"])
             elif self.__class__.__name__ == "CofactorTable":
                 return pd.DataFrame(columns = ["fcs_colname", "cofactors"])
+    
+    def rename_channel(self,
+                       old_channel_name,
+                       new_channel_name) -> None:
+        self.dataframe.loc[self.dataframe["fcs_colname"] == old_channel_name, "fcs_colname"] = new_channel_name
+
 
 
 class Panel(BaseSupplement):
@@ -153,7 +159,7 @@ class Panel(BaseSupplement):
     
     def get_channels(self):
         return self.dataframe["fcs_colname"].to_list()
-
+    
 
 class Metadata(BaseSupplement):
     """
