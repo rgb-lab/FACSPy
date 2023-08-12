@@ -24,9 +24,7 @@ def flowsom_cluster(adata: AnnData,
                     verbose: bool = False,
                     n_jobs: int = None,
                     random_state: int = 187) -> Optional[AnnData]:
-    
-    if parc_kwargs is None:
-        parc_kwargs = {}
+   
     cluster_set = adata.copy() if copy else adata
 
     assert contains_only_fluo(cluster_set)
@@ -36,7 +34,7 @@ def flowsom_cluster(adata: AnnData,
         assert adata.isview
 
     ### we take the raw data as they are mostly below 50 markers anyway and would probably be not too much higher
-    adata.obs["flowsom_labels"] = flowsom(adata.layers[on],
+    adata.obs["flowsom_labels"] = flowsom(cluster_set.layers[on],
                                           x_dim = x_dim,
                                           y_dim = y_dim,
                                           sigma = sigma,
