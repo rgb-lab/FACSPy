@@ -667,9 +667,19 @@ class unsupervisedGating(BaseGating):
                            markers: list[str]) -> list[str]:
         """This function checks for disallowed characters that would otherwise mess up the pd.query function"""
         disallowed_characters = ["/", "[", "{", "(", ")", "}", "]"]
-        for i, marker in enumerate(markers):
-            if any(k in marker for k in disallowed_characters):
-                markers[i] = marker.translate(None, disallowed_characters)
+        replacement_dict = {char: "" for char in disallowed_characters}       
+        if isinstance(markers, pd.Index):
+            markers = list(markers)
+            for i, marker in enumerate(markers):
+                if any(k in marker for k in disallowed_characters):
+                    transtab = marker.maketrans(replacement_dict)
+                    markers[i] = marker.translate(transtab)
+        if isinstance(markers, dict):
+            for direction in markers:
+                for i, marker in enumerate(markers[direction]):
+                    if any(k in marker for k in disallowed_characters):
+                        transtab = marker.maketrans(replacement_dict)
+                        markers[direction][i] = marker.translate(transtab)
         return markers
             
     def identify_clusters_of_interest(self,
