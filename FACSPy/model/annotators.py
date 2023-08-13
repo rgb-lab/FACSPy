@@ -9,6 +9,13 @@ from scipy.spatial import ConvexHull
 from ..utils import transform_gates_according_to_gate_transform, transform_vertices_according_to_gate_transform
 from ..utils import find_parent_gate, GATE_SEPARATOR
 
+from ..clustering._leiden import leiden_cluster
+from ..clustering._flowsom import flowsom_cluster
+from ..clustering._parc import parc_cluster
+from ..clustering._phenograph import phenograph_cluster
+
+
+
 from sklearn.preprocessing import (MinMaxScaler,
                                    PowerTransformer,
                                    QuantileTransformer,
@@ -696,9 +703,15 @@ class unsupervisedGating(BaseGating):
 
     def cluster_dataset(self,
                         dataset: AnnData) -> AnnData:
-        if self.clustering_algorithm != "leiden":
-            raise NotImplementedError("Please select 'leiden' :D")
-        sc.tl.leiden(dataset, key_added = self.cluster_key)
+
+        if self.clustering_algorithm == "leiden":
+            leiden_cluster(dataset)
+        elif self.clustering_algorithm == "parc":
+            parc_cluster(dataset)
+        elif self.clustering_algorithm == "flowsom":
+            flowsom_cluster(dataset)
+        else:
+            phenograph_cluster(dataset)
         return dataset
 
     def preprocess_dataset(self,
