@@ -571,7 +571,8 @@ class unsupervisedGating(BaseGating):
         return marker_dict
 
     def identify_population(self,
-                            population: str) -> None:
+                            population: str,
+                            cluster_kwargs: dict) -> None:
         
         parent_population = self.gating_strategy[population][0]
         if not self.population_is_already_a_gate(parent_population):
@@ -611,7 +612,8 @@ class unsupervisedGating(BaseGating):
             subset = self.preprocess_dataset(subset)
             print("... clustering")
             if self.cluster_key not in subset.obs:
-                subset = self.cluster_dataset(subset)
+                subset = self.cluster_dataset(subset,
+                                              cluster_kwargs)
             
             cluster_vector = self.identify_clusters_of_interest(subset,
                                                                 markers_of_interest)
@@ -626,12 +628,14 @@ class unsupervisedGating(BaseGating):
                                              predictions,
                                              gate_indices) 
     
-    def identify_populations(self):
+    def identify_populations(self,
+                             cluster_kwargs: dict = {}):
         self.adata.X = self.adata.layers["transformed"]
         self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
         for population in self.gating_strategy:
             print(f"Population: {population}")
-            self.identify_population(population)
+            self.identify_population(population,
+                                     cluster_kwargs)
         self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
 
     def convert_cell_types_to_bool(self,
@@ -702,16 +706,21 @@ class unsupervisedGating(BaseGating):
         return cells_of_interest.index
 
     def cluster_dataset(self,
-                        dataset: AnnData) -> AnnData:
+                        dataset: AnnData,
+                        cluster_kwargs: dict) -> AnnData:
 
         if self.clustering_algorithm == "leiden":
-            leiden_cluster(dataset)
+            leiden_cluster(dataset,
+                           cluster_kwargs = cluster_kwargs)
         elif self.clustering_algorithm == "parc":
-            parc_cluster(dataset)
+            parc_cluster(dataset,
+                         cluster_kwargs = cluster_kwargs)
         elif self.clustering_algorithm == "flowsom":
-            flowsom_cluster(dataset)
+            flowsom_cluster(dataset,
+                            cluster_kwargs = cluster_kwargs)
         else:
-            phenograph_cluster(dataset)
+            phenograph_cluster(dataset,
+                               cluster_kwargs = cluster_kwargs)
         return dataset
 
     def preprocess_dataset(self,
