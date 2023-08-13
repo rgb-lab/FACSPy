@@ -22,7 +22,7 @@ def flowsom_cluster(adata: AnnData,
                     consensus_cluster_resample_proportion: float = 0.5,
                     consensus_cluster_n_resamples: int = 10,
                     verbose: bool = False,
-                    n_jobs: int = None,
+                    n_jobs: int = 16,
                     random_state: int = 187) -> Optional[AnnData]:
    
     cluster_set = adata.copy() if copy else adata
