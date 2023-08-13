@@ -10,10 +10,10 @@ def phenograph_cluster(adata: ad.AnnData,
                        algorithm: Literal["leiden", "louvain"] = "leiden",
                        exclude: Optional[Union[str, list[str]]] = None,
                        copy: bool = False,
-                       phenograph_kwargs = None) -> Optional[ad.AnnData]:
+                       cluster_kwargs: dict = None) -> Optional[ad.AnnData]:
 
-    if phenograph_kwargs is None:
-        phenograph_kwargs = {}
+    if cluster_kwargs is None:
+        cluster_kwargs = {}
     cluster_set = adata.copy() if copy else adata
 
     assert contains_only_fluo(cluster_set)
@@ -24,7 +24,7 @@ def phenograph_cluster(adata: ad.AnnData,
 
     communities, graph, Q = phenograph.cluster(cluster_set.layers[on],
                                                clustering_algo = algorithm,
-                                               **phenograph_kwargs)
+                                               **cluster_kwargs)
 
     adata.obs[f"{key_added}_{algorithm}"] = communities
     adata.obs[f"{key_added}_{algorithm}"] = adata.obs[f"{key_added}_{algorithm}"].astype("category")
