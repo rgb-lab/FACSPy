@@ -544,19 +544,34 @@ class unsupervisedGating(BaseGating):
                  gating_strategy: dict,
                  clustering_algorithm: Literal["leiden", "FlowSOM"],
                  cluster_key: str = None) -> None:
-        self.gating_strategy = gating_strategy
+        gating_strategy = gating_strategy
+        self.gating_strategy = self.preprocess_gating_strategy(gating_strategy)
         self.clustering_algorithm = clustering_algorithm
         self.adata = adata
         self.cluster_key = cluster_key or "clusters"
         assert contains_only_fluo(self.adata)
+    
+    def preprocess_gating_strategy(self,
+                                   gating_strategy: dict) -> dict:
+        parent_populations = {entry[0] for _, entry in gating_strategy.items()}
+        return {
+            population: [
+                [
+                    key,
+                    value[1],
+                ]  ## [CD4CM, ["CD4+", "CD197-"]] instead of [CD4_T_cells, ["CD4+", "CD197-"]]
+                for key, value in gating_strategy.items()
+                if value[0] == population
+            ]
+            for population in parent_populations
+        }
 
     def population_is_already_a_gate(self,
                                      parent_population) -> bool:
         return parent_population in [gate.split("/")[-1] for gate in self.adata.uns["gating_cols"]]
 
     def process_markers(self,
-                        population: str) -> dict[str, list[Optional[str]]]:
-        markers = self.gating_strategy[population][1]
+                        markers: list[str]) -> dict[str, list[Optional[str]]]:
         if not isinstance(markers, list):
             markers = [markers]
         marker_dict = {"up": [],
@@ -570,71 +585,96 @@ class unsupervisedGating(BaseGating):
                 marker_dict["up"].append(marker)
         return marker_dict
 
+    def find_parent_population_in_gating_strategy(self,
+                                                  query_population: str) -> str:
+        for entry in self.gating_strategy:
+            for population in self.gating_strategy[entry]:
+                if population[0] == query_population:
+                    return entry
+        raise ParentGateNotFoundError(query_population)
+
     def identify_population(self,
-                            population: str,
+                            population_to_cluster: str,
                             cluster_kwargs: dict) -> None:
         
-        parent_population = self.gating_strategy[population][0]
-        if not self.population_is_already_a_gate(parent_population):
-            if parent_population in self.gating_strategy:
-                self.identify_population(parent_population)
+        if population_to_cluster in self.already_analyzed:
+            return
+        
+        print(f"Analyzing population: {population_to_cluster}")
+        
+        if not self.population_is_already_a_gate(population_to_cluster):
+            print("Gate was not yet calculated - looking for parent gate")
+            parent_of_population_to_cluster = self.find_parent_population_in_gating_strategy(population_to_cluster) 
+            if parent_of_population_to_cluster in self.gating_strategy:
+                self.identify_population(parent_of_population_to_cluster,
+                                         cluster_kwargs)
             else:
-                raise ParentGateNotFoundError(parent_population)
+                raise ParentGateNotFoundError(population_to_cluster)
         
-        markers_of_interest = self.process_markers(population)
-        
-        ## this handles a weird case where this population already exists...
-        ## should potentially throw an error?
-        parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
-                            if gate_path.endswith(parent_population)][0]
-        population_gate_path = "/".join([parent_gate_path, population])
-        
-        if not self.population_is_already_a_gate(population):
-            self.append_gate_column_to_adata(population_gate_path)
-
-        gate_indices = find_gate_indices(self.adata, population_gate_path)
-        
-        if parent_population != "root":
+        if population_to_cluster != "root":
             dataset = subset_gate(self.adata,
-                                  gate = parent_population,
+                                  gate = population_to_cluster,
                                   as_view = True)
             assert dataset.is_view
         else:
             dataset = self.adata.copy()
-        
-        
+
         for sample in dataset.obs["file_name"].unique():
             print(f"Analyzing sample {sample}")
+
             subset = self.subset_anndata_by_sample(adata = dataset,
                                                    samples = sample,
                                                    copy = False)
+        
             print("... preprocessing")
-            subset = self.preprocess_dataset(subset)
+            subset = self.preprocess_dataset(subset = subset)
             print("... clustering")
             if self.cluster_key not in subset.obs:
                 subset = self.cluster_dataset(subset,
                                               cluster_kwargs)
             
-            cluster_vector = self.identify_clusters_of_interest(subset,
-                                                                markers_of_interest)
-            
-            cell_types = self.map_cell_types_to_cluster(subset,
-                                                        cluster_vector,
-                                                        population)
+            for population_list in self.gating_strategy[population_to_cluster]:
+                population_name: str = population_list[0]
+                print(f"... gating population {population_name}")
+                
+                ## each entry is a list with the structure [population_name, [marker1, marker2, marker3]]
+                parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
+                                    if gate_path.endswith(population_to_cluster)][0]
+                population_gate_path = "/".join([parent_gate_path, population_name])
 
-            predictions = self.convert_cell_types_to_bool(cell_types)
-    
-            self.add_gating_to_input_dataset(subset,
-                                             predictions,
-                                             gate_indices) 
-    
+                if not self.population_is_already_a_gate(population_name):
+                    self.append_gate_column_to_adata(population_gate_path)
+                
+                gate_index: list[int] = find_gate_indices(self.adata,
+                                                          population_gate_path)
+
+                markers: list[str] = population_list[1]
+                markers_of_interest = self.process_markers(markers)
+                cluster_vector = self.identify_clusters_of_interest(subset,
+                                                                    markers_of_interest)
+                cell_types = self.map_cell_types_to_cluster(subset,
+                                                            cluster_vector,
+                                                            population_name)
+                predictions = self.convert_cell_types_to_bool(cell_types)
+                self.add_gating_to_input_dataset(subset,
+                                                 predictions,
+                                                 gate_index)
+        self.already_analyzed.append(population_to_cluster)
+        return 
+   
     def identify_populations(self,
-                             cluster_kwargs: dict = {}):
+                             cluster_kwargs: Optional[dict] = None):
+        if cluster_kwargs is None:
+            cluster_kwargs = {}
         self.adata.X = self.adata.layers["transformed"]
         self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
-        for population in self.gating_strategy:
-            print(f"Population: {population}")
-            self.identify_population(population,
+        ### mutable object to keep track of analyzed gates. this is necessary
+        ### because if parents are not present immediately, the population
+        ### is analyzed beforehand but still a key in the dictionary and
+        ### therefore analyzed twice.
+        self.already_analyzed = []
+        for cell_population in self.gating_strategy:
+            self.identify_population(cell_population,
                                      cluster_kwargs)
         self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
 
