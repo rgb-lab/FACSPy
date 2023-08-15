@@ -108,8 +108,7 @@ class FCSFile:
             return events
         
         return events[np.random.randint(events.shape[0],
-                                        size = size,
-                                        replace = False), :]
+                                        size = size), :]
 
     def parse_and_process_original_events(self,
                                           fcs_data: FlowData,
