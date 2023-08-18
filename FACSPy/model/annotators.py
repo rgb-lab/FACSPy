@@ -601,7 +601,6 @@ class unsupervisedGating(BaseGating):
             return
         
         print(f"Analyzing population: {population_to_cluster}")
-        
         if not self.population_is_already_a_gate(population_to_cluster):
             parent_of_population_to_cluster = self.find_parent_population_in_gating_strategy(population_to_cluster) 
             if parent_of_population_to_cluster in self.gating_strategy:
