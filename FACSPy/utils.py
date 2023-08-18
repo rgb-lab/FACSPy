@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from .exceptions.exceptions import ChannelSubsetError
+from .exceptions.exceptions import ChannelSubsetError, GateNotFoundError
 from .exceptions.utils import GateNotProvidedError, ExhaustedHierarchyError
 from itertools import combinations
 
@@ -76,9 +76,11 @@ def find_gate_path_of_gate(adata: AnnData,
     "root/singlets"
 
     """
-
-    return [gate_path for gate_path in adata.uns["gating_cols"]
-            if gate_path.endswith(gate)][0]
+    try:
+        return [gate_path for gate_path in adata.uns["gating_cols"]
+                if gate_path.endswith(gate)][0]
+    except IndexError as e:
+        raise GateNotFoundError(gate) from e
 
 def find_gate_indices(adata: AnnData,
                       gate_columns: Union[str, list[str]]) -> list[int]:
