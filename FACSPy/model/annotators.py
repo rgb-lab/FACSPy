@@ -608,48 +608,62 @@ class unsupervisedGating(BaseGating):
         else:
             dataset = self.adata.copy()
 
-        for sample in dataset.obs["file_name"].unique():
-            print(f"Analyzing sample {sample}")
+        if dataset.shape[0] == 0:
+            """
+            Handles the case where no parent cells have been found. In order to avoid missing gates,
+            empty gates are appended.
+            TODO: code doubling...
+            """
+            for population_list in self.gating_strategy[population_to_cluster]:
+                population_name: str = population_list[0]
+                print(f"... gating population {population_name}")
 
-            subset = self.subset_anndata_by_sample(adata = dataset,
-                                                   samples = sample,
-                                                   copy = False)
-    
-            if subset.shape[0] != 0:    
+                parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
+                                    if gate_path.endswith(population_to_cluster)][0]
+                population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
+                if not self.population_is_already_a_gate(population_name):
+                    self.append_gate_column_to_adata(population_gate_path)
+        else:
+            for sample in dataset.obs["file_name"].unique():
+                print(f"Analyzing sample {sample}")
+
+                subset = self.subset_anndata_by_sample(adata = dataset,
+                                                    samples = sample,
+                                                    copy = False)
+            
                 print("... preprocessing")
                 subset = self.preprocess_dataset(subset = subset)
                 print("... clustering")
                 if self.cluster_key not in subset.obs:
                     subset = self.cluster_dataset(subset,
-                                                  cluster_kwargs)
+                                                cluster_kwargs)
                 
-            for population_list in self.gating_strategy[population_to_cluster]:
-                population_name: str = population_list[0]
-                print(f"... gating population {population_name}")
-                
-                ## each entry is a list with the structure [population_name, [marker1, marker2, marker3]]
-                parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
-                                    if gate_path.endswith(population_to_cluster)][0]
-                population_gate_path = "/".join([parent_gate_path, population_name])
+                for population_list in self.gating_strategy[population_to_cluster]:
+                    population_name: str = population_list[0]
+                    print(f"... gating population {population_name}")
+                    
+                    ## each entry is a list with the structure [population_name, [marker1, marker2, marker3]]
+                    parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
+                                        if gate_path.endswith(population_to_cluster)][0]
+                    population_gate_path = "/".join([parent_gate_path, population_name])
 
-                if not self.population_is_already_a_gate(population_name):
-                    self.append_gate_column_to_adata(population_gate_path)
-                if subset.shape[0] == 0:
-                    continue
-                gate_index: list[int] = find_gate_indices(self.adata,
-                                                          population_gate_path)
+                    if not self.population_is_already_a_gate(population_name):
+                        self.append_gate_column_to_adata(population_gate_path)
+                    
+                    gate_index: list[int] = find_gate_indices(self.adata,
+                                                            population_gate_path)
 
-                markers: list[str] = population_list[1]
-                markers_of_interest = self.process_markers(markers)
-                cluster_vector = self.identify_clusters_of_interest(subset,
-                                                                    markers_of_interest)
-                cell_types = self.map_cell_types_to_cluster(subset,
-                                                            cluster_vector,
-                                                            population_name)
-                predictions = self.convert_cell_types_to_bool(cell_types)
-                self.add_gating_to_input_dataset(subset,
-                                                 predictions,
-                                                 gate_index)
+                    markers: list[str] = population_list[1]
+                    markers_of_interest = self.process_markers(markers)
+                    cluster_vector = self.identify_clusters_of_interest(subset,
+                                                                        markers_of_interest)
+                    cell_types = self.map_cell_types_to_cluster(subset,
+                                                                cluster_vector,
+                                                                population_name)
+                    predictions = self.convert_cell_types_to_bool(cell_types)
+                    self.add_gating_to_input_dataset(subset,
+                                                    predictions,
+                                                    gate_index)
         self.already_analyzed.append(population_to_cluster)
         return 
    
