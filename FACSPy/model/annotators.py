@@ -614,14 +614,15 @@ class unsupervisedGating(BaseGating):
             subset = self.subset_anndata_by_sample(adata = dataset,
                                                    samples = sample,
                                                    copy = False)
-        
-            print("... preprocessing")
-            subset = self.preprocess_dataset(subset = subset)
-            print("... clustering")
-            if self.cluster_key not in subset.obs:
-                subset = self.cluster_dataset(subset,
-                                              cluster_kwargs)
-            
+    
+            if subset.shape[0] != 0:    
+                print("... preprocessing")
+                subset = self.preprocess_dataset(subset = subset)
+                print("... clustering")
+                if self.cluster_key not in subset.obs:
+                    subset = self.cluster_dataset(subset,
+                                                  cluster_kwargs)
+                
             for population_list in self.gating_strategy[population_to_cluster]:
                 population_name: str = population_list[0]
                 print(f"... gating population {population_name}")
@@ -633,7 +634,8 @@ class unsupervisedGating(BaseGating):
 
                 if not self.population_is_already_a_gate(population_name):
                     self.append_gate_column_to_adata(population_gate_path)
-                
+                if subset.shape[0] == 0:
+                    continue
                 gate_index: list[int] = find_gate_indices(self.adata,
                                                           population_gate_path)
 
