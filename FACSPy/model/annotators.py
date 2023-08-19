@@ -14,26 +14,15 @@ from ..clustering._flowsom import flowsom_cluster
 from ..clustering._parc import parc_cluster
 from ..clustering._phenograph import phenograph_cluster
 
-
-
-from sklearn.preprocessing import (MinMaxScaler,
-                                   PowerTransformer,
-                                   QuantileTransformer,
-                                   RobustScaler,
-                                   StandardScaler,
-                                   MaxAbsScaler)
-
 from typing import Optional, Union, Literal
 
 from sklearn.utils.validation import check_is_fitted
 
 from .classifiers import DecisionTree, RandomForest, implemented_estimators
-from .utils import (implemented_transformers,
-                    implemented_scalers,
-                    cap_data,
+from .utils import (cap_data,
                     transform_data,
                     scale_data,
-                    QuantileCapper)
+                    )
 
 from ..utils import (contains_only_fluo,
                      subset_gate,
@@ -596,12 +585,13 @@ class unsupervisedGating(BaseGating):
     def identify_population(self,
                             population_to_cluster: str,
                             cluster_kwargs: dict) -> None:
-        
+        print("Already analyzed: ", self.already_analyzed)
         if population_to_cluster in self.already_analyzed:
             return
         
         print(f"Analyzing population: {population_to_cluster}")
         if not self.population_is_already_a_gate(population_to_cluster):
+            print("population ", population_to_cluster, " is not yet a gate...")
             parent_of_population_to_cluster = self.find_parent_population_in_gating_strategy(population_to_cluster) 
             if parent_of_population_to_cluster in self.gating_strategy:
                 self.identify_population(parent_of_population_to_cluster,
@@ -614,6 +604,7 @@ class unsupervisedGating(BaseGating):
                                   gate = population_to_cluster,
                                   as_view = True)
             assert dataset.is_view
+            print("The gate subset has shape ", dataset.shape)
         else:
             dataset = self.adata.copy()
 
