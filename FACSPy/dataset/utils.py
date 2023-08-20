@@ -47,7 +47,7 @@ def get_stained_samples(dataframe: pd.DataFrame,
 
 def reindex_metadata(metadata: pd.DataFrame,
                      indices: list[str]) -> pd.DataFrame:
-    return metadata.set_index(indices) if indices else metadata
+    return metadata.set_index(indices).sort_index() if indices else metadata
 
 def find_name_of_control_sample_by_metadata(sample,
                                             metadata_to_compare: pd.DataFrame,
