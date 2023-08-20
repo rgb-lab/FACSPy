@@ -52,19 +52,23 @@ class Transformer:
                                                                              by = "file_name")
         cofactors = {}
         for sample in stained_samples:
+            print(sample)
             cofactors[sample] = {}
             fluo_channels = fetch_fluo_channels(dataset)
             sample_subset = create_sample_subset_with_controls(dataset,
                                                                sample,
                                                                corresponding_control_samples,
                                                                match_cell_number = True)
+            print("sample subset shape: ", sample_subset.shape)
             for channel in fluo_channels:
+                print(f"    {channel}")
                 data_array = sample_subset[:, sample_subset.var.index == channel].layers["compensated"]
                 cofactor_stained_sample = self.estimate_cofactor_on_stained_sample(data_array,
                                                                                    200)
                 if corresponding_control_samples[sample]:
                     control_sample = sample_subset[sample_subset.obs["staining"] != "stained", sample_subset.var.index == channel]
                     data_array = control_sample.layers["compensated"]
+                    print("data array shape: ", data_array.shape)
                     cofactor_unstained_sample = self.estimate_cofactor_on_unstained_sample(data_array, 20)
                     cofactor_by_percentile = self.estimate_cofactor_from_control_quantile(control_sample)
                 
