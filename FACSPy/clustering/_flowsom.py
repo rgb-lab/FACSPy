@@ -22,6 +22,9 @@ def flowsom_cluster(adata: AnnData,
 
     assert contains_only_fluo(cluster_set)
 
+    if "consensus_cluster_max_n" not in cluster_kwargs:
+        cluster_kwargs["consensus_cluster_max_n"] = min(50, adata.shape[0])
+
     if exclude:
         cluster_set = adata[:, [var for var in adata.var_names if var not in exclude]]
         assert adata.isview
