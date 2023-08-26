@@ -25,6 +25,7 @@ from ..utils import (GATE_SEPARATOR,
                      subset_gate,
                      find_parent_population,
                      find_grandparent_population,
+                     find_current_population,
                      convert_gate_to_obs)
 
 def find_y_label(adata: AnnData,
@@ -125,7 +126,7 @@ def gate_frequency(adata: AnnData,
                 print("warning... Values were uniform, no statistics to plot.")
 
     ax = label_plot_basic(ax = ax,
-                          title = f"gate frequency per {groupby[0]}\ngate: {gate}",
+                          title = f"gate frequency per {groupby[0]}\ngate: {find_current_population(gate)}",
                           y_label = f"freq. of\n{find_y_label(adata, freq_of, gate)}",
                           x_label = "")
     
