@@ -1,5 +1,3 @@
-import pandas as pd
-import numpy as np
 from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -60,7 +58,7 @@ def fold_change(adata: AnnData,
                      y = "index",
                      palette = p_color,
                      ax = ax)
-       ax.set_title(f"Comparison\n{group1} vs {group2}")
+       ax.set_title(f"enriched in\n{group1}     {group2}")
        
        ax.set_yticklabels(ax.get_yticklabels(), fontsize = 10)
        ax.set_ylabel("antigen")
