@@ -14,7 +14,8 @@ from .utils import (subset_gate,
                     convert_gate_to_obs,
                     convert_gates_to_obs,
                     add_metadata_to_obs,
-                    rename_channel)
+                    rename_channel,
+                    convert_cluster_to_gate)
 from .io.io import save_dataset, read_dataset
 
 import sys
