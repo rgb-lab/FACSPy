@@ -562,6 +562,51 @@ def create_comparisons(data: pd.DataFrame,
 def ifelse(condition, true_val, false_val) -> Any:
     return true_val if condition else false_val
 
+def convert_cluster_to_gate(adata: AnnData,
+                            obs_column: str,
+                            positive_cluster: Union[int, str, list[int], list[str]],
+                            population_name: Optional[str],
+                            parent_name: str,
+                            copy: bool = False) -> Optional[AnnData]:
+    from scipy.sparse import csr_matrix, hstack
+    adata = adata.copy() if copy else adata
+    full_parent = find_gate_path_of_gate(adata, parent_name)
+    full_gate = GATE_SEPARATOR.join([full_parent, population_name])
+    if full_gate in adata.uns["gating_cols"]:
+        raise TypeError("Gate already present. Please choose a different name!")
+
+    if not isinstance(positive_cluster, list):
+        positive_cluster = [positive_cluster]
+    gate_list = adata.obs[obs_column]
+    uniques = gate_list.unique()
+    mapping = {cluster: cluster in positive_cluster for cluster in uniques}
+    gate_matrix = csr_matrix(gate_list.map(mapping).values.reshape(len(gate_list), 1), dtype = bool)
+    adata.obsm["gating"] = hstack([adata.obsm["gating"], gate_matrix])
+
+    adata.uns["gating_cols"] = adata.uns["gating_cols"].append(pd.Index([full_gate]))
+
+    return adata if copy else None
+
+def convert_obs_to_gate(adata: AnnData,
+                        obs_column: str,
+                        gate_name: Optional[str] = None,
+                        negative_identifier: Optional[str] = "other"
+                        ) -> Optional[AnnData]:
+    gate_list = adata.obs[obs_column]
+    unique_entries = gate_list.unique()
+    if len(unique_entries) > 2:
+        raise TypeError("To apply for gates, only two values are allowed")
+    if negative_identifier not in unique_entries:
+        raise TypeError("Please provide a negative identifier for the gate")
+    if gate_name is None:
+        raise TypeError("Please provide a gate path")
+    positive_identifier = [entry for entry in unique_entries if entry != negative_identifier][0]
+    mapped_gate = gate_list.map({negative_identifier: False,
+                                 positive_identifier: True})
+    
+    from scipy.sparse import csr_matrix
+
+
 def convert_gate_to_obs(adata: AnnData,
                         gate: str,
                         key_added: Optional[str] = None,
