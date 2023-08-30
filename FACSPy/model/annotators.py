@@ -259,7 +259,6 @@ class supervisedGating(BaseGating):
         
         return X_train, X_test, y_train, y_test
 
-
     def merge_current_and_reference_gates(self,
                                           current_gates: list[str],
                                           reference_gates: list[dict]) -> list[dict]:
@@ -607,7 +606,7 @@ class unsupervisedGating(BaseGating):
             print("The gate subset has shape ", dataset.shape)
         else:
             dataset = self.adata.copy()
-
+        
         if dataset.shape[0] == 0:
             """
             Handles the case where no parent cells have been found. In order to avoid missing gates,
@@ -630,7 +629,7 @@ class unsupervisedGating(BaseGating):
                 subset = self.subset_anndata_by_sample(adata = dataset,
                                                     samples = sample,
                                                     copy = False)
-            
+                #TODO: handle the case where only a couple of cells are present...
                 print("... preprocessing")
                 subset = self.preprocess_dataset(subset = subset)
                 print("... clustering")
