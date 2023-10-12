@@ -6,6 +6,7 @@ from scipy.sparse import csr_matrix
 from anndata import AnnData
 from typing import Literal, Optional
 
+from .utils import preprocess_adata
 from ..utils import (subset_gate,
                      remove_channel,
                      contains_only_fluo,
@@ -264,47 +265,6 @@ def merge_dimred_coordinates_into_adata(adata: AnnData,
     
     return adata
 
-def scale_adata(adata: AnnData,
-                scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]]) -> AnnData:
-    if scaling == "MinMaxScaler":
-        from sklearn.preprocessing import MinMaxScaler
-        adata.X = MinMaxScaler().fit_transform(adata.X)
-    elif scaling == "RobustScaler":
-        from sklearn.preprocessing import RobustScaler
-        adata.X = RobustScaler().fit_transform(adata.X)
-    else:
-        from sklearn.preprocessing import StandardScaler
-        adata.X = StandardScaler().fit_transform(adata.X)
-    return adata
-
-def preprocess_adata(adata: AnnData,
-                     gate: str,
-                     data_origin: Literal["compensated", "transformed"],
-                     use_only_fluo: bool = True,
-                     exclude: Optional[list[str]] = None,
-                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None) -> AnnData:
-    adata = adata.copy()
-    adata.X = adata.layers[data_origin]
-    
-    if scaling is not None:
-        adata = scale_adata(adata,
-                            scaling = scaling)
-        
-    if not contains_only_fluo(adata) and use_only_fluo:
-        subset_fluo_channels(adata = adata)
-    
-    if exclude is not None:
-        for channel in exclude:
-            remove_channel(adata,
-                           channel = channel,
-                           copy = False)
-    
-    adata = subset_gate(adata = adata,
-                        gate = gate,
-                        as_view = True)
-    assert adata.is_view
-    return adata
-
 def pca(adata: AnnData,
         gate: str,
         data_origin: Literal["compensated", "transformed"] = "transformed",
@@ -433,7 +393,6 @@ def tsne(adata: AnnData,
          copy: bool = False,
          *args,
          **kwargs) -> Optional[AnnData]:
-    
 
     adata = adata.copy() if copy else adata
 
