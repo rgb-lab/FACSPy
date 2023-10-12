@@ -45,6 +45,7 @@ def marker_correlation(adata: AnnData,
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cmap: str = "inferno",
                        figsize: tuple[float, float] = (4,4),
+                       y_label_fontsize: float = 10,
                        return_fig: bool = False,
                        return_dataframe: bool = False,
                        save: bool = None,
@@ -80,7 +81,7 @@ def marker_correlation(adata: AnnData,
                           cbar_padding = 0.8)
     remove_ticklabels(ax, which = "x")
     remove_ticks(ax, which = "x")
-    ax.set_yticklabels(ax.get_yticklabels(), fontsize = 5)
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)
     if return_fig:
         return clustermap
 

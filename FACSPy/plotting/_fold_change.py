@@ -22,7 +22,7 @@ def fold_change(adata: AnnData,
                 data_origin: Literal["compensated", "transformed"] = "compensated",
                 stat: Literal["p", "p_adj"] = "p",
                 cmap: str = "Reds_r",
-                test: str = "Kruskal",
+                test: Literal["Kruskal", "Wilcoxon"] = "Kruskal",
                 figsize: tuple[float, float] = (4,10),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
@@ -54,10 +54,10 @@ def fold_change(adata: AnnData,
                                    
 
        sns.barplot(data = fold_changes,
-                     x = "asinh_fc",
-                     y = "index",
-                     palette = p_color,
-                     ax = ax)
+                   x = "asinh_fc",
+                   y = "index",
+                   palette = p_color,
+                   ax = ax)
        ax.set_title(f"enriched in\n{group1}     {group2}")
        
        ax.set_yticklabels(ax.get_yticklabels(), fontsize = 10)
@@ -71,11 +71,11 @@ def fold_change(adata: AnnData,
        
        handles = [Patch(facecolor = group_lut[name]) for name in group_lut]
        ax.legend(handles,
-                     group_lut,
-                     loc = "center left",
-                     bbox_to_anchor = (1.1,0.5),
-                     title = "p_signif."
-                     )
+                 group_lut,
+                 loc = "center left",
+                 bbox_to_anchor = (1.1,0.5),
+                 title = "p_signif."
+                 )
        
        plt.tight_layout()
        if return_fig:

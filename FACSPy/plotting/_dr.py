@@ -11,12 +11,16 @@ from .utils import savefig_or_show
 
 def create_dimred_dataframe(adata: AnnData,
                             basis: str,
-                            dimred: str) -> pd.DataFrame:
+                            dimred: str,
+                            data_origin: Literal["transformed", "compensated"]) -> pd.DataFrame:
     obs_frame = adata.obs
     dimred_coordinates = adata.obsm[basis]
     dimred_cols = [f"{dimred}{i}" for i in range(1, dimred_coordinates.shape[1] + 1)]
     obs_frame[dimred_cols] = dimred_coordinates
-    return obs_frame
+
+    fluo_values = adata.to_df(layer = data_origin)
+    
+    return pd.concat([obs_frame, fluo_values], axis = 1)
 
 
 def create_dimred_plot(adata: AnnData,
@@ -64,7 +68,8 @@ def diffmap(adata: AnnData,
     if return_dataframe:
         return create_dimred_dataframe(adata = adata,
                                        basis = basis,
-                                       dimred = dimred)
+                                       dimred = dimred,
+                                       data_origin = data_origin)
 
     fig = create_dimred_plot(adata = adata,
                              basis = basis,
@@ -100,7 +105,8 @@ def pca(adata: AnnData,
     if return_dataframe:
         return create_dimred_dataframe(adata = adata,
                                        basis = basis,
-                                       dimred = dimred)
+                                       dimred = dimred,
+                                       data_origin = data_origin)
 
     fig = create_dimred_plot(adata = adata,
                              basis = basis,
@@ -138,7 +144,8 @@ def tsne(adata: AnnData,
     if return_dataframe:
         return create_dimred_dataframe(adata = adata,
                                        basis = basis,
-                                       dimred = dimred)
+                                       dimred = dimred,
+                                       data_origin = data_origin)
 
     fig = create_dimred_plot(adata = adata,
                              basis = basis,
@@ -174,7 +181,8 @@ def umap(adata: AnnData,
     if return_dataframe:
         return create_dimred_dataframe(adata = adata,
                                        basis = basis,
-                                       dimred = dimred)
+                                       dimred = dimred,
+                                       data_origin = data_origin)
 
     fig = create_dimred_plot(adata = adata,
                              basis = basis,

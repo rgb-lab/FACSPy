@@ -25,6 +25,7 @@ from .utils import (scale_data,
                     savefig_or_show)
 
 from ._clustermap import create_clustermap
+from ..utils import fetch_fluo_channels
 
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,
@@ -46,7 +47,6 @@ def expression_heatmap(adata: AnnData,
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        data_origin: Literal["compensated", "transformed"] = "transformed",
                        
-                       
                        plot_annotate: Optional[str] = None,
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
@@ -56,7 +56,7 @@ def expression_heatmap(adata: AnnData,
                        label_metaclusters_in_dataset: bool = True,
                        label_metaclusters_key: Optional[str] = "metacluster_sc",
                        figsize: Optional[tuple[int, int]] = (5,3.8),
-                       y_label_fontsize: Optional[Union[int, float]] = 4,
+                       y_label_fontsize: Optional[Union[int, float]] = 10,
                        return_dataframe: bool = False,
                        return_fig: bool = False,
                        save: bool = None,
@@ -68,13 +68,16 @@ def expression_heatmap(adata: AnnData,
     raw_data = get_uns_dataframe(adata = adata,
                                  gate = gate,
                                  table_identifier = f"{data_metric}_{data_group}_{data_origin}")
-    
+    ### QUICK FIX FOR MISSING SAMPLES! CHECK CHECK CHECK!
+    raw_data = raw_data.dropna(axis = 0, how = "any")
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
                                   copy = True,
                                   scaling = scaling)
-
+    ### QUICK FIX FOR MISSING SAMPLES! CHECK CHECK CHECK!
+    plot_data = plot_data.dropna(axis = 0, how = "any")
+    
     if cluster_method == "correlation":
         col_linkage = calculate_linkage(calculate_correlation_data(plot_data[fluo_columns].T, corr_method))
     
@@ -105,8 +108,8 @@ def expression_heatmap(adata: AnnData,
                                    cmap = cmap,
                                    figsize = figsize,
                                    cbar_kws = {"label": "scaled expression", "orientation": 'horizontal'},
-                                   vmin = 0 if scaling is not None else None,
-                                   vmax = 1 if scaling is not None else None
+                                   vmin = 0 if scaling == "MinMaxScaler" else None,
+                                   vmax = 1 if scaling == "MinMaxScaler" else None
                                    )
 
     indices = [t.get_text() for t in np.array(clustermap.ax_heatmap.get_xticklabels())]

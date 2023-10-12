@@ -52,11 +52,11 @@ def fop(adata: AnnData,
                      show = show)
 
 def mfi(adata: AnnData,
+        gate: str,
         marker: Union[str, list[str]],
         colorby: Optional[str] = None,
         order: list[str] = None,
         groupby: Union[str, list[str]] = None,
-        gate: str = None,
         data_group: Optional[Union[str, list[str]]] = "sample_ID",
         data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
         data_origin: Literal["compensated", "transformed"] = "compensated",
