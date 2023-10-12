@@ -461,24 +461,6 @@ def subset_gate(adata: AnnData,
     adata._init_as_actual(subset, dtype = None)
     return adata if copy else None
 
-# def subset_gate_as_view(adata: AnnData,
-#                         gate: Optional[str] = None,
-#                         gate_path: Optional[str] = None,
-#                         copy: bool = False) -> AnnData:
-#     adata = adata.copy() if copy else adata
-    
-#     if gate is None and gate_path is None:
-#         raise TypeError("Please provide either a gate name or a gate path.")
-    
-#     gates: list[str] = adata.uns["gating_cols"].to_list()
-    
-#     if gate:
-#         gate_path = [gate_path for gate_path in gates if gate_path.endswith(gate)][0]
-
-#     gate_idx = gates.index(gate_path)
-
-#     return adata[adata.obsm["gating"][:,gate_idx] == True,:]
-
 def equalize_groups(data: AnnData,
                     fraction: Optional[float] = None,
                     n_obs: Optional[int] = None,
@@ -671,4 +653,15 @@ def remove_channel(adata: AnnData,
         [var for var in adata.var_names if var not in channel]
     )
 
+    return adata if copy else None
+
+def convert_var_to_panel(adata: AnnData,
+                 copy: bool = False) -> Optional[AnnData]:
+    from .dataset.supplements import Panel
+    adata = adata.copy() if copy else adata
+    
+    new_panel = pd.DataFrame(data = {"fcs_colname": adata.var["pnn"].to_list(),
+                                     "antigens": adata.var["pns"].to_list()})
+    adata.uns["panel"] = Panel(panel = new_panel)
+    
     return adata if copy else None
