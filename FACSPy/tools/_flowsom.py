@@ -4,7 +4,8 @@ from FlowSOM.cluster import flowsom as _flowsom
 
 from typing import Optional, Literal, Union
 
-from .utils import preprocess_adata
+from .utils import (preprocess_adata,
+                    merge_cluster_info_into_adata)
 
 def flowsom(adata: AnnData,
             gate: str,
@@ -39,7 +40,9 @@ def flowsom(adata: AnnData,
     cluster_annotations = _flowsom(preprocessed_adata.layers[data_origin],
                                    *args,
                                    **kwargs)
-    adata.obs[cluster_key] = cluster_annotations
-    adata.obs[cluster_key] = adata.obs[cluster_key].astype("category")
-
+    adata = merge_cluster_info_into_adata(adata,
+                                          preprocessed_adata,
+                                          cluster_key = cluster_key,
+                                          cluster_assignments = cluster_annotations)
+    
     return adata if copy else None

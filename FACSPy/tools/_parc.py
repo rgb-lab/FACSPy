@@ -4,7 +4,9 @@ from anndata import AnnData
 
 from typing import Optional, Union, Literal
 
-from .utils import preprocess_adata
+from .utils import (preprocess_adata,
+                    merge_cluster_info_into_adata,
+                    merge_neighbors_info_into_adata)
 
 def parc(adata: AnnData,
          gate: str,
@@ -32,16 +34,25 @@ def parc(adata: AnnData,
 
     ### we take the raw data as they are mostly below 50 markers anyway and would probably be not too much higher
     if connectivities_key not in adata.obsp:
+        print("computing neighbors in parc")
         sc.pp.neighbors(preprocessed_adata,
                         random_state = 187,
                         key_added = neighbors_key)
+        adata = merge_neighbors_info_into_adata(adata,
+                                                preprocessed_adata,
+                                                neighbors_key = neighbors_key)
+ 
     
     parcer = _parc.PARC(preprocessed_adata.layers[data_origin],
-                        neighbor_graph = adata.obsp[connectivities_key] if connectivities_key in adata.obsp else None,
+                        neighbor_graph = preprocessed_adata.obsp[connectivities_key]
+                                         if connectivities_key in preprocessed_adata.obsp else None,
                         *args,
                         **kwargs)
     parcer.run_PARC()
-    adata.obs[cluster_key] = parcer.labels
-    adata.obs[cluster_key] = adata.obs[cluster_key].astype("category")
 
+    adata = merge_cluster_info_into_adata(adata,
+                                          preprocessed_adata,
+                                          cluster_key = cluster_key,
+                                          cluster_assignments = parcer.labels)
+       
     return adata if copy else None

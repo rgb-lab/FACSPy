@@ -3,7 +3,7 @@ from anndata import AnnData
 
 from typing import Optional, Literal, Union
 
-from .utils import preprocess_adata
+from .utils import preprocess_adata, merge_cluster_info_into_adata
 
 def phenograph(adata: AnnData,
                gate: str,
@@ -33,8 +33,11 @@ def phenograph(adata: AnnData,
                                                 *args,
                                                 **kwargs)
 
-    adata.obs[cluster_key] = communities
-    adata.obs[cluster_key] = adata.obs[cluster_key].astype("category")
+    adata = merge_cluster_info_into_adata(adata,
+                                          preprocessed_adata,
+                                          cluster_key = cluster_key,
+                                          cluster_assignments = communities)
+
     adata.uns[f"{cluster_key}_graph"] = graph
     adata.uns[f"{cluster_key}_Q"] = Q
 
