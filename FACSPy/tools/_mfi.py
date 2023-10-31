@@ -3,7 +3,7 @@ from typing import Union, Optional, Literal
 from anndata import AnnData
 import pandas as pd
 
-from .utils import assemble_dataframe
+from ._utils import assemble_dataframe
 
 def calculate_medians_from_frame(input_frame: pd.DataFrame,
                                  gate,

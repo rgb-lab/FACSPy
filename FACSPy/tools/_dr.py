@@ -3,7 +3,7 @@ import scanpy as sc
 from anndata import AnnData
 from typing import Literal, Optional
 
-from .utils import (preprocess_adata,
+from ._utils import (preprocess_adata,
                     merge_pca_info_into_adata,
                     merge_neighbors_info_into_adata,
                     merge_dimred_coordinates_into_adata,

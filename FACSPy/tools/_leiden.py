@@ -22,7 +22,7 @@ except ImportError:
 
 from typing import Optional, Tuple, Sequence, Type, Union, Literal
 
-from .utils import preprocess_adata, merge_adata_frames, merge_neighbors_info_into_adata, merge_cluster_info_into_adata
+from ._utils import preprocess_adata, merge_neighbors_info_into_adata, merge_cluster_info_into_adata
 
 def leiden(adata: AnnData,
            gate: str,
@@ -49,8 +49,6 @@ def leiden(adata: AnnData,
                                           scaling = scaling)
 
     if connectivities_key not in adata.obsp:
-        import time
-        start = time.time()
         sc.pp.neighbors(preprocessed_adata,
                         random_state = 187,
                         key_added = neighbors_key)

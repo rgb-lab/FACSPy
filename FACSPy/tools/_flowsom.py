@@ -1,11 +1,11 @@
 
 from anndata import AnnData
-from FlowSOM.cluster import flowsom as _flowsom
+from FlowSOM import flowsom as _flowsom
 
 from typing import Optional, Literal, Union
 
-from .utils import (preprocess_adata,
-                    merge_cluster_info_into_adata)
+from ._utils import (preprocess_adata,
+                     merge_cluster_info_into_adata)
 
 def flowsom(adata: AnnData,
             gate: str,

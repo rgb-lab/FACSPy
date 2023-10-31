@@ -3,7 +3,7 @@ from anndata import AnnData
 
 from typing import Optional, Literal, Union
 
-from .utils import preprocess_adata, merge_cluster_info_into_adata
+from ._utils import preprocess_adata, merge_cluster_info_into_adata
 
 def phenograph(adata: AnnData,
                gate: str,

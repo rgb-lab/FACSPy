@@ -4,7 +4,7 @@ from anndata import AnnData
 
 from typing import Optional, Union, Literal
 
-from .utils import (preprocess_adata,
+from ._utils import (preprocess_adata,
                     merge_cluster_info_into_adata,
                     merge_neighbors_info_into_adata)
 

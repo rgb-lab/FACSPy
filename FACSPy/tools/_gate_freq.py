@@ -2,7 +2,7 @@ from anndata import AnnData
 import pandas as pd
 
 from typing import Optional
-from .utils import assemble_dataframe
+from ._utils import assemble_dataframe
 from ..utils import find_parents_recursively, flatten_nested_list
 
 # Timer unit: 1e-07 s

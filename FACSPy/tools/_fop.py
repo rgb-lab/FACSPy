@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 
-from .utils import assemble_dataframe
+from ._utils import assemble_dataframe
 
 # from .utils import reindex_dictionary, convert_to_dataframe
 
