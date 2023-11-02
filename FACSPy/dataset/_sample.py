@@ -34,7 +34,8 @@ class FCSFile:
         self.fcs_metadata = self._parse_fcs_metadata(raw_data)
         self.channels = self._parse_channel_information(raw_data)
         self.original_events = self._parse_and_process_original_events(raw_data,
-                                                                      subsample)
+                                                                       subsample)
+        self.compensated_events = None
         self.fcs_compensation = self._parse_compensation_matrix_from_fcs()
 
     def __repr__(self) -> str:
