@@ -2,8 +2,8 @@ import pytest
 import pandas as pd
 import os
 
-from FACSPy.dataset.supplements import Panel, Metadata, CofactorTable
-from FACSPy.exceptions.supplements import (SupplementDataTypeError,
+from FACSPy.dataset._supplements import Panel, Metadata, CofactorTable
+from FACSPy.exceptions.supplements import (SupplementInputTypeError,
                                            SupplementFileNotFoundError,
                                            SupplementCreationError,
                                            SupplementColumnError,
@@ -284,15 +284,16 @@ def test_cofactors_from_fcs():
 
 
 def test_panel_input_parameters(mock_panel_nparray_instead_of_dataframe):
-    with pytest.raises(SupplementDataTypeError):
+    with pytest.raises(SupplementInputTypeError):
+
         _ = Panel(panel = mock_panel_nparray_instead_of_dataframe)
 
 def test_metadata_input_parameters(mock_metadata_np_array_instead_of_dataframe):
-    with pytest.raises(SupplementDataTypeError):
+    with pytest.raises(SupplementInputTypeError):
         _ = Metadata(metadata = mock_metadata_np_array_instead_of_dataframe)
 
 def test_cofactor_input_parameters(mock_cofactors_np_array_instead_of_dataframe):
-    with pytest.raises(SupplementDataTypeError):
+    with pytest.raises(SupplementInputTypeError):
         _ = CofactorTable(cofactors = mock_cofactors_np_array_instead_of_dataframe)
 
 
