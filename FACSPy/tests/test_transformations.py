@@ -14,7 +14,7 @@ import pandas as pd
 def mock_anndata():
     return ad.AnnData(
         X = np.zeros((10,10), dtype = np.float64),
-        var = pd.DataFrame(data = np.zeros(shape = (10,2)),
+        var = pd.DataFrame(data = np.zeros(shape = (10,2)).astype(str),
                            columns = ["pns", "pnn"],
                            index = [f"channel{i}" for i in range(10)]),
         layers = {
@@ -50,7 +50,7 @@ def test_asinh_transform(mock_anndata: AnnData):
     transform default is "compensated" layer
     """
     wanted_result = np.repeat([2.99822295], 100).reshape(10,10).astype(np.float64)
-    np.testing.assert_array_almost_equal(mock_anndata.layers["logicle"], wanted_result)
+    np.testing.assert_array_almost_equal(mock_anndata.layers["asinh"], wanted_result)
 
 def test_logicle_transform(mock_anndata: AnnData):
     transform(mock_anndata,
