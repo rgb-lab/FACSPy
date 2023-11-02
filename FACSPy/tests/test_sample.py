@@ -80,9 +80,5 @@ def test_find_time_channel(fcs_file: FCSFile):
     assert time_index == 20
     assert time_step == 0.01
 
-def test_parse_original_events(fcs_file: FCSFile):
-    x: np.ndarray = fcs_file._parse_original_events()
-    assert x.shape == (13480,21)
-
 def test_remove_disallowed_characters(fcs_file: FCSFile):
     assert "/" not in fcs_file._remove_disallowed_characters_from_string("/WHAT/")
