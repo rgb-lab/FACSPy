@@ -4,7 +4,7 @@ import pandas as pd
 from pandas.io.parsers.readers import TextFileReader
 import numpy as np
 import os
-from ..exceptions.supplements import (SupplementDataTypeError,
+from ..exceptions.supplements import (SupplementInputTypeError,
                                       SupplementFileNotFoundError,
                                       SupplementCreationError,
                                       SupplementColumnError,
@@ -86,7 +86,7 @@ class BaseSupplement:
                                      dataframe: pd.DataFrame,
                                      columns_to_check: list[str]) -> pd.DataFrame:
         if not isinstance(dataframe, pd.DataFrame):
-            raise SupplementDataTypeError(data_type = type(dataframe),
+            raise SupplementInputTypeError(data_type = type(dataframe),
                                           class_name = self.__class__.__name__)
         if any(k not in dataframe.columns for k in columns_to_check):
             for column in columns_to_check:
