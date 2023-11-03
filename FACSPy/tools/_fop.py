@@ -75,7 +75,7 @@ def calculate_fops_from_frame(input_frame: pd.DataFrame,
                               groupby: Optional[str],
                               cofactors: Union[pd.Series, int, float]) -> pd.DataFrame:
     groups = ["sample_ID", groupby] if groupby != "sample_ID" else ["sample_ID"]
-    grouped_data = input_frame.loc[input_frame[gate] == True, fluo_columns + groups].groupby(groups)
+    grouped_data = input_frame.loc[input_frame[gate] == True, fluo_columns + groups].groupby(groups, observed = True)
     data = grouped_data.sum() / grouped_data.count()
     data["gate"] = gate
     data = data.set_index(["gate"], append = True)
