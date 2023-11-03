@@ -6,10 +6,6 @@ import random
 
 import pandas as pd
 
-from ..exceptions.exceptions import FileIdentityError, FileSaveError
-
-from typing import OrderedDict
-
 from pandas import DatetimeIndex
 
 def id_generator(size: int = 6) -> str:
@@ -55,7 +51,7 @@ def save_dataset(adata: AnnData,
             pickle.dump(uns, uns_metadata)
     except Exception as e:
         ## if something fails, the adata object gets the uns slot back
-        ## so that the user does not have to get the dataset again
+        ## so that the user does not have to create the dataset again
         adata.uns = uns
         raise e
 
@@ -69,7 +65,7 @@ def read_dataset(input_dir: str,
                  read_uns: bool = True) -> AnnData:
     
     import scanpy as sc
-    adata = sc.read(os.path.join(input_dir, f"{file_name}.h5ad"))
+    adata = sc.read_h5ad(os.path.join(input_dir, f"{file_name}.h5ad"))
     with open(os.path.join(input_dir, f"{file_name}.uns"), "rb") as uns_metadata:
         uns = pd.read_pickle(uns_metadata)
     adata.uns = uns
