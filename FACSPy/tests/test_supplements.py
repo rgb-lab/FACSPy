@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 from FACSPy.dataset._supplements import Panel, Metadata, CofactorTable
-from FACSPy.exceptions.supplements import (SupplementInputTypeError,
+from FACSPy.exceptions._supplements import (SupplementInputTypeError,
                                            SupplementFileNotFoundError,
                                            SupplementCreationError,
                                            SupplementColumnError,
