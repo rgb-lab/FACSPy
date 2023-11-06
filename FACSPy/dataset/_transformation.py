@@ -15,9 +15,9 @@ from ._utils import (find_corresponding_control_samples,
                     asinh)
 from ._supplements import CofactorTable
 
-from ..utils import fetch_fluo_channels
-from ..exceptions.exceptions import InvalidTransformationError
-from ..exceptions.supplements import SupplementFormatError
+from .._utils import fetch_fluo_channels
+from ..exceptions._exceptions import InvalidTransformationError
+from ..exceptions._supplements import SupplementFormatError
 
 
 IMPLEMENTED_TRANSFORMS = ["asinh", "logicle", "hyperlog", "log"]
