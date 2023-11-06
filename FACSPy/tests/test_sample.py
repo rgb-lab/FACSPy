@@ -3,7 +3,7 @@ import pandas as pd
 
 from FACSPy.dataset._sample import FCSFile
 from FACSPy.transforms._matrix import Matrix
-from FACSPy.exceptions.exceptions import NotCompensatedError
+from FACSPy.exceptions._exceptions import NotCompensatedError
 
 
 
