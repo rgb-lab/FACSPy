@@ -1,8 +1,8 @@
 import pytest
 
 from FACSPy.dataset._transformation import transform
-from FACSPy.exceptions.exceptions import InvalidTransformationError
-from FACSPy.exceptions.supplements import SupplementFormatError
+from FACSPy.exceptions._exceptions import InvalidTransformationError
+from FACSPy.exceptions._supplements import SupplementFormatError
 from FACSPy.dataset._supplements import CofactorTable
 
 import anndata as ad
