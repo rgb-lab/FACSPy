@@ -4,7 +4,7 @@ import pandas as pd
 from pandas.io.parsers.readers import TextFileReader
 import numpy as np
 import os
-from ..exceptions.supplements import (SupplementInputTypeError,
+from ..exceptions._supplements import (SupplementInputTypeError,
                                       SupplementFileNotFoundError,
                                       SupplementCreationError,
                                       SupplementColumnError,
