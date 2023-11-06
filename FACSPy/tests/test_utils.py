@@ -3,7 +3,7 @@ import pandas as pd
 import anndata as ad
 import numpy as np
 
-from FACSPy.utils import (GATE_SEPARATOR,
+from FACSPy._utils import (GATE_SEPARATOR,
                           find_gate_path_of_gate,
                           find_gate_indices,
                           equalize_groups,
@@ -19,7 +19,7 @@ from FACSPy.utils import (GATE_SEPARATOR,
                           subset_fluo_channels,
                           subset_gate)
 
-from FACSPy.exceptions.utils import GateNotProvidedError, ExhaustedHierarchyError
+from FACSPy.exceptions._utils import GateNotProvidedError, ExhaustedHierarchyError
 
 # QUICKFIND: Gates
 @pytest.fixture
@@ -222,6 +222,7 @@ def test_close_polygon_gate_coordinates():
 def test_ifelse():
     assert ifelse(True, "right", "wrong") == "right"
     assert ifelse(False, "right", "wrong") == "wrong"
+    # sourcery skip: use-isna
     assert ifelse(np.nan == np.nan, "right", "wrong") == "wrong"
 
 def test_flatten_nested_list():
