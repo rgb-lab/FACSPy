@@ -6,7 +6,7 @@ from flowio import FlowData
 from typing import Optional
 
 from ..transforms._matrix import Matrix
-from ..exceptions.exceptions import NotCompensatedError
+from ..exceptions._exceptions import NotCompensatedError
 
 class FCSFile:
     """
