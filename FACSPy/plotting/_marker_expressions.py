@@ -10,11 +10,11 @@ from matplotlib.patches import Patch
 
 from typing import Literal, Union, Optional
 
-from ..utils import flatten_nested_list
+from .._utils import flatten_nested_list
 
-from .utils import savefig_or_show
+from ._utils import savefig_or_show
 
-from .cofactor_plots import calculate_histogram_data
+from ._cofactor_plots import calculate_histogram_data
 
 import warnings
 
@@ -121,21 +121,21 @@ def marker_density(adata: AnnData,
                 pal = colorby_pal
             warnings.simplefilter('ignore', category=UserWarning)
             sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
-            g = sns.FacetGrid(histogram_df,
-                              row = groupby[0],
-                              hue = groupby[0],
-                              aspect = 5,
-                              height = 0.3,
-                              palette = pal)
+            fig = sns.FacetGrid(histogram_df,
+                                row = groupby[0],
+                                hue = groupby[0],
+                                aspect = 5,
+                                height = 0.3,
+                                palette = pal)
             
-            g.set_titles("")
-            g.set_ylabels("")
-            g.set(yticks = [])
-            g.map(sns.lineplot, "x", "y", clip_on = False)
+            fig.set_titles("")
+            fig.set_ylabels("")
+            fig.set(yticks = [])
+            fig.map(sns.lineplot, "x", "y", clip_on = False)
             
-            g.map(plt.axvline, x = 0.88, color = "black")#
+            fig.map(plt.axvline, x = 0.88, color = "black")#
             
-            g.figure.subplots_adjust(hspace = -0.5)
+            fig.figure.subplots_adjust(hspace = -0.5)
 
             # Define and use a simple function to label the plot in axes coordinates
             def label(x, color, label):
@@ -143,13 +143,13 @@ def marker_density(adata: AnnData,
                 ax.text(0.9, .2, label, fontsize = 10, color=color, transform=ax.transAxes) #ha="left", va="center", 
             # if colorby[0] != groupby[0]:
             #     g.map(label, groupby[0])
-            for axs in g._axes_dict.keys():
-                g._axes_dict[axs].fill_between(x = histogram_df.loc[histogram_df[groupby[0]] == axs, "x"].to_numpy(dtype = np.float64),
-                                               y1 = histogram_df.loc[histogram_df[groupby[0]] == axs, "y"].to_numpy(dtype = np.float64),
-                                               y2 = 0,
-                                               alpha = 0.1)
+            for axs in fig._axes_dict.keys():
+                fig._axes_dict[axs].fill_between(x = histogram_df.loc[histogram_df[groupby[0]] == axs, "x"].to_numpy(dtype = np.float64),
+                                                 y1 = histogram_df.loc[histogram_df[groupby[0]] == axs, "y"].to_numpy(dtype = np.float64),
+                                                 y2 = 0,
+                                                 alpha = 0.1)
                 if groupby[0] != colorby[0]:
-                    g._axes_dict[axs].text(0.9, .2, axs, fontsize = 10, color="black", transform = g._axes_dict[axs].transAxes)
+                    fig._axes_dict[axs].text(0.9, .2, axs, fontsize = 10, color="black", transform = fig._axes_dict[axs].transAxes)
             
             
             handles = [Patch(facecolor = colorby_pal[name]) for name in colorby_pal]
@@ -161,12 +161,12 @@ def marker_density(adata: AnnData,
                                       loc = "center right",
                                       title = colorby[0],
                                       bbox_to_anchor = (3, 0.5) if groupby[0] != colorby[0] else (2,0.5),
-                                      bbox_transform = g.fig.transFigure)
+                                      bbox_transform = fig.fig.transFigure)
             
-            g.fig.add_artist(group_legend)
-            g.set_xlabels(f'{marker}\n{on}\nexpression', fontsize = 10)
+            fig.fig.add_artist(group_legend)
+            fig.set_xlabels(f'{marker}\n{on}\nexpression', fontsize = 10)
             if xlim is not None:
-                g.set(xlim = xlim)
+                fig.set(xlim = xlim)
             
             # TODO: REMOVE uncomment if in bad mood :)
             #print("Nico war hier möhöhöhö")
