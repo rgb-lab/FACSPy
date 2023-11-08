@@ -33,7 +33,7 @@ def merge_cofactors_into_dataset_var(adata: AnnData,
 
 def match_cell_numbers(adata: AnnData) -> AnnData:
     min_cell_number = adata.obs["file_name"].value_counts().min()
-    return adata[adata.obs.groupby("file_name").sample(n=min_cell_number).index,:]
+    return adata[adata.obs.groupby("file_name", observed = True).sample(n=min_cell_number).index,:]
 
 def create_sample_subset_with_controls(adata: AnnData,
                                        sample: str,
