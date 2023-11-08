@@ -1,15 +1,10 @@
-import pickle
 from anndata import AnnData
+
 import os
-import string
-import random
+import pickle
 
 import pandas as pd
-
 from pandas import DatetimeIndex
-
-def id_generator(size: int = 6) -> str:
-    return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(size))
 
 def make_var_valid(adata: AnnData) -> bool:
     for col in adata.var.columns:
@@ -19,7 +14,6 @@ def make_var_valid(adata: AnnData) -> bool:
         if isinstance(adata.var[col].cat.categories, DatetimeIndex):
             adata.obs[col] = adata.obs[col].astype("str").astype("category")
             ### add warning!
-    
     return adata
 
 def make_obs_valid(adata: AnnData) -> bool:
