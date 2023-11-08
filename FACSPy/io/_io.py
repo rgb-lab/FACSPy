@@ -6,6 +6,8 @@ import pickle
 import pandas as pd
 from pandas import DatetimeIndex
 
+from ..synchronization._synchronize import hash_dataset
+
 def make_var_valid(adata: AnnData) -> bool:
     for col in adata.var.columns:
         if adata.var[col].dtype != "category":
@@ -63,4 +65,7 @@ def read_dataset(input_dir: str,
     with open(os.path.join(input_dir, f"{file_name}.uns"), "rb") as uns_metadata:
         uns = pd.read_pickle(uns_metadata)
     adata.uns = uns
+    ### because the PYTHONHASHSEED is changed for every session,
+    ### dataset needs to be rehashed here
+    hash_dataset(adata)
     return adata
