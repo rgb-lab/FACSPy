@@ -1,6 +1,16 @@
 from typing import Any
 import warnings
 
+class InvalidTransformationError(Exception):
+
+    def __init__(self,
+                 transform,
+                 implemented_transformations):
+        self.message = (
+            f"You selected {transform} for transformation, which is not implemented. " + 
+            f"Please choose one of {implemented_transformations}"
+        )
+        super().__init__(self.message)
 
 class AnalysisNotPerformedError(Exception):
 
@@ -104,4 +114,14 @@ class ClassifierNotImplementedError(Exception):
         )
         super().__init__(self.message)
 
+class NotCompensatedError(Exception):
 
+    def __init__(self):
+        self.message = "File is not compensated. Please compensate first."
+        super().__init__(self.message)
+
+class InputDirectoryNotFoundError(Exception):
+
+    def __init__(self):
+        self.message = "The provided input directory was not found."
+        super().__init__(self.message)

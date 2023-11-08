@@ -23,13 +23,22 @@ class SupplementNoInputDirectoryError(Exception):
         )
         super().__init__(self.message)
 
-class SupplementDataTypeError(Exception):
+class SupplementInputTypeError(Exception):
     
     def __init__(self,
                  data_type: Any,
                  class_name:str):
         self.data_type = data_type
         self.message = f"Please provide the {class_name} as a pandas dataframe, it was {self.data_type}"
+        super().__init__(self.message)
+
+class SupplementDataTypeError(Exception):
+    
+    def __init__(self,
+                 data_type: Any,
+                 class_name:str):
+        self.data_type = data_type
+        self.message = f"Please provide the {class_name} as a {class_name} object by calling fp.dt.{class_name}(), it was {self.data_type}"
         super().__init__(self.message)
 
 class SupplementColumnError(Exception):
@@ -68,4 +77,16 @@ class SupplementCreationError(Exception):
         self.message = f"{class_name} could not be created because neither a file or a table "
         self.message += "was supplied and no flag to infer from data was created. "
         self.message += f"If you provided a dataframe, please use the appropriate keyword '{keyword_map[class_name]}'"
+        super().__init__(self.message)
+
+
+class SupplementFormatError(Exception):
+
+    def __init__(self,
+                 supplement,
+                 instance_type):
+        self.message = (
+            f"You tried to supply a {supplement} object, but supplied an object of type {instance_type}. " + 
+            f"Please run the analysis by providing a {supplement} object."
+        )
         super().__init__(self.message)
