@@ -5,8 +5,8 @@ from ._supplements import Metadata, CofactorTable
 from typing import Union, Literal
 from KDEpy import FFTKDE
 
-def match_cell_numbers(adata: AnnData) -> AnnData:
-    return adata
+import warnings
+
 
 def replace_missing_cofactors(dataframe: pd.DataFrame) -> pd.DataFrame:
     """ 
@@ -31,6 +31,10 @@ def merge_cofactors_into_dataset_var(adata: AnnData,
     adata_var["cofactors"] = adata_var["cofactors"].astype(np.float32)
     return adata_var 
 
+def match_cell_numbers(adata: AnnData) -> AnnData:
+    min_cell_number = adata.obs["file_name"].value_counts().min()
+    return adata[adata.obs.groupby("file_name").sample(n=min_cell_number).index,:]
+
 def create_sample_subset_with_controls(adata: AnnData,
                                        sample: str,
                                        corresponding_controls: dict,
@@ -47,13 +51,21 @@ def asinh(data: np.ndarray,
 
 def transform_data_array(compensated_data: np.ndarray,
                          cofactors: Union[np.ndarray, int, float]) -> np.ndarray:
-    return np.arcsinh(np.divide(compensated_data, cofactors))
+    return asinh(compensated_data, cofactors)
 
 def get_histogram_curve(data_array: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    # TODO: needs try except for finite support kernel
     _, x = np.histogram(data_array, bins = 100)
-    _, curve = FFTKDE(kernel = "gaussian",
-                      bw = "silverman"
-                      ).fit(data_array).evaluate(100)
+    try:
+        _, curve = FFTKDE(kernel = "gaussian",
+                          bw = "ISJ"
+                          ).fit(data_array).evaluate(100)
+    except ValueError: # signals a finite support error
+        warnings.warn("Gaussian Kernel led to a value error, switching to Epanechnikov Kernel")
+        _, curve = FFTKDE(kernel = "epa",
+                          bw = "ISJ"
+                          ).fit(data_array).evaluate(100)
+
     return x, curve
 
 def get_control_samples(dataframe: pd.DataFrame,
@@ -66,7 +78,7 @@ def get_stained_samples(dataframe: pd.DataFrame,
 
 def reindex_metadata(metadata: pd.DataFrame,
                      indices: list[str]) -> pd.DataFrame:
-    return metadata.set_index(indices).sort_index() if indices else metadata
+    return metadata.set_index(indices).sort_index()
 
 def find_name_of_control_sample_by_metadata(sample,
                                             metadata_to_compare: pd.DataFrame,
