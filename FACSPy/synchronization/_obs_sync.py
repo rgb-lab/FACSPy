@@ -1,7 +1,10 @@
 import pandas as pd
-from ..dataset.supplements import Metadata
+from ..dataset._supplements import Metadata
 from anndata import AnnData
-from typing import Optional
+
+from ._utils import (_get_frame_metrics,
+                     _recalculate_samplewise_dimreds,
+                     _get_present_samplewise_dimreds)
 
 def synchronize_samples(adata: AnnData,
                         recalculate: bool = False) -> None:
@@ -12,53 +15,69 @@ def synchronize_samples(adata: AnnData,
     First, the metadata are subset for the unique sampleIDs in
     adata.obs["sample_ID"]
 
-
-
     Args:
-        adata (AnnData): _description_
-        current_sample_IDs (pd.Series): _description_
+        adata (AnnData): the anndata object
+        recalculate (bool): whether or not to recalculate the mfi/fop/samplewise dr frames
+        
     """
-    #TODO: sanitize categoricals!
 
-    current_obs_sample_IDs = adata.obs["sample_ID"].unique()
+    current_obs_sample_IDs = adata.obs["sample_ID"].unique().tolist()
+
+    mfi_frames = [key for key in adata.uns if "mfi" in key]
+    fop_frames = [key for key in adata.uns if "fop" in key]
+
+    for frame_id in mfi_frames + fop_frames:
+        if recalculate:
+            calculated_dimreds = _get_present_samplewise_dimreds(adata.uns[frame_id])
+            if "mfi" in frame_id:
+                _recalculate_mfi(adata = adata,
+                                 frame_id = frame_id)
+            if "fop" in frame_id:
+                _recalculate_fop(adata = adata,
+                                 frame_id = frame_id)
+            _recalculate_samplewise_dimreds(adata, frame_id, calculated_dimreds)
+
+        _synchronize_uns_frame(adata = adata,
+                               identifier = frame_id,
+                               sample_IDs = current_obs_sample_IDs)
 
     print("... Synchronizing metadata")
-    _synchronize_metadata(adata,
-                          current_obs_sample_IDs)
+    _synchronize_metadata_object(adata,
+                                 current_obs_sample_IDs)
+    
+    _sanitize_categoricals(adata)
 
-    for uns_frame in ["mfi_sample_ID_compensated",
-                      "mfi_sample_ID_transformed",
-                      "fop_sample_ID_compensated",
-                      "fop_sample_ID_transformed",
-                      "gate_frequencies"]:
-        if uns_frame in adata.uns:
-            print(f"... Synchronizing dataframe {uns_frame}")
-            if recalculate:
-                _placeholder()
-            _synchronize_uns_frame(adata,
-                                   identifier = uns_frame,
-                                   sample_IDs = current_obs_sample_IDs)
+def _sanitize_categoricals(adata: AnnData):
+    obs_frame = adata.obs.copy()
+    for column in obs_frame.columns:
+        if isinstance(obs_frame[column].dtype, pd.CategoricalDtype):
+            obs_frame[column] = obs_frame[column].cat.remove_unused_categories()
+    adata.obs = obs_frame
+    return
+    
+def _recalculate_mfi(adata: AnnData,
+                     frame_id: str) -> None:
+    from ..tools._mfi import mfi
+    _, data_origin, data_group = _get_frame_metrics(frame_id)
+    mfi(adata, groupby = data_group, layer = data_origin)
 
-
-def _placeholder(): pass
-
-def extract_data_group_from_identifier(identifier):
-    data_metric = identifier.split("_")[0]
-    if "compensated" in identifier:
-        return identifier.split(f"{data_metric}_")[1].split("_compensated")[0]
-    if "transformed" in identifier:
-        return identifier.split(f"{data_metric}_")[1].split("_transformed")[0]
+def _recalculate_fop(adata: AnnData,
+                     frame_id: str) -> None:
+    from ..tools._fop import fop
+    _, data_origin, data_group = _get_frame_metrics(frame_id)
+    fop(adata, groupby = data_group, layer = data_origin)
 
 def _synchronize_uns_frame(adata: AnnData,
                            identifier: str,
                            sample_IDs: list[str]) -> None:
-    data_group = extract_data_group_from_identifier(identifier)
-    if data_group is None or "sample_ID" in data_group:
-        df: pd.DataFrame = adata.uns[identifier]
-        adata.uns[identifier] = df.loc[df.index.get_level_values("sample_ID").isin(sample_IDs),:]
+    uns_frame: pd.DataFrame = adata.uns[identifier]
+    adata.uns[identifier] = uns_frame.loc[uns_frame.index.get_level_values("sample_ID").isin(sample_IDs),:]
+    return
 
-def _synchronize_metadata(adata: AnnData,
-                          current_obs_sample_IDs: pd.Series) -> None:
+def _synchronize_metadata_object(adata: AnnData,
+                                 current_obs_sample_IDs: pd.Series) -> None:
     metadata: Metadata = adata.uns["metadata"]
     metadata.subset("sample_ID", current_obs_sample_IDs)
+    metadata._sanitize_categoricals()
+    adata.uns["metadata"] = metadata
     return
