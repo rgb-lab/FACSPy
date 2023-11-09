@@ -40,9 +40,10 @@ def mock_cofactors_with_prefixes():
             "fcs_colname": [
                 "FSC-A",
                 "SSC-A",
-                "APC-H7-A",
-                "FJComp-PE-CF594-A",
-                "Comp-PE-A",
+                "CD16",
+                "Live/Dead",
+                "mitoTracker"
+
             ],
             "cofactors": list(range(5)),
         }
@@ -67,9 +68,9 @@ def mock_cofactors_correct():
             "fcs_colname": [
                 "FSC-A",
                 "SSC-A",
-                "APC-H7-A",
-                "PE-CF594-A",
-                "PE-A",
+                "CD16",
+                "Live/Dead",
+                "mitoTracker"
             ],
             "cofactors": list(range(5)),
         }
@@ -82,9 +83,9 @@ def mock_cofactors_np_array_instead_of_dataframe():
             "fcs_colname": [
                 "FSC-A",
                 "SSC-A",
-                "APC-H7-A",
-                "PE-CF594-A",
-                "PE-A",
+                "CD16",
+                "Live/Dead",
+                "mitoTracker"
             ],
             "cofactors": list(range(5)),
         }
@@ -98,9 +99,9 @@ def mock_cofactors_wrong_colname():
             "fcs_colnamez": [
                 "FSC-A",
                 "SSC-A",
-                "APC-H7-A",
-                "FJComp-PE-CF594-A",
-                "Comp-PE-A",
+                "CD16",
+                "Live/Dead",
+                "mitoTracker"
             ],
             "cofactor": list(range(5)),
         }
@@ -374,13 +375,13 @@ def test_panel_get_channels(mock_panel_correct):
 
 def test_cofactors_get_cofactor(mock_cofactors_correct):
     x = CofactorTable(cofactors = mock_cofactors_correct)
-    assert x.get_cofactor("APC-H7-A") == 2
-    assert x.get_cofactor("PE-A") == 4
+    assert x.get_cofactor("CD16") == 2
+    assert x.get_cofactor("mitoTracker") == 4
 
 def test_cofactors_set_cofactor(mock_cofactors_correct):
     x = CofactorTable(cofactors = mock_cofactors_correct)
-    x.set_cofactor("APC-H7-A", 200)
-    assert x.get_cofactor("APC-H7-A") == 200
+    x.set_cofactor("CD16", 200)
+    assert x.get_cofactor("CD16") == 200
 
 def test_cofactor_set_columns(mock_cofactors_correct):
     x = CofactorTable(cofactors = mock_cofactors_correct)
@@ -390,12 +391,36 @@ def test_cofactor_set_columns(mock_cofactors_correct):
 def test_cofactors_set_cofactors(mock_cofactors_correct):
     x = CofactorTable(cofactors = mock_cofactors_correct)
     x.set_cofactors([200 for _ in range(5)])
-    assert x.get_cofactor("APC-H7-A") == 200
+    assert x.get_cofactor("CD16") == 200
     y = CofactorTable(cofactors = mock_cofactors_correct)
     y.set_cofactors(cytof = True)
-    assert y.get_cofactor("APC-H7-A") == 5
+    assert y.get_cofactor("CD16") == 5
     with pytest.raises(ValueError):
         y.set_cofactors()
+
+def test_channel_selection_panel(mock_panel_correct: pd.DataFrame):
+    x = Panel(panel = mock_panel_correct)
+    x.select_channels(["CD16", "mitoTracker"])
+    assert x.dataframe.shape == (2,2)
+    assert "CD16" in x.dataframe["antigens"].to_list()
+    assert "mitoTracker" in x.dataframe["antigens"].to_list()
+    assert "FSC-A" not in x.dataframe["antigens"].to_list()
+
+def test_channel_selection_cofactors(mock_cofactors_correct: pd.DataFrame):
+    x = CofactorTable(cofactors = mock_cofactors_correct)
+    x.select_channels(["CD16", "mitoTracker"])
+    assert x.dataframe.shape == (2,2)
+    assert "CD16" in x.dataframe["fcs_colname"].to_list()
+    assert "mitoTracker" in x.dataframe["fcs_colname"].to_list()
+    assert "FSC-A" not in x.dataframe["fcs_colname"].to_list()
+
+def test_channel_selection_metadata(mock_metadata_correct: Metadata):
+    x = Metadata(metadata = mock_metadata_correct)
+    with pytest.raises(TypeError):
+        x.select_channels(["CD16", "mitoTracker"])
+
+
+
 
 
 
