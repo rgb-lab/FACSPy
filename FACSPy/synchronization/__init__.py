@@ -1,1 +1,1 @@
-from ._synchronize import dataset_has_been_modified, synchronize_dataset
+from ._synchronize import _dataset_has_been_modified, synchronize_dataset, synchronize_samples, synchronize_vars
