@@ -5,13 +5,13 @@ from ._var_sync import synchronize_vars
 
 from ._hash_generation import generate_hash_dict
 
-def hash_dataset(adata: AnnData,
+def _hash_dataset(adata: AnnData,
                           copy: bool = False) -> Optional[AnnData]:
     adata = adata.copy() if copy else adata
     adata.uns["dataset_status_hash"] = generate_hash_dict(adata)
     return adata if copy else None
 
-def dataset_has_been_modified(adata: AnnData) -> bool:
+def _dataset_has_been_modified(adata: AnnData) -> bool:
     """
     Returns a boolean if the dataset has been modified.
     Calculates the hashs on the input dataset and compares
@@ -22,7 +22,7 @@ def dataset_has_been_modified(adata: AnnData) -> bool:
     """
     return generate_hash_dict(adata) != adata.uns["dataset_status_hash"]
 
-def get_modified_entities(adata) -> list[str]:
+def _get_modified_entities(adata) -> list[str]:
     current_hash_dict = adata.uns["dataset_status_hash"]
     comparison_hash_dict = generate_hash_dict(adata)
     return [
@@ -54,11 +54,11 @@ def synchronize_dataset(adata: AnnData,
     """
     adata = adata.copy() if copy else adata
     
-    if not dataset_has_been_modified(adata):
+    if not _dataset_has_been_modified(adata):
         print("dataset is already synchronized")
         return adata if copy else None
     
-    modified_subsets = get_modified_entities(adata)
+    modified_subsets = _get_modified_entities(adata)
     print(modified_subsets)
 
     if "obs_names" in modified_subsets:
@@ -68,7 +68,7 @@ def synchronize_dataset(adata: AnnData,
         print("synchronizing vars")
         synchronize_vars(adata)
 
-    hash_dataset(adata)
+    _hash_dataset(adata)
 
 
 
