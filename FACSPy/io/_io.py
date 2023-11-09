@@ -6,19 +6,19 @@ import pickle
 import pandas as pd
 from pandas import DatetimeIndex
 
-from ..synchronization._synchronize import hash_dataset
+from ..synchronization._synchronize import _hash_dataset
 
-def make_var_valid(adata: AnnData) -> bool:
+def _make_var_valid(adata: AnnData) -> bool:
     for col in adata.var.columns:
         if adata.var[col].dtype != "category":
             adata.var[col] = adata.var[col].astype("str")
             continue
         if isinstance(adata.var[col].cat.categories, DatetimeIndex):
-            adata.obs[col] = adata.obs[col].astype("str").astype("category")
+            adata.var[col] = adata.var[col].astype("str").astype("category")
             ### add warning!
     return adata
 
-def make_obs_valid(adata: AnnData) -> bool:
+def _make_obs_valid(adata: AnnData) -> bool:
     for col in adata.obs.columns:
         if adata.obs[col].dtype != "category":
             continue
@@ -37,10 +37,11 @@ def save_dataset(adata: AnnData,
 
     del adata.uns
 
-    adata = make_obs_valid(adata)
-    adata = make_var_valid(adata) 
+    adata = _make_obs_valid(adata)
+    adata = _make_var_valid(adata) 
 
-    ### implement "check if file exists"
+    if os.path.isfile(os.path.join(output_dir, f"{file_name}.h5ad")) and not overwrite:
+        raise FileExistsError("The file already exists. Please set 'overwrite' to True")
     try:
         adata.write(os.path.join(output_dir, f"{file_name}.h5ad"))
         with open(os.path.join(output_dir, f"{file_name}.uns"), "wb") as uns_metadata:
@@ -57,8 +58,7 @@ def save_dataset(adata: AnnData,
 
 
 def read_dataset(input_dir: str,
-                 file_name: str,
-                 read_uns: bool = True) -> AnnData:
+                 file_name: str) -> AnnData:
     
     import scanpy as sc
     adata = sc.read_h5ad(os.path.join(input_dir, f"{file_name}.h5ad"))
@@ -67,5 +67,5 @@ def read_dataset(input_dir: str,
     adata.uns = uns
     ### because the PYTHONHASHSEED is changed for every session,
     ### dataset needs to be rehashed here
-    hash_dataset(adata)
+    _hash_dataset(adata)
     return adata
