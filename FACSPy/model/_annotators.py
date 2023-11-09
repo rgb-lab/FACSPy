@@ -1,37 +1,45 @@
 from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import scanpy as sc
+
 from scipy.sparse import csr_matrix
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from scipy.spatial import ConvexHull
-from ..utils import transform_gates_according_to_gate_transform, transform_vertices_according_to_gate_transform
-from ..utils import find_parent_gate, GATE_SEPARATOR
+from sklearn.utils.validation import check_is_fitted
 
-from ..clustering._leiden import leiden_cluster
-from ..clustering._flowsom import flowsom_cluster
-from ..clustering._parc import parc_cluster
-from ..clustering._phenograph import phenograph_cluster
+from scipy.spatial import ConvexHull
 
 from typing import Optional, Union, Literal
 
-from sklearn.utils.validation import check_is_fitted
-
-from .classifiers import DecisionTree, RandomForest, implemented_estimators
-from .utils import (cap_data,
+from ._classifiers import DecisionTree, RandomForest, implemented_estimators
+from ._utils import (cap_data,
                     transform_data,
                     scale_data,
                     )
 
-from ..utils import (contains_only_fluo,
+from .._utils import transform_gates_according_to_gate_transform, transform_vertices_according_to_gate_transform
+from .._utils import find_parent_gate, GATE_SEPARATOR
+
+from ..tools._leiden import leiden
+from ..tools._phenograph import phenograph
+from ..tools._parc import parc
+from ..tools._flowsom import flowsom
+
+from .._utils import (contains_only_fluo,
                      subset_gate,
                      get_idx_loc,
                      find_gate_indices,
                      create_gate_lut,
                      find_parents_recursively,
-                     find_current_population)
-from ..exceptions.exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
+                     find_current_population,
+                     find_gate_path_of_gate,
+                     is_valid_filename,
+                     is_valid_sample_ID)
+
+from ..exceptions._exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
 
 """
 TODO: testing of classifier
@@ -77,6 +85,113 @@ class BaseGating:
                 gate_index,
             ] = predictions[:, i]
 
+    def append_gate_column_to_adata(self,
+                                    gate_path) -> None:
+        self.adata.uns["gating_cols"] = self.adata.uns["gating_cols"].append(pd.Index([gate_path]))
+        empty_column = np.zeros(
+                shape = (self.adata.obsm["gating"].shape[0],
+                         1),
+                dtype = bool
+            )
+        self.adata.obsm["gating"] = np.hstack([self.adata.obsm["gating"], empty_column])
+        return
+
+class ManualGating(BaseGating):
+
+    def __init__(self,
+                 adata: AnnData,
+                 gate_coordinates: np.ndarray,
+                 x_channel: str,
+                 y_channel: str,
+                 data_origin: Literal["compensated", "transformed"],
+                 parent_population: str,
+                 gate_name: str,
+                 sample_identifier: Optional[str] = None
+                 ) -> None:
+        self.adata: AnnData = adata
+        
+        self.gate_coordinates = self._preprocess_gate_coordinates(gate_coordinates)
+        self._create_hull_from_gate_coordinates()
+        
+        self.subset = self._preprocess_adata(sample_identifier = sample_identifier,
+                                             parent_population = parent_population)
+        self._cells = self._extract_cells(self.subset,
+                                          x_channel,
+                                          y_channel,
+                                          data_origin)
+        self.parent_population = parent_population
+        self.gate_name = gate_name
+        self.gating_path = self._create_gate_path()
+
+    def _preprocess_adata(self,
+                          sample_identifier: Optional[str],
+                          parent_population: str) -> AnnData:
+
+        subset = subset_gate(self.adata,
+                             gate = parent_population,
+                             as_view = True)
+
+        if sample_identifier is None:
+            return subset
+
+        if is_valid_sample_ID(subset, sample_identifier):
+            subset = subset[subset.obs["sample_ID"] == str(sample_identifier),:]
+        elif is_valid_filename(subset, sample_identifier):
+            subset = subset[subset.obs["file_name"] == str(sample_identifier),:]
+        else:
+            raise ValueError(f"{sample_identifier} not found")
+        return subset 
+
+    def _create_gate_path(self):
+        parent_path = find_gate_path_of_gate(self.adata, self.parent_population)
+        return GATE_SEPARATOR.join([parent_path, self.gate_name])
+
+    def _preprocess_gate_coordinates(self,
+                                     gate_coordinates: np.ndarray) -> np.ndarray:
+        if gate_coordinates.shape[0] <= 2:
+            # means we likely have a rectangle range and
+            # cannot create a hull from that
+            return np.array(
+                np.meshgrid(gate_coordinates[:,0], gate_coordinates[:,1])
+            ).T.reshape(-1,2)
+        return gate_coordinates
+
+    def _extract_cells(self,
+                       adata: AnnData,
+                       x_channel: str,
+                       y_channel: str,
+                       data_origin: Literal["compensated", "transformed"]) -> np.ndarray:
+        return adata.to_df(layer = data_origin)[[x_channel, y_channel]].values
+    
+    def _create_hull_from_gate_coordinates(self):
+        self.hull = ConvexHull(self.gate_coordinates)
+        return
+    
+    def gate(self):
+        self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
+        gating_result = self._points_in_gate()
+        
+        self.append_gate_column_to_adata(self.gating_path)
+        gate_index = find_gate_indices(self.adata, self.gating_path)
+        
+        self.add_gating_to_input_dataset(self.subset,
+                                         predictions = gating_result,
+                                         gate_indices = gate_index)
+        
+        self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
+        return
+
+    def _points_in_gate(self,
+                        tol: float = 1e-12) -> np.ndarray:
+        gate_results: np.ndarray = np.all(
+            self.hull.equations[:,:-1] @ self._cells.T + np.repeat(
+                self.hull.equations[:,-1][None,:],
+                len(self._cells), axis=0).T <= tol, 0
+            )
+        return gate_results.reshape(gate_results.shape[0], 1)
+
+    
+
 
 class supervisedGating(BaseGating):
     """
@@ -112,7 +227,7 @@ class supervisedGating(BaseGating):
                  estimator: Literal["DecisionTree", "RandomForest"] = "DecisionTree",
                  train_on: Optional[Union[Literal["all_gated"], list[str]]] = "all_gated"):
         
-        self.adata = adata
+        self.adata: AnnData = adata
         self.wsp_group = wsp_group
         self.base_estimator = estimator
         self.train_on = train_on
@@ -661,8 +776,8 @@ class unsupervisedGating(BaseGating):
                                                                 population_name)
                     predictions = self.convert_cell_types_to_bool(cell_types)
                     self.add_gating_to_input_dataset(subset,
-                                                    predictions,
-                                                    gate_index)
+                                                     predictions,
+                                                     gate_index)
         self.already_analyzed.append(population_to_cluster)
         return 
    
@@ -696,16 +811,6 @@ class unsupervisedGating(BaseGating):
         # TODO: map function...
         return [population if cluster in cluster_vector else "other" for cluster in subset.obs[self.cluster_key].to_list()]
 
-    def append_gate_column_to_adata(self,
-                                    gate_path) -> None:
-        self.adata.uns["gating_cols"] = self.adata.uns["gating_cols"].append(pd.Index([gate_path]))
-        empty_column = np.zeros(
-                shape = (self.adata.obsm["gating"].shape[0],
-                         1),
-                dtype = bool
-            )
-        self.adata.obsm["gating"] = np.hstack([self.adata.obsm["gating"], empty_column])
-        return
         
     def convert_markers_to_query_string(self,
                                         markers_of_interest: dict[str: list[Optional[str]]]) -> str:
@@ -754,17 +859,17 @@ class unsupervisedGating(BaseGating):
                         cluster_kwargs: dict) -> AnnData:
 
         if self.clustering_algorithm == "leiden":
-            leiden_cluster(dataset,
-                           cluster_kwargs = cluster_kwargs)
+            leiden(dataset,
+                   cluster_kwargs = cluster_kwargs)
         elif self.clustering_algorithm == "parc":
-            parc_cluster(dataset,
-                         cluster_kwargs = cluster_kwargs)
+            parc(dataset,
+                 cluster_kwargs = cluster_kwargs)
         elif self.clustering_algorithm == "flowsom":
-            flowsom_cluster(dataset,
-                            cluster_kwargs = cluster_kwargs)
+            flowsom(dataset,
+                    cluster_kwargs = cluster_kwargs)
         else:
-            phenograph_cluster(dataset,
-                               cluster_kwargs = cluster_kwargs)
+            phenograph(dataset,
+                       cluster_kwargs = cluster_kwargs)
         return dataset
 
     def preprocess_dataset(self,

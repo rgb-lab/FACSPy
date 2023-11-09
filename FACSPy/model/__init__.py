@@ -1,2 +1,2 @@
-from .annotators import supervisedGating, unsupervisedGating
-from .classifiers import RandomForest, DecisionTree
+from ._annotators import supervisedGating, unsupervisedGating
+from ._classifiers import RandomForest, DecisionTree
