@@ -120,6 +120,18 @@ class BaseSupplement:
                        new_channel_name) -> None:
         self.dataframe.loc[self.dataframe["fcs_colname"] == old_channel_name, "fcs_colname"] = new_channel_name
 
+    def select_channels(self,
+                        channels: list[str]) -> None:
+        if isinstance(self, Metadata):
+            raise TypeError("Channels cannot be selected from metadata object")
+        if not isinstance(channels, list):
+            channels = [channels]
+        if isinstance(self, Panel):
+            self.dataframe = self.dataframe.loc[self.dataframe["antigens"].isin(channels)]
+        if isinstance(self, CofactorTable):
+            self.dataframe = self.dataframe.loc[self.dataframe["fcs_colname"].isin(channels)]
+
+    
 
 
 class Panel(BaseSupplement):
