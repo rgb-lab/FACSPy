@@ -58,7 +58,7 @@ class Matrix(object):
         if fluorochromes is None:
             fluorochromes = ['' for _ in detectors]
 
-        self.fluorochomes = fluorochromes
+        self.fluorochromes = fluorochromes
 
     def __repr__(self):
         return (
