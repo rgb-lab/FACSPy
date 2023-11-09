@@ -267,6 +267,8 @@ class Metadata(BaseSupplement):
     def subset(self,
                column: str,
                values: list[Union[str, int]]) -> None:
+        if not isinstance(values, list):
+            values = [values]
         self.dataframe = self.dataframe.loc[self.dataframe[column].isin(values)]
 
     def extract_metadata_factors(self):
