@@ -1,7 +1,7 @@
 from matplotlib.axes import Axes
 import pandas as pd
 
-from ..utils import create_comparisons
+from .._utils import create_comparisons
 
 from statannotations.Annotator import Annotator
 

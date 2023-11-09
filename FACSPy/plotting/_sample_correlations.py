@@ -4,7 +4,7 @@ from anndata import AnnData
 from matplotlib.figure import Figure
 from typing import Literal, Union, Optional
 
-from .utils import (scale_data,
+from ._utils import (scale_data,
                     map_obs_to_cmap,
                     append_metadata,
                     get_uns_dataframe,

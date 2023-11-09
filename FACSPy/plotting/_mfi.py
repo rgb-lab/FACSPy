@@ -11,7 +11,7 @@ from ._baseplot import adjust_legend
 
 from ._basestats import add_statistic
 from ._baseplot import barplot, stripboxplot, label_plot_basic
-from .utils import (get_uns_dataframe,
+from ._utils import (get_uns_dataframe,
                     savefig_or_show)
 
 def fop(adata: AnnData,

@@ -1,16 +1,14 @@
 from anndata import AnnData
 import pandas as pd
-import numpy as np
-from typing import Union, Literal
+from typing import Union
 
 from matplotlib.figure import Figure
-from matplotlib.axis import Axis
 
 from matplotlib import pyplot as plt
 
 from typing import Optional
 
-from .utils import savefig_or_show
+from ._utils import savefig_or_show
 
 
 

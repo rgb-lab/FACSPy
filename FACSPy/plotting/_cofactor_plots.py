@@ -7,16 +7,16 @@ from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from .utils import (calculate_fig_size,
+from ._utils import (calculate_fig_size,
                     turn_off_missing_plots,
                     calculate_nrows,
                     savefig_or_show)
 
 from typing import Optional, Union, Literal
 
-from ..dataset.utils import (find_corresponding_control_samples,
-                             get_histogram_curve)
-from ..utils import subset_gate
+from ..dataset._utils import (find_corresponding_control_samples,
+                              get_histogram_curve)
+from .._utils import subset_gate
 
 
 def prepare_data_subsets(adata: AnnData,

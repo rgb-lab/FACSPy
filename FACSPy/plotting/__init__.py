@@ -6,9 +6,9 @@ from ._mfi import mfi, fop
 from ._sample_correlations import sample_correlation
 from ._sample_distance import sample_distance
 from ._samplewise_dr import pca_samplewise, mds_samplewise
-from .cofactor_plots import cofactor_distribution, transformation_plot
-from .gating_strategy import gating_strategy
-from .qc import cell_counts, gate_frequency
+from ._cofactor_plots import cofactor_distribution, transformation_plot
+from ._gating_strategy import gating_strategy
+from ._qc import cell_counts, gate_frequency
 from ._expression_heatmap import expression_heatmap
 from ._cluster_mfi import cluster_heatmap, cluster_mfi
 from ._marker_correlations import marker_correlation

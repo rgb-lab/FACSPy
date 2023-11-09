@@ -8,7 +8,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from typing import Literal, Union, Optional
-from .utils import (scale_data,
+from ._utils import (scale_data,
                     map_obs_to_cmap,
                     calculate_sample_distance,
                     append_metadata,

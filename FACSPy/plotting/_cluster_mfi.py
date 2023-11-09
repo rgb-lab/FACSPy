@@ -1,6 +1,4 @@
 from anndata import AnnData
-from matplotlib import pyplot as plt
-import seaborn as sns
 import numpy as np
 import pandas as pd
 
@@ -8,8 +6,7 @@ from matplotlib.figure import Figure
 
 from typing import Literal, Optional, Union
 
-from ..utils import find_gate_path_of_gate
-from .utils import (scale_data,
+from ._utils import (scale_data,
                     calculate_sample_distance,
                     calculate_linkage,
                     get_uns_dataframe,

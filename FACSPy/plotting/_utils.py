@@ -17,12 +17,11 @@ from sklearn.preprocessing import (MinMaxScaler,
                                    RobustScaler,
                                    StandardScaler)
 
-from ..exceptions.exceptions import AnalysisNotPerformedError
+from ..exceptions._exceptions import AnalysisNotPerformedError
 
-from ..utils import find_gate_path_of_gate
+from .._utils import find_gate_path_of_gate
 
 from scipy.cluster.hierarchy import cut_tree
-import scipy
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from scipy.spatial import distance_matrix

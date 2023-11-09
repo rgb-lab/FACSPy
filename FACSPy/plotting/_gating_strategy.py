@@ -9,21 +9,19 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from matplotlib.patches import ConnectionPatch
 import matplotlib.patches as patches
 
 from typing import Union, Optional, Literal
 
 
-from ..utils import (create_gate_lut,
-                     find_parent_gate,
+from .._utils import (create_gate_lut,
                      GATE_SEPARATOR,
                      find_parent_population,
                      subset_gate,
                      find_gate_indices,
                      find_gate_path_of_gate)
 
-from .utils import turn_off_missing_plot, savefig_or_show
+from ._utils import turn_off_missing_plot, savefig_or_show
 
 
 class GatingStrategyGrid:

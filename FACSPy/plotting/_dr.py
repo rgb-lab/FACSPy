@@ -7,7 +7,9 @@ import pandas as pd
 from typing import Optional, Literal
 
 
-from .utils import savefig_or_show
+from ._utils import savefig_or_show
+
+## BIG TODO!: check for dataset hash before assuming that PCA has been calculated!
 
 def create_dimred_dataframe(adata: AnnData,
                             basis: str,

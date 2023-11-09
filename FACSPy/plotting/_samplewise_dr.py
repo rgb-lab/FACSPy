@@ -9,11 +9,8 @@ from matplotlib.figure import Figure
 
 from typing import Literal, Union, Optional
 
-from .utils import get_uns_dataframe, turn_off_missing_plots, savefig_or_show
-from ..utils import find_gate_path_of_gate, reduction_names
-
-from ..exceptions.exceptions import AnalysisNotPerformedError
-
+from ._utils import get_uns_dataframe, turn_off_missing_plots, savefig_or_show
+from .._utils import reduction_names
 
 def samplewise_dr_plot(adata: AnnData,
                        dataframe: pd.DataFrame,

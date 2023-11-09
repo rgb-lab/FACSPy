@@ -8,9 +8,9 @@ from ..tools._fold_change import calculate_fold_changes
 
 from typing import Literal, Union, Optional
 
-from ..utils import ifelse
+from .._utils import ifelse
 
-from .utils import savefig_or_show
+from ._utils import savefig_or_show
 
 def fold_change(adata: AnnData,
                 groupby: str,

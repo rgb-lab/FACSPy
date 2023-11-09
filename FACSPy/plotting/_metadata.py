@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 from anndata import AnnData
 
-from .utils import savefig_or_show
+from ._utils import savefig_or_show
 
 from ._baseplot import (stripboxplot,
                         barplot,

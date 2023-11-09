@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 
 from typing import Literal, Optional, Union
 
-from .utils import (scale_data,
+from ._utils import (scale_data,
                     map_obs_to_cmap,
                     calculate_sample_distance,
                     calculate_linkage,
@@ -25,7 +25,7 @@ from .utils import (scale_data,
                     savefig_or_show)
 
 from ._clustermap import create_clustermap
-from ..utils import fetch_fluo_channels
+from .._utils import fetch_fluo_channels
 
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,

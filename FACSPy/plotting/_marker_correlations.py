@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from typing import Literal, Optional, Union
 
-from .utils import (scale_data,
+from ._utils import (scale_data,
                     get_uns_dataframe,
                     remove_ticklabels,
                     remove_ticks,

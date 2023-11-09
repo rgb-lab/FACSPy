@@ -11,13 +11,15 @@ from anndata import AnnData
 
 from typing import Union, Optional, Literal
 
-from .utils import savefig_or_show
+from ._utils import savefig_or_show
+from .._utils import subset_gate, get_sample_ID_from_filename, is_valid_filename, is_valid_sample_ID
 
 #TODO: add legend
 def biax(adata: AnnData,
+         gate: str,
          x_channel: str,
          y_channel: str,
-         sample_ID: Union[str, list[str]], 
+         sample_identifier: Union[str, list[str]], 
          layer: Literal["compensated", "raw", "transformed"] = "compensated",
          add_cofactor: bool = False,
          show: Optional[bool] = None,
@@ -25,15 +27,18 @@ def biax(adata: AnnData,
          return_dataframe: bool = False,
          return_fig: bool = False) -> Optional[Figure]:
     
-    if not isinstance(sample_ID, list):
-        sample_ID = [sample_ID]
     
-    for sample in sample_ID:
-        if sample not in adata.obs["sample_ID"].unique():
-            raise ValueError(f"sampleID {sample} not found!")
+    adata = subset_gate(adata, gate = gate, as_view = True)
+    if is_valid_sample_ID(adata, sample_identifier):
+        sample_specific = adata[adata.obs["sample_ID"] == str(sample_identifier),:]
+    elif is_valid_filename(adata, sample_identifier):
+        sample_specific = adata[adata.obs["file_name"] == str(sample_identifier),:]
+    else:
+        raise ValueError(f"{sample_identifier} not found")
     
-    dataframe = adata[adata.obs["sample_ID"].isin(sample_ID)].to_df(layer = layer)
-    dataframe["sample_ID"] = adata[adata.obs["sample_ID"].isin(sample_ID)].obs["sample_ID"].to_list()
+    expression_data = sample_specific.to_df(layer = layer)
+    obs_data = sample_specific.obs.copy()
+    dataframe = pd.concat([expression_data, obs_data], axis = 1)
 
     if return_dataframe:
         return dataframe
@@ -45,7 +50,7 @@ def biax(adata: AnnData,
         "y": y_channel,
         "linewidth": 0,
         "s": 2,
-        "c": dataframe["sample_ID"],
+        "c": dataframe["sample_ID"].astype(int),
         "legend": "auto"
     }
     sns.scatterplot(**plot_params,

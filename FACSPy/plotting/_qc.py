@@ -9,16 +9,16 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from ..exceptions.exceptions import HierarchyError
+from ..exceptions._exceptions import HierarchyError
 
-from .utils import savefig_or_show
+from ._utils import savefig_or_show
 from ._baseplot import (stripboxplot,
                         barplot,
                         label_plot_basic,
                         adjust_legend)
 from ._basestats import add_statistic
 
-from ..utils import (GATE_SEPARATOR,
+from .._utils import (GATE_SEPARATOR,
                      find_gate_path_of_gate,
                      find_parent_gate,
                      find_grandparent_gate,
