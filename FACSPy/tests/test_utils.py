@@ -1,30 +1,32 @@
 import pytest
 import pandas as pd
-import anndata as ad
 import numpy as np
+from anndata import AnnData
+import anndata as ad
 
 from FACSPy._utils import (GATE_SEPARATOR,
-                          find_gate_path_of_gate,
-                          find_gate_indices,
-                          equalize_groups,
-                          find_parent_population,
-                          find_current_population,
-                          find_parent_gate,
-                          find_parents_recursively,
-                          ifelse,
-                          find_grandparent_gate,
-                          find_grandparent_population,
-                          close_polygon_gate_coordinates,
-                          flatten_nested_list,
-                          subset_fluo_channels,
-                          subset_gate)
+                           find_gate_path_of_gate,
+                           find_gate_indices,
+                           equalize_groups,
+                           find_parent_population,
+                           find_current_population,
+                           find_parent_gate,
+                           find_parents_recursively,
+                           ifelse,
+                           find_grandparent_gate,
+                           find_grandparent_population,
+                           close_polygon_gate_coordinates,
+                           flatten_nested_list,
+                           subset_fluo_channels,
+                           subset_gate)
 
-from FACSPy.exceptions._utils import GateNotProvidedError, ExhaustedHierarchyError
+from FACSPy.exceptions._utils import (GateNotProvidedError,
+                                      ExhaustedHierarchyError)
 
 # QUICKFIND: Gates
 @pytest.fixture
-def mock_anndata():
-    adata1 = ad.AnnData(
+def mock_anndata_gating() -> AnnData:
+    adata1 = AnnData(
         X = np.zeros((10,10)),
         obs = pd.DataFrame(
             data = {
@@ -34,7 +36,7 @@ def mock_anndata():
             }
         )
     )
-    adata2 = ad.AnnData(
+    adata2 = AnnData(
         X = np.zeros((100,10)),
         obs = pd.DataFrame(
             data = {
@@ -44,7 +46,7 @@ def mock_anndata():
             }
         )
     )
-    adata3 = ad.AnnData(
+    adata3 = AnnData(
         X = np.zeros((1000,10)),
         obs = pd.DataFrame(
             data = {
@@ -63,19 +65,19 @@ def mock_anndata():
     return concatenated
 
 
-def test_find_gate_path_of_gate(mock_anndata):
-    assert find_gate_path_of_gate(mock_anndata, "T_cells") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
-    assert find_gate_path_of_gate(mock_anndata, "live") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live"
-    assert find_gate_path_of_gate(mock_anndata, "singlets") == f"root{GATE_SEPARATOR}singlets"
+def test_find_gate_path_of_gate(mock_anndata_gating: AnnData):
+    assert find_gate_path_of_gate(mock_anndata_gating, "T_cells") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
+    assert find_gate_path_of_gate(mock_anndata_gating, "live") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live"
+    assert find_gate_path_of_gate(mock_anndata_gating, "singlets") == f"root{GATE_SEPARATOR}singlets"
 
-def test_find_gate_indices(mock_anndata):
-    assert find_gate_indices(mock_anndata, find_gate_path_of_gate(mock_anndata,"T_cells")) == [1]
+def test_find_gate_indices(mock_anndata_gating):
+    assert find_gate_indices(mock_anndata_gating, find_gate_path_of_gate(mock_anndata_gating,"T_cells")) == [1]
 
 
 # QUICKFIND: Group Equalizing
 @pytest.fixture
-def mock_anndata():
-    adata1 = ad.AnnData(
+def mock_anndata() -> AnnData:
+    adata1 = AnnData(
         X = np.zeros((10,10)),
         obs = pd.DataFrame(
             data = {
@@ -85,7 +87,7 @@ def mock_anndata():
             }
         )
     )
-    adata2 = ad.AnnData(
+    adata2 = AnnData(
         X = np.zeros((100,10)),
         obs = pd.DataFrame(
             data = {
@@ -95,7 +97,7 @@ def mock_anndata():
             }
         )
     )
-    adata3 = ad.AnnData(
+    adata3 = AnnData(
         X = np.zeros((1000,10)),
         obs = pd.DataFrame(
             data = {
@@ -248,8 +250,8 @@ def test_convert_gates_to_obs(): pass
 
 # QUICKFIND: Subset fluo channels
 @pytest.fixture
-def mock_anndata():
-    return ad.AnnData(
+def mock_anndata_subset():
+    return AnnData(
         X = np.zeros((7,7)),
         var = pd.DataFrame(
             data = {
@@ -260,26 +262,26 @@ def mock_anndata():
         )
     )
 
-def test_fluo_channel_copy_function(mock_anndata):
-    subset_fluo_channels(mock_anndata,
+def test_fluo_channel_copy_function(mock_anndata_subset):
+    subset_fluo_channels(mock_anndata_subset,
                          copy = False)
-    assert mock_anndata.shape[1] == 2
+    assert mock_anndata_subset.shape[1] == 2
 
-def test_fluo_channel_subset(mock_anndata):
-    dataset = subset_fluo_channels(mock_anndata,
+def test_fluo_channel_subset(mock_anndata_subset):
+    dataset = subset_fluo_channels(mock_anndata_subset,
                                    copy = True)
     assert dataset.shape[1] == 2
 
-def test_fluo_channel_subset_2(mock_anndata):
-    dataset = subset_fluo_channels(mock_anndata, copy = True)
+def test_fluo_channel_subset_2(mock_anndata_subset):
+    dataset = subset_fluo_channels(mock_anndata_subset, copy = True)
     assert "BUV 395-A" in dataset.var.index
     assert "APC-Cy7-A" in dataset.var.index
     assert "Time" not in dataset.var.index
 
 
 @pytest.fixture
-def mock_anndata():
-    return ad.AnnData(
+def mock_anndata_gate_subset() -> AnnData:
+    return AnnData(
         X = np.zeros((7,7), dtype = np.float64),
         var = pd.DataFrame(
             data = {
@@ -293,54 +295,54 @@ def mock_anndata():
         dtype = np.int32
     )
 
-def test_gate_subset_copy_function(mock_anndata):
-    subset_gate(mock_anndata,
+def test_gate_subset_copy_function(mock_anndata_gate_subset):
+    subset_gate(mock_anndata_gate_subset,
                 gate = "T_cells",
                 copy = False)
-    assert mock_anndata.shape[0] == 3
+    assert mock_anndata_gate_subset.shape[0] == 3
 
-def test_gate_subset_copy_function_2(mock_anndata):
-    subset_gate(mock_anndata,
+def test_gate_subset_copy_function_2(mock_anndata_gate_subset):
+    subset_gate(mock_anndata_gate_subset,
                 gate = "singlets",
                 copy = False)
-    assert mock_anndata.shape[0] == 5
+    assert mock_anndata_gate_subset.shape[0] == 5
 
-def test_gate_subset_return(mock_anndata):
-    dataset = subset_gate(mock_anndata,
+def test_gate_subset_return(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
                           gate = "T_cells",
                           copy = True)
     assert dataset.shape[0] == 3
 
-def test_gate_subset_return(mock_anndata):
-    dataset = subset_gate(mock_anndata,
+def test_gate_subset_return(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
                           gate = "singlets",
                           copy = True)
     assert dataset.shape[0] == 5
 
-def test_gate_subset_gate_path(mock_anndata):
-    dataset = subset_gate(mock_anndata,
+def test_gate_subset_gate_path(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
                           gate_path = "root/singlets/T_cells",
                           copy = True)
     assert dataset.shape[0] == 3
 
-def test_gate_subset_gate_path(mock_anndata):
-    dataset = subset_gate(mock_anndata,
+def test_gate_subset_gate_path(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
                           gate_path = "root/singlets",
                           copy = True)
     assert dataset.shape[0] == 5
 
-def test_gate_subset_gate_path_as_gate(mock_anndata):
-    dataset = subset_gate(mock_anndata,
+def test_gate_subset_gate_path_as_gate(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
                           gate = "root/singlets/T_cells",
                           copy = True)
     assert dataset.shape[0] == 3
 
-def test_gate_subset_gate_path_as_gate(mock_anndata):
-    dataset = subset_gate(mock_anndata,
+def test_gate_subset_gate_path_as_gate(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
                           gate = "root/singlets",
                           copy = True)
     assert dataset.shape[0] == 5
 
-def test_gate_subset_wrong_inputs(mock_anndata):
+def test_gate_subset_wrong_inputs(mock_anndata_gate_subset):
     with pytest.raises(TypeError):
-        subset_gate(mock_anndata)
+        subset_gate(mock_anndata_gate_subset)
