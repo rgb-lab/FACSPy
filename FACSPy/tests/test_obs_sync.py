@@ -36,14 +36,14 @@ def mock_dataset():
 
 def test_synchronize_obs_wo_recalc(mock_dataset: AnnData):
     adata = mock_dataset
-    original_sample_IDs = adata.obs["sample_ID"].unique().to_list()
+    original_sample_IDs = adata.obs["sample_ID"].unique().tolist()
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
     assert "MDS1" in df.columns
     adata = adata[adata.obs["condition1"].isin(["x", "y"]),:].copy()
     assert _dataset_has_been_modified(adata)
     synchronize_samples(adata,
                         recalculate = False)
-    new_sample_IDs = adata.obs["sample_ID"].unique().to_list()
+    new_sample_IDs = adata.obs["sample_ID"].unique().tolist()
     df_after_sync: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
     assert "1" in df_after_sync.index
     assert "2" in df_after_sync.index
@@ -66,7 +66,7 @@ def test_synchronize_obs_w_recalc(mock_dataset: AnnData):
     assert _dataset_has_been_modified(adata)
     synchronize_samples(adata,
                         recalculate = True)
-    new_sample_IDs = adata.obs["sample_ID"].unique().to_list()
+    new_sample_IDs = adata.obs["sample_ID"].unique().tolist()
     df_after_sync: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
     assert "MDS1" in df_after_sync.columns
     assert "MDS2" in df_after_sync.columns
@@ -94,5 +94,5 @@ def test_synchronize_obs_wo_recalc_metadata_object(mock_dataset: AnnData):
     synchronize_samples(adata,
                         recalculate = True)
     metadata = adata.uns["metadata"]
-    assert metadata.dataframe["sample_ID"].to_list() == ["1", "2", "3", "4"]
+    assert metadata.dataframe["sample_ID"].tolist() == ["1", "2", "3", "4"]
     assert list(metadata.dataframe["sample_ID"].cat.categories) == ["1", "2", "3", "4"]
