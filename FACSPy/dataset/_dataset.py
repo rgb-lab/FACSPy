@@ -26,7 +26,7 @@ from .._utils import (fetch_fluo_channels,
                      time_channels,
                      cytof_technical_channels,
                      spectral_flow_technical_channels)
-from ..synchronization._synchronize import hash_dataset
+from ..synchronization._synchronize import _hash_dataset
 
 
 def create_dataset(input_directory: str,
@@ -95,7 +95,7 @@ class DatasetAssembler:
         self.dataset = self.append_gates(dataset,
                                          gates)
 
-        hash_dataset(self.dataset)
+        _hash_dataset(self.dataset)
 
     def fill_empty_gates(self,
                          file_list: list[FCSFile],
