@@ -5,9 +5,9 @@ from anndata import AnnData
 
 from typing import Union, Literal, Optional
 
-from ..exceptions.exceptions import NotSupportedStatisticalTestError
+from ..exceptions._exceptions import NotSupportedStatisticalTestError
 
-from ..plotting.utils import get_uns_dataframe
+from ..plotting._utils import get_uns_dataframe
 
 from scipy.stats import kruskal, wilcoxon
 

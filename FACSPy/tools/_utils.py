@@ -5,7 +5,7 @@ from typing import Literal, Optional
 
 from scipy.sparse import csr_matrix
 
-from ..utils import (contains_only_fluo,
+from .._utils import (contains_only_fluo,
                      subset_fluo_channels,
                      remove_channel,
                      subset_gate)

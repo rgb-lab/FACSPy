@@ -9,9 +9,9 @@ from umap import UMAP
 
 from typing import Optional, Union, Literal
 
-from ..utils import reduction_names
+from .._utils import reduction_names
 
-from ..plotting.utils import scale_data, select_gate_from_multiindex_dataframe
+from ..plotting._utils import scale_data, select_gate_from_multiindex_dataframe
 
 def perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
                data: np.ndarray,
@@ -24,12 +24,12 @@ def perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
                    random_state = 187).fit_transform(data)
     if reduction == "TSNE":
         return TSNE(n_components = n_components,
-                   random_state = 187,
-                   learning_rate = "auto",
-                   init = "pca").fit_transform(data)
+                    random_state = 187,
+                    learning_rate = "auto",
+                    init = "pca").fit_transform(data)
     if reduction == "UMAP":
         return UMAP(n_components = n_components,
-                   random_state = 187).fit_transform(data)
+                    random_state = 187).fit_transform(data)
 
 
 def perform_samplewise_dr(data: pd.DataFrame,
@@ -148,7 +148,7 @@ def save_samplewise_dr_settings(adata: AnnData,
     if "settings" not in adata.uns:
         adata.uns["settings"] = {}
 
-    adata.uns["settings"][f"_{reduction}_samplewise"] = {
+    adata.uns["settings"][f"_{reduction}_samplewise_{data_metric}_{data_origin}"] = {
         "data_group": data_group,
         "data_metric": data_metric,
         "data_origin": data_origin,
