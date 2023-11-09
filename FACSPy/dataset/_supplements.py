@@ -280,6 +280,12 @@ class Metadata(BaseSupplement):
 
     def get_factors(self):
         return self.extract_metadata_factors()
+    
+    def _sanitize_categoricals(self):
+        for column in self.dataframe:
+            if isinstance(self.dataframe[column].dtype, pd.CategoricalDtype):
+                self.dataframe[column] = self.dataframe[column].cat.remove_unused_categories()
+        return
 
 
 class CofactorTable(BaseSupplement):
