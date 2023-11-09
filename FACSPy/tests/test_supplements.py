@@ -414,10 +414,18 @@ def test_channel_selection_cofactors(mock_cofactors_correct: pd.DataFrame):
     assert "mitoTracker" in x.dataframe["fcs_colname"].to_list()
     assert "FSC-A" not in x.dataframe["fcs_colname"].to_list()
 
-def test_channel_selection_metadata(mock_metadata_correct: Metadata):
+def test_channel_selection_metadata(mock_metadata_correct: pd.DataFrame):
     x = Metadata(metadata = mock_metadata_correct)
     with pytest.raises(TypeError):
         x.select_channels(["CD16", "mitoTracker"])
+
+def test_metadata_categorical_sanitization(mock_metadata_correct: pd.DataFrame):
+    x = Metadata(metadata = mock_metadata_correct)
+    x.subset("file_name", "some_file.fcs")
+    x._sanitize_categoricals()
+    print(x.dataframe)
+    assert len(x.dataframe["file_name"].cat.categories) == 1
+    assert len(x.dataframe["sample_ID"].cat.categories) == 1
 
 
 
