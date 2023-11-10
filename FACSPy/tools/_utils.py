@@ -6,20 +6,21 @@ from typing import Literal, Optional
 from scipy.sparse import csr_matrix
 
 from .._utils import (contains_only_fluo,
-                     subset_fluo_channels,
-                     remove_channel,
-                     subset_gate)
+                      subset_fluo_channels,
+                      remove_channel,
+                      subset_gate)
 
-def assemble_dataframe(adata: AnnData,
-                       on: Literal["transformed", "compensated"] = "compensated",
-                       expression_data: bool = True) -> pd.DataFrame:
+def _concat_gate_info_and_obs_and_fluo_data(adata: AnnData,
+                                            on: Literal["transformed", "compensated"] = "compensated") -> pd.DataFrame:
+    gate_and_obs = _concat_gate_info_and_obs(adata)
+    fluo_data = adata.to_df(layer = on)
+    return pd.concat([gate_and_obs, fluo_data], axis = 1)
+
+def _concat_gate_info_and_obs(adata: AnnData) -> pd.DataFrame:
     obs = adata.obs.copy()
     gates = pd.DataFrame(data = adata.obsm["gating"].todense(),
-                         columns = adata.uns["gating_cols"].to_list(),
+                         columns = adata.uns["gating_cols"].tolist(),
                          index = obs.index)
-    if expression_data:
-        expression_data = adata.to_df(layer = on)
-        return pd.concat([gates, expression_data, obs], axis = 1)
     return pd.concat([gates, obs], axis = 1)
 
 def scale_adata(adata: AnnData,
