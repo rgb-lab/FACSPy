@@ -11,12 +11,12 @@ from FACSPy._utils import (GATE_SEPARATOR,
                            find_parent_population,
                            find_current_population,
                            find_parent_gate,
-                           find_parents_recursively,
+                           _find_parents_recursively,
                            ifelse,
                            find_grandparent_gate,
                            find_grandparent_population,
                            close_polygon_gate_coordinates,
-                           flatten_nested_list,
+                           _flatten_nested_list,
                            subset_fluo_channels,
                            subset_gate)
 
@@ -206,15 +206,15 @@ def test_find_parents_recursively():
     test_string3 = f"root{GATE_SEPARATOR}singlets"
     test_string4 = ""
     
-    parent_list = find_parents_recursively(test_string1)
+    parent_list = _find_parents_recursively(test_string1)
     assert f"root{GATE_SEPARATOR}singlets" in parent_list
     assert "root" in parent_list
     with pytest.raises(ExhaustedHierarchyError):
-        find_parents_recursively(test_string2)
-    parent_list = find_parents_recursively(test_string3)
+        _find_parents_recursively(test_string2)
+    parent_list = _find_parents_recursively(test_string3)
     assert parent_list ==  ["root"]
     with pytest.raises(GateNotProvidedError):
-        find_parents_recursively(test_string4)
+        _find_parents_recursively(test_string4)
 
 def test_close_polygon_gate_coordinates():
     coordinate_array = np.array([[1,2],[3,4]])
@@ -229,7 +229,7 @@ def test_ifelse():
 
 def test_flatten_nested_list():
     test_list = [["some", "strings", 2], ["some", "other", "ints"]]
-    assert flatten_nested_list(test_list) == ["some", "strings", 2, "some", "other", "ints"]
+    assert _flatten_nested_list(test_list) == ["some", "strings", 2, "some", "other", "ints"]
 
 
 
