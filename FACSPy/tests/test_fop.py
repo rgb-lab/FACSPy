@@ -96,6 +96,19 @@ def test_cuttoff(mock_dataset: AnnData):
         cutoff = [90+i for i in range(len(mock_dataset.var_names))])
     assert "fop_sample_ID_compensated" in mock_dataset.uns
 
+def test_settings_save(mock_dataset: AnnData):
+    fop(mock_dataset,
+        use_only_fluo = False)
+        
+    assert "settings" in mock_dataset.uns
+    settings = mock_dataset.uns["settings"]
+    assert "_fop_sample_ID_compensated" in settings
+    assert settings["_fop_sample_ID_compensated"]["groupby"] == "sample_ID"
+    assert settings["_fop_sample_ID_compensated"]["use_only_fluo"] == False
+    assert settings["_fop_sample_ID_compensated"]["cutoff"] == None
+    assert all(settings["_fop_sample_ID_compensated"]["cofactors"] == mock_dataset.var["cofactors"].to_numpy())
+
+
 
 
 
