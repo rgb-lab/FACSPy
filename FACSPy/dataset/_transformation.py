@@ -10,8 +10,8 @@ from ._utils import (find_corresponding_control_samples,
                     get_histogram_curve,
                     transform_data_array,
                     create_sample_subset_with_controls,
-                    merge_cofactors_into_dataset_var,
-                    replace_missing_cofactors,
+                    _merge_cofactors_into_dataset_var,
+                    _replace_missing_cofactors,
                     asinh)
 from ._supplements import CofactorTable
 
@@ -93,8 +93,8 @@ def transform(adata: AnnData,
 
     if cofactor_table:
         adata.uns["cofactor_table"] = cofactor_table
-        adata.var = merge_cofactors_into_dataset_var(adata, cofactor_table)
-        adata.var = replace_missing_cofactors(adata.var)
+        adata.var = _merge_cofactors_into_dataset_var(adata, cofactor_table)
+        adata.var = _replace_missing_cofactors(adata.var)
         cofactors = adata.var["cofactors"].values
     else:
         cofactors = None
