@@ -5,7 +5,7 @@ import pandas as pd
 from anndata import AnnData
 
 from ._utils import _concat_gate_info_and_obs_and_fluo_data
-from .._utils import fetch_fluo_channels
+from .._utils import _fetch_fluo_channels
 from ..dataset._utils import (_merge_cofactors_into_dataset_var,
                               _replace_missing_cofactors)
 
@@ -32,6 +32,11 @@ def fop(adata: AnnData,
     if not isinstance(layer, list):
         layer = [layer]
     
+    if use_only_fluo:
+        columns_to_analyze = _fetch_fluo_channels(adata)
+    else:
+        columns_to_analyze = adata.var_names.tolist()
+
     if cutoff is not None:
         cofactors = cutoff
     else:
@@ -44,11 +49,6 @@ def fop(adata: AnnData,
             adata.var = _replace_missing_cofactors(adata.var)
 
         cofactors = adata.var.loc[columns_to_analyze, "cofactors"].to_numpy(dtype = np.float32)
-
-    if use_only_fluo:
-        columns_to_analyze = fetch_fluo_channels(adata)
-    else:
-        columns_to_analyze = adata.var_names.tolist()
 
     for _layer in layer:
         dataframe = _concat_gate_info_and_obs_and_fluo_data(adata,
