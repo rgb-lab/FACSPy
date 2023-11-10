@@ -32,20 +32,23 @@ def fop(adata: AnnData,
     if not isinstance(layer, list):
         layer = [layer]
     
-    if not "cofactors" in adata.var.columns:
-        try:
-            cofactor_table = adata.uns["cofactors"]
-        except KeyError as e:
-            raise e
-        adata.var = _merge_cofactors_into_dataset_var(adata, cofactor_table)
-        adata.var = _replace_missing_cofactors(adata.var)
+    if cutoff is not None:
+        cofactors = cutoff
+    else:
+        if not "cofactors" in adata.var.columns:
+            try:
+                cofactor_table = adata.uns["cofactors"]
+            except KeyError as e:
+                raise e
+            adata.var = _merge_cofactors_into_dataset_var(adata, cofactor_table)
+            adata.var = _replace_missing_cofactors(adata.var)
+
+        cofactors = adata.var.loc[columns_to_analyze, "cofactors"].to_numpy(dtype = np.float32)
 
     if use_only_fluo:
         columns_to_analyze = fetch_fluo_channels(adata)
     else:
         columns_to_analyze = adata.var_names.tolist()
-
-    cofactors = adata.var.loc[columns_to_analyze, "cofactors"].to_numpy(dtype = np.float32) if cutoff is None else cutoff
 
     for _layer in layer:
         dataframe = _concat_gate_info_and_obs_and_fluo_data(adata,
@@ -75,8 +78,7 @@ def _save_settings(adata: AnnData,
     
     adata.uns["settings"][f"_fop_{groupby}_{layer}"] = {
         "groupby": groupby,
-        "cutoff": cutoff,
-        "cofactors": cofactors,
+        "cutoff": cutoff or cofactors,
         "use_only_fluo": use_only_fluo,
     }
 
