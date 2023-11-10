@@ -126,6 +126,17 @@ def test_correct_mfi_median(mock_dataset: AnnData):
 
     assert gate_specific_data.equals(mean_df)
 
+def test_settings_save(mock_dataset: AnnData):
+    mfi(mock_dataset,
+        use_only_fluo = False,
+        method = "median")
+    assert "settings" in mock_dataset.uns
+    settings = mock_dataset.uns["settings"]
+    assert "_mfi_sample_ID_compensated" in settings
+    assert settings["_mfi_sample_ID_compensated"]["groupby"] == "sample_ID"
+    assert settings["_mfi_sample_ID_compensated"]["use_only_fluo"] == False
+    assert settings["_mfi_sample_ID_compensated"]["method"] == "median"
+
 
 
 
