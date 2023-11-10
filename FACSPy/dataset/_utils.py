@@ -8,7 +8,7 @@ from KDEpy import FFTKDE
 import warnings
 
 
-def replace_missing_cofactors(dataframe: pd.DataFrame) -> pd.DataFrame:
+def _replace_missing_cofactors(dataframe: pd.DataFrame) -> pd.DataFrame:
     """ 
     Missing cofactors can indicate Scatter-Channels and Time Channels
     or not-measured channels. In any case, cofactor is set to 1 for now.
@@ -16,7 +16,7 @@ def replace_missing_cofactors(dataframe: pd.DataFrame) -> pd.DataFrame:
     dataframe[["cofactors"]] = dataframe[["cofactors"]].fillna(1)
     return dataframe
 
-def merge_cofactors_into_dataset_var(adata: AnnData,
+def _merge_cofactors_into_dataset_var(adata: AnnData,
                                      cofactor_table: CofactorTable):
     if "cofactors" in adata.var.columns:
         adata.var = adata.var.drop("cofactors", axis = 1)
