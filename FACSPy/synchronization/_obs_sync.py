@@ -59,13 +59,17 @@ def _recalculate_mfi(adata: AnnData,
                      frame_id: str) -> None:
     from ..tools._mfi import mfi
     _, data_origin, data_group = _get_frame_metrics(frame_id)
-    mfi(adata, groupby = data_group, layer = data_origin)
+    settings_dict = adata.uns["settings"][f"_mfi_{data_group}_{data_origin}"]
+    mfi(adata,
+        **settings_dict)
 
 def _recalculate_fop(adata: AnnData,
                      frame_id: str) -> None:
     from ..tools._fop import fop
     _, data_origin, data_group = _get_frame_metrics(frame_id)
-    fop(adata, groupby = data_group, layer = data_origin)
+    settings_dict = adata.uns["settings"][f"_fop_{data_group}_{data_origin}"]
+    fop(adata,
+        **settings_dict)
 
 def _synchronize_uns_frame(adata: AnnData,
                            identifier: str,
