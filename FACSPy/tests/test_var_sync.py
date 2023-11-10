@@ -36,7 +36,8 @@ def mock_dataset():
                               metadata = metadata,
                               workspace = workspace)
     adata.layers["transformed"] = adata.layers["compensated"].copy()
-    fp.tl.mfi(adata)
+    fp.tl.mfi(adata,
+              use_only_fluo = False)
     fp.tl.mds_samplewise(adata)
     return adata
 
