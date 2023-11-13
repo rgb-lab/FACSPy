@@ -4,7 +4,7 @@ from anndata import AnnData
 import pandas as pd
 
 from ._utils import _concat_gate_info_and_obs_and_fluo_data
-from .._utils import fetch_fluo_channels
+from .._utils import _fetch_fluo_channels
 
 def _mean(df: pd.DataFrame) -> pd.DataFrame:
     return df.mean()
@@ -42,7 +42,7 @@ def mfi(adata: AnnData,
         raise NotImplementedError("metric must be one of ['median', 'mean', 'geo_mean']")
 
     if use_only_fluo:
-        columns_to_analyze = fetch_fluo_channels(adata)
+        columns_to_analyze = _fetch_fluo_channels(adata)
     else:
         columns_to_analyze = adata.var_names.tolist()
 
@@ -77,6 +77,7 @@ def _save_settings(adata: AnnData,
         "groupby": groupby,
         "method": method,
         "use_only_fluo": use_only_fluo,
+        "layer": layer
     }
 
     return 
