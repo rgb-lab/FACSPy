@@ -97,7 +97,7 @@ def _perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
                                              "this avoids a value error")
 
             kwargs["perplexity"] = min(30, data.shape[0]-1)
-        if n_components > 3 and not "n_components" in kwargs:
+        if n_components > 3 and not "method" in kwargs:
             _warn_user_about_changed_setting("TSNE",
                                              "method",
                                              "exact",
