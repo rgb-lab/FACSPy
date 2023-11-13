@@ -78,8 +78,9 @@ def _save_settings(adata: AnnData,
     
     adata.uns["settings"][f"_fop_{groupby}_{layer}"] = {
         "groupby": groupby,
-        "cutoff": cutoff or cofactors,
+        "cutoff": cutoff if cutoff is not None else cofactors,
         "use_only_fluo": use_only_fluo,
+        "layer": layer
     }
 
     return 
