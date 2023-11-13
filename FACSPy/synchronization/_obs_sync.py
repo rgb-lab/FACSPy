@@ -41,7 +41,6 @@ def synchronize_samples(adata: AnnData,
                                identifier = frame_id,
                                sample_IDs = current_obs_sample_IDs)
 
-    print("... Synchronizing metadata")
     _synchronize_metadata_object(adata,
                                  current_obs_sample_IDs)
     
