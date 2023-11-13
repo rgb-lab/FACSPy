@@ -52,7 +52,7 @@ def fop(adata: AnnData,
 
     for _layer in layer:
         dataframe = _concat_gate_info_and_obs_and_fluo_data(adata,
-                                                            on = _layer)
+                                                            layer = _layer)
 
         dataframe[columns_to_analyze] = dataframe[columns_to_analyze] > cofactors ## calculates positives as FI above cofactor
         adata.uns[f"fop_{groupby}_{_layer}"] = pd.concat([_calculate_fops_from_frame(dataframe, gate, columns_to_analyze, groupby)
