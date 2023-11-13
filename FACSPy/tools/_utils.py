@@ -23,31 +23,32 @@ def _concat_gate_info_and_obs(adata: AnnData) -> pd.DataFrame:
                          index = obs.index)
     return pd.concat([gates, obs], axis = 1)
 
-def scale_adata(adata: AnnData,
-                scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]]) -> AnnData:
+def _scale_adata(adata: AnnData,
+                 layer: Literal["compensated", "transformed"] = "transformed",
+                 scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler") -> AnnData:
     if scaling == "MinMaxScaler":
         from sklearn.preprocessing import MinMaxScaler
-        adata.X = MinMaxScaler().fit_transform(adata.X)
+        adata.layers[layer] = MinMaxScaler().fit_transform(adata.layers[layer])
     elif scaling == "RobustScaler":
         from sklearn.preprocessing import RobustScaler
-        adata.X = RobustScaler().fit_transform(adata.X)
+        adata.layers[layer] = RobustScaler().fit_transform(adata.layers[layer])
     else:
         from sklearn.preprocessing import StandardScaler
-        adata.X = StandardScaler().fit_transform(adata.X)
+        adata.layers[layer] = StandardScaler().fit_transform(adata.layers[layer])
     return adata
 
-def preprocess_adata(adata: AnnData,
-                     gate: str,
-                     data_origin: Literal["compensated", "transformed"],
-                     use_only_fluo: bool = True,
-                     exclude: Optional[list[str]] = None,
-                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None) -> AnnData:
+def _preprocess_adata(adata: AnnData,
+                      gate: str,
+                      layer: Literal["compensated", "transformed"],
+                      use_only_fluo: bool = True,
+                      exclude: Optional[list[str]] = None,
+                      scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None) -> AnnData:
     adata = adata.copy()
-    adata.X = adata.layers[data_origin]
     
     if scaling is not None:
-        adata = scale_adata(adata,
-                            scaling = scaling)
+        adata = _scale_adata(adata,
+                             layer = layer,
+                             scaling = scaling)
         
     if not contains_only_fluo(adata) and use_only_fluo:
         subset_fluo_channels(adata = adata)
