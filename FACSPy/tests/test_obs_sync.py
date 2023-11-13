@@ -36,7 +36,6 @@ def mock_dataset():
 
 def test_synchronize_obs_wo_recalc(mock_dataset: AnnData):
     adata = mock_dataset
-    original_sample_IDs = adata.obs["sample_ID"].unique().tolist()
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
     assert "MDS1" in df.columns
     adata = adata[adata.obs["condition1"].isin(["x", "y"]),:].copy()
@@ -77,14 +76,13 @@ def test_synchronize_obs_w_recalc(mock_dataset: AnnData):
     assert "4" in df_after_sync.index
     assert "5" not in df_after_sync.index
     assert "6" not in df_after_sync.index
-    # because for the test dataset the last row is zeros, np.all would return False
+    # because for the test dataset the last row is NaN, np.all would return False
     assert np.any(
         np.not_equal(
             df.loc[df.index.get_level_values("sample_ID").isin(new_sample_IDs), ["MDS1", "MDS2", "MDS3"]].values.flatten(),
             df_after_sync.loc[df_after_sync.index.get_level_values("sample_ID").isin(new_sample_IDs), ["MDS1", "MDS2", "MDS3"]].values.flatten()
         )
     )
-            
 
 def test_synchronize_obs_wo_recalc_metadata_object(mock_dataset: AnnData):
     adata = mock_dataset
