@@ -48,7 +48,7 @@ def mfi(adata: AnnData,
 
     for _layer in layer:
         dataframe = _concat_gate_info_and_obs_and_fluo_data(adata,
-                                                            on = _layer)
+                                                            layer = _layer)
         
         adata.uns[f"mfi_{'_'.join([groupby])}_{_layer}"] = pd.concat([_calculate_metric_from_frame(dataframe,
                                                                                                    gate,
