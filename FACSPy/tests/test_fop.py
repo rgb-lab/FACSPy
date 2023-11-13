@@ -105,8 +105,7 @@ def test_settings_save(mock_dataset: AnnData):
     assert "_fop_sample_ID_compensated" in settings
     assert settings["_fop_sample_ID_compensated"]["groupby"] == "sample_ID"
     assert settings["_fop_sample_ID_compensated"]["use_only_fluo"] == False
-    assert settings["_fop_sample_ID_compensated"]["cutoff"] == None
-    assert all(settings["_fop_sample_ID_compensated"]["cofactors"] == mock_dataset.var["cofactors"].to_numpy())
+    assert all(settings["_fop_sample_ID_compensated"]["cutoff"] == mock_dataset.var["cofactors"].to_numpy())
 
 
 
