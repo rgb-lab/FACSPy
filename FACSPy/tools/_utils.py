@@ -11,9 +11,9 @@ from .._utils import (contains_only_fluo,
                       subset_gate)
 
 def _concat_gate_info_and_obs_and_fluo_data(adata: AnnData,
-                                            on: Literal["transformed", "compensated"] = "compensated") -> pd.DataFrame:
+                                            layer: Literal["transformed", "compensated"] = "compensated") -> pd.DataFrame:
     gate_and_obs = _concat_gate_info_and_obs(adata)
-    fluo_data = adata.to_df(layer = on)
+    fluo_data = adata.to_df(layer = layer)
     return pd.concat([gate_and_obs, fluo_data], axis = 1)
 
 def _concat_gate_info_and_obs(adata: AnnData) -> pd.DataFrame:
@@ -28,13 +28,13 @@ def _scale_adata(adata: AnnData,
                  scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler") -> AnnData:
     if scaling == "MinMaxScaler":
         from sklearn.preprocessing import MinMaxScaler
-        adata.layers[layer] = MinMaxScaler().fit_transform(adata.layers[layer])
+        adata.X = MinMaxScaler().fit_transform(adata.layers[layer])
     elif scaling == "RobustScaler":
         from sklearn.preprocessing import RobustScaler
-        adata.layers[layer] = RobustScaler().fit_transform(adata.layers[layer])
+        adata.X = RobustScaler().fit_transform(adata.layers[layer])
     else:
         from sklearn.preprocessing import StandardScaler
-        adata.layers[layer] = StandardScaler().fit_transform(adata.layers[layer])
+        adata.X = StandardScaler().fit_transform(adata.layers[layer])
     return adata
 
 def _preprocess_adata(adata: AnnData,
@@ -45,23 +45,28 @@ def _preprocess_adata(adata: AnnData,
                       scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None) -> AnnData:
     adata = adata.copy()
     
-    if scaling is not None:
-        adata = _scale_adata(adata,
-                             layer = layer,
-                             scaling = scaling)
+    adata = subset_gate(adata = adata,
+                        gate = gate,
+                        as_view = True)
+    
+    assert adata.is_view
         
     if not contains_only_fluo(adata) and use_only_fluo:
         subset_fluo_channels(adata = adata)
+    assert adata.is_view
     
     if exclude is not None:
         for channel in exclude:
             remove_channel(adata,
                            channel = channel,
                            copy = False)
+    assert adata.is_view
+
+    if scaling is not None:
+        adata = _scale_adata(adata,
+                             layer = layer,
+                             scaling = scaling)
     
-    adata = subset_gate(adata = adata,
-                        gate = gate,
-                        as_view = True)
     assert adata.is_view
     return adata
 
