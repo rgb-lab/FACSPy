@@ -142,6 +142,17 @@ def _perform_samplewise_dr(adata: AnnData,
                            **kwargs):
     
     exclude = [] if exclude is None else exclude
+
+    _save_samplewise_dr_settings(adata = adata,
+                                 data_group = data_group,
+                                 data_metric = data_metric,
+                                 layer = layer,
+                                 use_only_fluo = use_only_fluo,
+                                 exclude = exclude,
+                                 scaling = scaling,
+                                 reduction = reduction.lower(),
+                                 n_components = n_components,
+                                 **kwargs)
     
     if use_only_fluo:
         columns_to_analyze = [
@@ -214,17 +225,6 @@ def _perform_samplewise_dr(adata: AnnData,
         ] = coords
 
     adata.uns[table_identifier] = return_data
-
-    _save_samplewise_dr_settings(adata = adata,
-                                 data_group = data_group,
-                                 data_metric = data_metric,
-                                 layer = layer,
-                                 use_only_fluo = use_only_fluo,
-                                 exclude = exclude,
-                                 scaling = scaling,
-                                 reduction = reduction.lower(),
-                                 n_components = n_components,
-                                 **kwargs)
 
     return return_data
 
