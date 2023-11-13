@@ -136,6 +136,7 @@ def test_settings_save(mock_dataset: AnnData):
     assert settings["_mfi_sample_ID_compensated"]["groupby"] == "sample_ID"
     assert settings["_mfi_sample_ID_compensated"]["use_only_fluo"] == False
     assert settings["_mfi_sample_ID_compensated"]["method"] == "median"
+    assert settings["_mfi_sample_ID_compensated"]["layer"] == "compensated"
 
 
 
