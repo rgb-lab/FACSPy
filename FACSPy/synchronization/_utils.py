@@ -36,7 +36,7 @@ def _get_samplewise_dimred_columns(df: pd.DataFrame) -> list[str]:
 
 def _recalculate_samplewise_dimreds(adata,
                                     frame_id: str,
-                                    calculated_dimreds: Optional[list[str]]) -> Optional[AnnData]:
+                                    calculated_dimreds: Optional[list[str]]) -> None:
     from ..tools._dr_samplewise import (pca_samplewise,
                                         mds_samplewise,
                                         tsne_samplewise,
@@ -53,22 +53,26 @@ def _recalculate_samplewise_dimreds(adata,
                                                 **settings_finder_dict)
         pca_samplewise(adata,
                        **settings)
+        return
     if "MDS" in calculated_dimreds:
         print(f"     ... Recalculating samplewise mds for {frame_id}")
         settings = _find_corresponding_settings(assay = "_mds_samplewise",
                                                 **settings_finder_dict)
         mds_samplewise(adata,
                        **settings)
+        return
     if "UMAP" in calculated_dimreds:
         print(f"     ... Recalculating samplewise umap for {frame_id}")
         settings = _find_corresponding_settings(assay = "_umap_samplewise",
                                                 **settings_finder_dict)
         umap_samplewise(adata,
                         **settings)
+        return
     if "TSNE" in calculated_dimreds:
         print(f"     ... Recalculating samplewise tsne for {frame_id}")
         settings = _find_corresponding_settings(assay = "_tsne_samplewise",
                                                 **settings_finder_dict)
         tsne_samplewise(adata,
                         **settings)
+        return
 
