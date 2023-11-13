@@ -11,12 +11,13 @@ from itertools import combinations
 from typing import Any
 
 reduction_names = {
-    reduction: [f"{reduction}{i}" for i in range(1,4)] for reduction in ["PCA", "MDS", "UMAP", "TSNE"]
+    reduction: [f"{reduction}{i}" for i in range(1,50)] for reduction in ["PCA", "MDS", "UMAP", "TSNE"]
 }
 
 GATE_SEPARATOR = "/"
 
 IMPLEMENTED_SAMPLEWISE_DIMREDS = ["MDS", "PCA", "UMAP", "TSNE"]
+IMPLEMENTED_SCALERS = ["MinMaxScaler", "RobustScaler", "StandardScaler"]
 
 cytof_technical_channels = ["event_length", "Event_length",
                             "width", "Width",
@@ -207,7 +208,7 @@ def find_grandparent_population(gate: str) -> str:
     """
     return find_parent_population(find_parent_gate(gate))
 
-def find_parents_recursively(gate: str, parent_list = None) -> list[str]:
+def _find_parents_recursively(gate: str, parent_list = None) -> list[str]:
     """Finds all parent gates of a specified gate
 
     Parameters
@@ -230,7 +231,7 @@ def find_parents_recursively(gate: str, parent_list = None) -> list[str]:
     parent = find_parent_gate(gate)
     parent_list.append(parent)
     if parent != "root":
-        return find_parents_recursively(parent, parent_list)
+        return _find_parents_recursively(parent, parent_list)
     return parent_list
     
 def subset_stained_samples(adata: AnnData,
@@ -408,14 +409,18 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
 
     return _gate_lut
 
-def fetch_fluo_channels(adata: AnnData) -> list[str]:
+def _fetch_fluo_channels(adata: AnnData) -> list[str]:
     """compares channel names to a predefined list of common FACS and CyTOF channels"""
-    return adata.var.loc[adata.var["type"] == "fluo"].index.to_list()
+    return adata.var.loc[adata.var["type"] == "fluo"].index.tolist()
 
 def subset_fluo_channels(adata: AnnData,
+                         as_view: bool = True,
                          copy: bool = False) -> AnnData:
     adata = adata.copy() if copy else adata
-    adata._inplace_subset_var(adata.var[adata.var["type"] == "fluo"].index)
+    if as_view:
+        return adata[:, adata.var["type"] == "fluo"]
+    else:
+        adata._inplace_subset_var(adata.var[adata.var["type"] == "fluo"].index)
     return adata if copy else None
 
 def subset_channels(adata: AnnData,
@@ -530,7 +535,7 @@ def remove_unnamed_channels(adata: AnnData,
     
     return adata if copy else None
 
-def flatten_nested_list(l):
+def _flatten_nested_list(l):
     return [item for sublist in l for item in sublist]
 
 def get_filename_from_sample_ID(adata: AnnData,
