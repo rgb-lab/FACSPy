@@ -12,6 +12,50 @@ class InvalidTransformationError(Exception):
         )
         super().__init__(self.message)
 
+class InsufficientSampleNumberWarning(Warning):
+    def __init__(self,
+                 message) -> None:
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
+    @classmethod
+    def _construct_message(cls,
+                           gate: str,
+                           n_samples_per_gate: int,
+                           n_components: int) -> None:
+        message = (
+            f"The gate {gate} has only members in {n_samples_per_gate} samples, " +
+            "which is insufficient for the dimensionality reduction with " +
+            f"{n_components} components. The coordinates of the missing components " +
+            f"are set to NaN."
+        )
+        return message
+
+
+class DimredSettingModificationWarning(Warning):
+    def __init__(self,
+                 message) -> None:
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+    
+    @classmethod
+    def _construct_message(cls,
+                           dimred,
+                           parameter,
+                           new_value,
+                           reason) -> None:
+        message = (
+            f"{dimred}: The settings where changed, because {reason}. " + 
+            f"The settings was {parameter} and the new value is {new_value}"
+        )
+        return message
+
+
+
 class AnalysisNotPerformedError(Exception):
 
     def __init__(self,
@@ -22,6 +66,15 @@ class AnalysisNotPerformedError(Exception):
         )
         super().__init__(self.message)
 
+class InvalidScalingError(Exception):
+
+    def __init__(self,
+                 scaler):
+        from .._utils import IMPLEMENTED_SCALERS
+        self.message = (
+            f"Invalid scaling method {scaler}. Please select one of {IMPLEMENTED_SCALERS}"
+        )
+        super().__init__(self.message)
 
 class FileSaveError(Exception):
 
