@@ -263,8 +263,9 @@ def mock_anndata_subset():
     )
 
 def test_fluo_channel_copy_function(mock_anndata_subset):
-    subset_fluo_channels(mock_anndata_subset,
-                         copy = False)
+    mock_anndata_subset = subset_fluo_channels(mock_anndata_subset,
+                                               as_view = True,
+                                               copy = False)
     assert mock_anndata_subset.shape[1] == 2
 
 def test_fluo_channel_subset(mock_anndata_subset):
