@@ -1,6 +1,70 @@
 from anndata import AnnData
-from typing import Optional
+from typing import Optional, Literal
 from scipy.sparse import csr_matrix
+
+from ._utils import (_preprocess_adata,
+                     _merge_neighbors_info_into_adata,
+                     _choose_use_rep_as_scanpy)
+
+def neighbors(adata: AnnData,
+              gate: str,
+              layer: str,
+              use_only_fluo: bool = True,
+              exclude: Optional[list[str]] = None,
+              scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
+              n_neighbors: int = 15,
+              use_rep: str = None,
+              n_pcs: int = None,
+              copy: bool = False,
+              *args,
+              **kwargs) -> Optional[AnnData]:
+    """Function to add neighbors to adata"""
+    adata = adata.copy() if copy else adata
+    
+    uns_key = f"{gate}_{layer}"
+    neighbors_key = f"{uns_key}_neighbors"
+
+    if use_rep is None:
+        use_rep = _choose_use_rep_as_scanpy(adata,
+                                            uns_key = uns_key,
+                                            use_rep = use_rep,
+                                            n_pcs = n_pcs)
+ 
+    preprocessed_adata = _preprocess_adata(adata = adata,
+                                           gate = gate,
+                                           layer = layer,
+                                           use_only_fluo = use_only_fluo,
+                                           exclude = exclude,
+                                           scaling = scaling)
+    adata = _neighbors(adata = adata,
+                       preprocessed_adata = preprocessed_adata,
+                       neighbors_key = neighbors_key,
+                       use_rep = use_rep,
+                       n_pcs = n_pcs,
+                       n_neighbors = n_neighbors,
+                       *args,
+                       **kwargs)
+    return adata if copy else None
+
+def _neighbors(adata: AnnData,
+               preprocessed_adata: AnnData,
+               neighbors_key: str,
+               **kwargs) -> None:
+    """internal neighbors function which can handle preprocessed adatas"""
+    (distances,
+     connectivities,
+     neighbors_dict) = _compute_neighbors(preprocessed_adata,
+                                          random_state = 187,
+                                          key_added = neighbors_key,
+                                          **kwargs)
+
+    adata = _merge_neighbors_info_into_adata(adata,
+                                             preprocessed_adata,
+                                             connectivities = connectivities,
+                                             distances = distances,
+                                             neighbors_dict = neighbors_dict,
+                                             neighbors_key = neighbors_key)
+    return adata
 
 def _compute_neighbors(adata: AnnData,
                        n_neighbors: int = 15,
@@ -17,9 +81,9 @@ def _compute_neighbors(adata: AnnData,
     # gets written to the dataset directly. That way,
     # we keep the anndatas as Views when multiple gates are
     # analyzed
-
     from scanpy.neighbors import Neighbors
-
+    if metric_kwds is None:
+        metric_kwds = {}
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
         n_neighbors = n_neighbors,
