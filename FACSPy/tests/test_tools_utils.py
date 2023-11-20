@@ -12,6 +12,11 @@ from FACSPy.tools._utils import _merge_dimred_varm_info_into_adata
 from FACSPy.tools._utils import _add_uns_data
 from FACSPy.tools._utils import _merge_dimred_coordinates_into_adata
 from FACSPy.tools._utils import _merge_symmetrical_csr_matrix
+from FACSPy.tools._utils import (_extract_valid_pca_kwargs,
+                                 _extract_valid_neighbors_kwargs,
+                                 _extract_valid_tsne_kwargs,
+                                 _extract_valid_umap_kwargs)
+
 from FACSPy.tools._neighbors import _compute_neighbors
 from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
@@ -96,7 +101,7 @@ def test_preprocess_adata_use_only_fluo_true(mock_dataset: AnnData):
                               use_only_fluo = True,
                               exclude = None)
     isinstance(adata.X, csr_matrix)
-    assert np.array_equal(adata.X.todense(), adata.layers["compensated"])
+    assert np.array_equal(adata.X, adata.layers["compensated"])
     # fluo channels should be subset
     assert fp._utils.contains_only_fluo(adata)
 
@@ -118,7 +123,7 @@ def test_preprocess_adata_scaling(mock_dataset: AnnData):
                               exclude = None)
     isinstance(adata.X, csr_matrix)
     # data are scaled so that should fail
-    assert not np.array_equal(adata.X.todense(), adata.layers["compensated"])
+    assert not np.array_equal(adata.X, adata.layers["compensated"])
     # fluo channels should be subset
     assert fp._utils.contains_only_fluo(adata)
 
@@ -131,7 +136,7 @@ def test_preprocess_adata_scaling(mock_dataset: AnnData):
                                      as_view = True)
     fluo_data_original = subset.layers["compensated"]
     assert np.array_equal(MinMaxScaler().fit_transform(fluo_data_original),
-                          scaled_data.todense())
+                          scaled_data)
     assert adata.is_view
     assert adata.shape == subset.shape
 
@@ -147,7 +152,7 @@ def test_preprocess_adata_exclude(mock_dataset: AnnData):
 
     isinstance(adata.X, csr_matrix)
     # data are scaled so that should fail
-    assert not np.array_equal(adata.X.todense(), adata.layers["compensated"])
+    assert not np.array_equal(adata.X, adata.layers["compensated"])
 
     scaled_data = adata.X
     # no scaling performed
@@ -161,7 +166,7 @@ def test_preprocess_adata_exclude(mock_dataset: AnnData):
                                as_view = True)
     fluo_data_original = subset.layers["compensated"]
     assert np.array_equal(MinMaxScaler().fit_transform(fluo_data_original),
-                          scaled_data.todense())
+                          scaled_data)
     assert adata.is_view
     assert adata.shape == subset.shape
 
@@ -174,8 +179,8 @@ def test_preprocess_adata_use_only_fluo_false(mock_dataset: AnnData):
                               exclude = None)
     # fluo channels should be subset
     assert not fp._utils.contains_only_fluo(adata)
-    assert isinstance(adata.X, csr_matrix)
-    assert np.array_equal(adata.X.todense(), adata.layers["compensated"])
+    assert isinstance(adata.X, np.ndarray)
+    assert np.array_equal(adata.X, adata.layers["compensated"])
 
     scaled_data = adata.X
 
@@ -184,7 +189,7 @@ def test_preprocess_adata_use_only_fluo_false(mock_dataset: AnnData):
                             as_view = True)
     fluo_data_original = subset.layers["compensated"]
     assert np.array_equal(fluo_data_original,
-                          scaled_data.todense())
+                          scaled_data)
     assert adata.is_view
     assert adata.shape == subset.shape
 
@@ -273,3 +278,60 @@ def test_merge_symmetrical_csr_matrix_facspy(mock_dataset: AnnData):
     live_subset = fp.subset_gate(adata, "live", copy = True)
     indexed_matrix: csr_matrix = live_subset.obsp["connectivities"]
     assert (connectivities != indexed_matrix).nnz == 0
+
+@pytest.fixture
+def kwargs_dict():
+    return {"n_comps": 15, "zero_center": False, "svd_solver": "arpack",
+            "random_state": 187, "chunk": False, "chunk_size": 100,
+            "whiten": True, "tol": 0.2, "iterated_power": "auto",
+            "n_oversamples": 20, "power_iteration_normalizer": "auto",
+            "n_neighbors": 15, "n_pcs": 10, "use_rep": "X_pca",
+            "knn": True, "method": "umap", "metric": "monkowski",
+            "metric_kwds": {}, "key_added": "random_key",
+            "n_components": 3, "perplexity": 30, "early_exaggeration": True,
+            "learning_rate": 1000, "use_fast_tsne": False, "n_jobs": 64,
+            "n_iter": 100, "n_iter_without_progress": 50, "min_grad_norm": 1,
+            "metric_params": {"some": "param"}, "init": "pca", "verbose": 1,
+            "method": "some_method", "angle": 0.5,
+            "min_dist": 0.1, "min_dist": 1, "spread": 0.1, "maxiter": 500,
+            "alpha": 2, "gamma": 2, "negative_sample_rate": 0.1,
+            "init_pos": "spectral", "a": 1, "b": 1, "neighbors_key": "some_neighbors"}
+
+def test_extract_valid_pca_kwargs(kwargs_dict: dict):
+    from FACSPy.tools._utils import _extract_valid_pca_kwargs
+    pca_kwargs = _extract_valid_pca_kwargs(kwargs_dict)
+    for param in ["n_comps", "zero_center", "svd_solver",
+                  "random_state", "chunk", "chunk_size",
+                  "whiten", "tol", "iterated_power",
+                  "n_oversamples", "power_iteration_normalizer"]:
+        assert param in pca_kwargs
+
+def test_extract_valid_neighbor_kwargs(kwargs_dict: dict):
+    from FACSPy.tools._utils import _extract_valid_neighbors_kwargs
+    neighbors_kwargs = _extract_valid_neighbors_kwargs(kwargs_dict)
+    assert isinstance(neighbors_kwargs, dict)
+    for param in ["n_neighbors", "n_pcs", "use_rep", "knn",
+                  "random_state", "method", "metric", "metric_kwds",
+                  "metric_kwds", "key_added"]:
+        assert param in neighbors_kwargs
+
+def test_extract_valid_tsne_kwargs(kwargs_dict: dict):
+    from FACSPy.tools._utils import _extract_valid_tsne_kwargs
+    tsne_kwargs = _extract_valid_tsne_kwargs(kwargs_dict)
+    assert isinstance(tsne_kwargs, dict)
+    for param in ["n_components", "n_pcs", "use_rep", "perplexity",
+                  "early_exaggeration", "learning_rate", "random_state",
+                  "use_fast_tsne", "n_jobs", "metric", "n_iter",
+                  "n_iter_without_progress", "min_grad_norm",
+                  "metric_params", "init", "verbose", "method", "angle"]:
+        assert param in tsne_kwargs
+
+def test_extract_valid_umap_kwargs(kwargs_dict: dict):
+    from FACSPy.tools._utils import _extract_valid_umap_kwargs
+    umap_kwargs = _extract_valid_umap_kwargs(kwargs_dict)
+    assert isinstance(umap_kwargs, dict)
+    for param in ["min_dist", "spread", "n_components",
+                  "maxiter", "alpha", "gamma", "negative_sample_rate",
+                  "init_pos", "random_state", "a", "b", "method",
+                  "neighbors_key"]:
+        assert param in umap_kwargs
