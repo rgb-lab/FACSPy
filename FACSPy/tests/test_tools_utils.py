@@ -298,7 +298,6 @@ def kwargs_dict():
             "init_pos": "spectral", "a": 1, "b": 1, "neighbors_key": "some_neighbors"}
 
 def test_extract_valid_pca_kwargs(kwargs_dict: dict):
-    from FACSPy.tools._utils import _extract_valid_pca_kwargs
     pca_kwargs = _extract_valid_pca_kwargs(kwargs_dict)
     for param in ["n_comps", "zero_center", "svd_solver",
                   "random_state", "chunk", "chunk_size",
@@ -307,7 +306,6 @@ def test_extract_valid_pca_kwargs(kwargs_dict: dict):
         assert param in pca_kwargs
 
 def test_extract_valid_neighbor_kwargs(kwargs_dict: dict):
-    from FACSPy.tools._utils import _extract_valid_neighbors_kwargs
     neighbors_kwargs = _extract_valid_neighbors_kwargs(kwargs_dict)
     assert isinstance(neighbors_kwargs, dict)
     for param in ["n_neighbors", "n_pcs", "use_rep", "knn",
@@ -316,7 +314,6 @@ def test_extract_valid_neighbor_kwargs(kwargs_dict: dict):
         assert param in neighbors_kwargs
 
 def test_extract_valid_tsne_kwargs(kwargs_dict: dict):
-    from FACSPy.tools._utils import _extract_valid_tsne_kwargs
     tsne_kwargs = _extract_valid_tsne_kwargs(kwargs_dict)
     assert isinstance(tsne_kwargs, dict)
     for param in ["n_components", "n_pcs", "use_rep", "perplexity",
@@ -327,7 +324,6 @@ def test_extract_valid_tsne_kwargs(kwargs_dict: dict):
         assert param in tsne_kwargs
 
 def test_extract_valid_umap_kwargs(kwargs_dict: dict):
-    from FACSPy.tools._utils import _extract_valid_umap_kwargs
     umap_kwargs = _extract_valid_umap_kwargs(kwargs_dict)
     assert isinstance(umap_kwargs, dict)
     for param in ["min_dist", "spread", "n_components",
