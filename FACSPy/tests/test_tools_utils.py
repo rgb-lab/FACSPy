@@ -331,3 +331,74 @@ def test_extract_valid_umap_kwargs(kwargs_dict: dict):
                   "init_pos", "random_state", "a", "b", "method",
                   "neighbors_key"]:
         assert param in umap_kwargs
+
+def test_choose_use_rep_as_scanpy(mock_dataset: AnnData):
+    adata = mock_dataset
+    from FACSPy.tools._utils import _choose_use_rep_as_scanpy
+    use_rep = _choose_use_rep_as_scanpy(adata,
+                                        uns_key = "live_compensated",
+                                        use_rep = "X",
+                                        n_pcs = None)
+    assert use_rep == "X"
+
+    with pytest.raises(ValueError):
+        use_rep = _choose_use_rep_as_scanpy(adata,
+                                            uns_key = "live_compensated",
+                                            use_rep = "X_pca_live_compensated",
+                                            n_pcs = None)
+
+    with pytest.raises(ValueError):
+        """passing use_rep = None will result in selected PCA, which is not calculated"""
+        use_rep = _choose_use_rep_as_scanpy(adata,
+                                            uns_key = "live_compensated",
+                                            use_rep = None,
+                                            n_pcs = None)
+
+    fluo_set = fp.subset_fluo_channels(adata, copy = True)
+    # adata.var is now 14, the function should return use_rep == "X"
+    use_rep = _choose_use_rep_as_scanpy(fluo_set,
+                                        uns_key = "live_compensated",
+                                        use_rep = None,
+                                        n_pcs = None)
+    assert use_rep == "X"
+
+    fp.tl.pca(adata,
+              gate = "live",
+              layer = "compensated")
+    use_rep = _choose_use_rep_as_scanpy(adata,
+                                        uns_key = "live_compensated",
+                                        use_rep = None,
+                                        n_pcs = None)
+    assert use_rep == "X_pca_live_compensated"
+
+    use_rep = _choose_use_rep_as_scanpy(adata,
+                                        uns_key = "live_compensated",
+                                        use_rep = "X_pca_live_compensated",
+                                        n_pcs = None)
+    assert use_rep == "X_pca_live_compensated"
+
+    with pytest.raises(ValueError):
+        # if we request too many PCs, this will error out
+        use_rep = _choose_use_rep_as_scanpy(adata,
+                                            uns_key = "live_compensated",
+                                            use_rep = None,
+                                            n_pcs = 21)
+
+    with pytest.raises(ValueError):
+        # if we request too many PCs, this will error out
+        use_rep = _choose_use_rep_as_scanpy(adata,
+                                            uns_key = "live_compensated",
+                                            use_rep = "X_pca_live_compensated",
+                                            n_pcs = 21)
+
+    with pytest.raises(ValueError):
+        # if we request a non_existent_key, this should error
+        # the same way as if we didnt calculate pca at all
+        use_rep = _choose_use_rep_as_scanpy(adata,
+                                            uns_key = "some_key",
+                                            use_rep = None,
+                                            n_pcs = None)
+
+
+
+    
