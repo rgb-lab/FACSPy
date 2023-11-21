@@ -5,7 +5,7 @@ from anndata import AnnData
 import numpy as np
 import FACSPy as fp
 from sklearn.manifold import TSNE
-from FACSPy.tools._dr import umap, diffmap, pca, tsne, _save_dr_settings
+from FACSPy.tools._utils import _save_dr_settings
 from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
 
