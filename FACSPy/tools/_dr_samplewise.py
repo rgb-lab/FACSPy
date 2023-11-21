@@ -1,5 +1,3 @@
-import warnings
-
 from anndata import AnnData
 
 import numpy as np
@@ -15,52 +13,14 @@ from .._utils import (_fetch_fluo_channels,
                       IMPLEMENTED_SCALERS,
                       reduction_names)
 from ..exceptions._exceptions import (AnalysisNotPerformedError,
-                                      InvalidScalingError,
-                                      InsufficientSampleNumberWarning,
-                                      DimredSettingModificationWarning)
+                                      InvalidScalingError)
 from ..plotting._utils import (scale_data,
                                select_gate_from_multiindex_dataframe)
 
-def _save_samplewise_dr_settings(adata: AnnData,
-                                 data_group,
-                                 data_metric,
-                                 layer,
-                                 use_only_fluo,
-                                 exclude,
-                                 scaling,
-                                 reduction,
-                                 n_components,
-                                 **kwargs) -> None:
-    if "settings" not in adata.uns:
-        adata.uns["settings"] = {}
+from ._utils import (_save_samplewise_dr_settings,
+                     _warn_user_about_changed_setting,
+                     _warn_user_about_insufficient_sample_size)
 
-    settings_dict = {
-        "data_group": data_group,
-        "data_metric": data_metric,
-        "layer": layer,
-        "use_only_fluo": use_only_fluo,
-        "exclude": exclude,
-        "scaling": scaling,
-        "n_components": n_components
-    }
-    settings_dict = {**settings_dict, **kwargs}
-    adata.uns["settings"][f"_{reduction}_samplewise_{data_metric}_{layer}"] = settings_dict
-    
-    return
-
-def _warn_user_about_changed_setting(dimred: str,
-                                     parameter: str,
-                                     new_value: str,
-                                     reason: str) -> None:
-    warning_kwargs = {
-        "dimred": dimred,
-        "parameter": parameter,
-        "new_value": new_value,
-        "reason": reason
-    }
-    warnings.warn(DimredSettingModificationWarning._construct_message(**warning_kwargs),
-                  DimredSettingModificationWarning)
-    return
 
 
 def _perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
@@ -227,131 +187,4 @@ def _perform_samplewise_dr(adata: AnnData,
     adata.uns[table_identifier] = return_data
 
     return return_data
-
-def _warn_user_about_insufficient_sample_size(gate: str,
-                                              n_samples_per_gate,
-                                              n_components) -> None:
-    warnings_params = {
-        "gate": gate,
-        "n_samples_per_gate": n_samples_per_gate,
-        "n_components": n_components
-    }
-    warnings.warn(InsufficientSampleNumberWarning._construct_message(**warnings_params),
-                  InsufficientSampleNumberWarning)
-    return
-
-
-def pca_samplewise(adata: AnnData,
-                   data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                   data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   layer: Literal["compensated", "transformed"] = "compensated",
-                   use_only_fluo: bool = True,
-                   exclude: Optional[Union[str, list, str]] = None,
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                   n_components: int = 3,
-                   copy = False,
-                   *args,
-                   **kwargs) -> Optional[AnnData]:
-
-    adata = adata.copy() if copy else adata
-
-    adata = _perform_samplewise_dr(adata = adata,
-                                   reduction = "PCA",
-                                   data_metric = data_metric,
-                                   data_group = data_group,
-                                   layer = layer,
-                                   use_only_fluo = use_only_fluo,
-                                   exclude = exclude,
-                                   scaling = scaling,
-                                   n_components = n_components,
-                                   *args,
-                                   **kwargs)
-
-    return adata if copy else None
-
-
-def tsne_samplewise(adata: AnnData,
-                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    layer: Literal["compensated", "transformed"] = "compensated",
-                    use_only_fluo: bool = True,
-                    exclude: Optional[Union[str, list, str]] = None,
-                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                    n_components: int = 3,
-                    copy = False,
-                    *args,
-                    **kwargs) -> Optional[AnnData]:
-
-    adata = adata.copy() if copy else adata
-
-    adata = _perform_samplewise_dr(adata = adata,
-                                   reduction = "TSNE",
-                                   data_metric = data_metric,
-                                   data_group = data_group,
-                                   layer = layer,
-                                   use_only_fluo = use_only_fluo,
-                                   exclude = exclude,
-                                   scaling = scaling,
-                                   n_components = n_components,
-                                   *args,
-                                   **kwargs)
-
-    return adata if copy else None
-
-def umap_samplewise(adata: AnnData,
-                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    layer: Literal["compensated", "transformed"] = "compensated",
-                    use_only_fluo: bool = True,
-                    exclude: Optional[Union[str, list, str]] = None,
-                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                    n_components: int = 3,
-                    copy = False,
-                    *args,
-                    **kwargs) -> Optional[AnnData]:
-
-    adata = adata.copy() if copy else adata
-
-    adata = _perform_samplewise_dr(adata = adata,
-                                   reduction = "UMAP",
-                                   data_metric = data_metric,
-                                   data_group = data_group,
-                                   layer = layer,
-                                   use_only_fluo = use_only_fluo,
-                                   exclude = exclude,
-                                   scaling = scaling,
-                                   n_components = n_components,
-                                   *args,
-                                   **kwargs)
-
-    return adata if copy else None
-
-
-def mds_samplewise(adata: AnnData,
-                   data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                   data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   layer: Literal["compensated", "transformed"] = "compensated",
-                   use_only_fluo: bool = True,
-                   exclude: Optional[Union[str, list, str]] = None,
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                   n_components: int = 3,
-                   copy = False,
-                   *args,
-                   **kwargs) -> Optional[AnnData]:
-
-    adata = adata.copy() if copy else adata
-
-    adata = _perform_samplewise_dr(adata = adata,
-                                   reduction = "MDS",
-                                   data_metric = data_metric,
-                                   data_group = data_group,
-                                   layer = layer,
-                                   use_only_fluo = use_only_fluo,
-                                   exclude = exclude,
-                                   scaling = scaling,
-                                   n_components = n_components,
-                                   *args,
-                                   **kwargs)
-
-    return adata if copy else None
 
