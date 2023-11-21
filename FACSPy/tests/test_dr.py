@@ -559,7 +559,6 @@ def test_diffmap_same_as_scanpy_kwargs(mock_dataset: AnnData):
     fp.tl.diffmap(facspy_adata,
                   gate = "live",
                   layer = "compensated",
-                  n_components = 2,
                   random_state = 187,
                   n_comps = 20)
     
