@@ -386,6 +386,14 @@ def _extract_valid_parc_kwargs(kwargs: dict) -> dict:
     return {k: v for (k, v) in kwargs.items()
             if k in valid_kwargs}
 
+def _extract_valid_leiden_kwargs(kwargs: dict) -> dict:
+    valid_kwargs = ["resolution", "restrict_to", "random_state",
+                    "key_added", "adjacency", "directed", "use_weights",
+                    "n_iterations", "partition_type", "neighbors_key",
+                    "obsp", "copy"]
+    return {k: v for (k, v) in kwargs.items()
+            if k in valid_kwargs}
+
 def _warn_user_about_changed_setting(dimred: str,
                                      parameter: str,
                                      new_value: str,
