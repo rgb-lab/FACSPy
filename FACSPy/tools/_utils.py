@@ -376,6 +376,15 @@ def _extract_valid_umap_kwargs(kwargs: dict) -> dict:
     return {k: v for (k, v) in kwargs.items()
             if k in valid_kwargs}
 
+def _extract_valid_parc_kwargs(kwargs: dict) -> dict:
+    valid_kwargs = ["true_label", "dist_std_local", "jac_std_global",
+                    "keep_all_local_dist", "too_big_factor", "small_pop",
+                    "jac_weighted_edges", "knn", "n_iter_leiden",
+                    "random_seed", "num_threads", "distance", "time_smallpop",
+                    "partition_type", "resolution_parameter", "knn_struct",
+                    "neighbor_graph", "hnsw_param_ef_construction"]
+    return {k: v for (k, v) in kwargs.items()
+            if k in valid_kwargs}
 
 def _warn_user_about_changed_setting(dimred: str,
                                      parameter: str,
