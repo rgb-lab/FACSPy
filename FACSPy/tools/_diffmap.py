@@ -9,11 +9,13 @@ def _diffmap(adata: AnnData,
              preprocessed_adata: AnnData,
              neighbors_key: str,
              dimred_key: str,
-             uns_key: str) -> AnnData:
+             uns_key: str,
+             **kwargs) -> AnnData:
 
     coords, diffmap_evals = _compute_diffmap(adata = preprocessed_adata,
-                                             n_comps = 3,
-                                             neighbors_key = neighbors_key)
+                                             neighbors_key = neighbors_key,
+                                             **kwargs)
+
 
     adata = _merge_dimred_coordinates_into_adata(adata = adata,
                                                  gate_subset = preprocessed_adata,
@@ -26,6 +28,7 @@ def _diffmap(adata: AnnData,
                           key_added = f"{uns_key}_diffmap_evals")
     
     return adata
+
 def _compute_diffmap(adata: AnnData,
                      n_comps: int = 15,
                      neighbors_key: Optional[str] = None,
