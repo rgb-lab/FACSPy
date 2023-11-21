@@ -10,7 +10,8 @@ from ._utils import (_preprocess_adata,
                      _extract_valid_pca_kwargs,
                      _extract_valid_neighbors_kwargs,
                      _extract_valid_tsne_kwargs,
-                     _extract_valid_umap_kwargs)
+                     _extract_valid_umap_kwargs,
+                     _save_dr_settings)
 
 from .._utils import IMPLEMENTED_SCALERS
 from ..exceptions._exceptions import InvalidScalingError
@@ -246,28 +247,4 @@ def tsne(adata: AnnData,
                   **tsne_kwargs)
     del adata.X
     return adata if copy else None
-
-def _save_dr_settings(adata: AnnData,
-                      gate,
-                      layer,
-                      use_only_fluo,
-                      exclude,
-                      scaling,
-                      reduction,
-                      **kwargs) -> None:
-    if "settings" not in adata.uns:
-        adata.uns["settings"] = {}
-
-    settings_dict = {
-        "gate": gate,
-        "layer": layer,
-        "use_only_fluo": use_only_fluo,
-        "exclude": exclude,
-        "scaling": scaling,
-    }
-    settings_dict = {**settings_dict, **kwargs}
-    adata.uns["settings"][f"_{reduction}_{layer}"] = settings_dict
-    
-    return
-
 
