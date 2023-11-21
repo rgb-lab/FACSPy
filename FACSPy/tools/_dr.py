@@ -119,7 +119,8 @@ def diffmap(adata: AnnData,
                      preprocessed_adata = preprocessed_adata,
                      neighbors_key = neighbors_key,
                      uns_key = uns_key,
-                     dimred_key = dimred_key)
+                     dimred_key = dimred_key,
+                     **kwargs)
     del adata.X
     return adata if copy else None
 
