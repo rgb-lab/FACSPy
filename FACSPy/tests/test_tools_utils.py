@@ -15,6 +15,7 @@ from FACSPy.tools._utils import (_extract_valid_pca_kwargs,
                                  _extract_valid_neighbors_kwargs,
                                  _extract_valid_tsne_kwargs,
                                  _extract_valid_umap_kwargs,
+                                 _extract_valid_parc_kwargs,
                                  _save_dr_settings,
                                  _save_cluster_settings,
                                  _save_samplewise_dr_settings)
@@ -366,7 +367,13 @@ def kwargs_dict():
             "method": "some_method", "angle": 0.5,
             "min_dist": 0.1, "min_dist": 1, "spread": 0.1, "maxiter": 500,
             "alpha": 2, "gamma": 2, "negative_sample_rate": 0.1,
-            "init_pos": "spectral", "a": 1, "b": 1, "neighbors_key": "some_neighbors"}
+            "init_pos": "spectral", "a": 1, "b": 1, "neighbors_key": "some_neighbors",
+            "true_label": "what", "dist_std_local": 15, "jac_std_global": 15,
+            "keep_all_local_dist": True, "too_big_factor": 10, "small_pop": 10,
+            "jac_weighted_edges": True, "n_iter_leiden": 100, "random_seed": 10,
+            "num_threads": 10, "distance": "wide", "time_smallpop": 10, "partition_type": "part",
+            "resolution_parameter": 1.0, "knn_struct": "beautiful", "neighbor_graph": "sparse_matrix",
+            "hnsw_param_ef_construction": "what"}
 
 def test_extract_valid_pca_kwargs(kwargs_dict: dict):
     pca_kwargs = _extract_valid_pca_kwargs(kwargs_dict)
@@ -402,6 +409,17 @@ def test_extract_valid_umap_kwargs(kwargs_dict: dict):
                   "init_pos", "random_state", "a", "b", "method",
                   "neighbors_key"]:
         assert param in umap_kwargs
+
+def test_extract_valid_parc_kwargs(kwargs_dict: dict):
+    parc_kwargs = _extract_valid_parc_kwargs(kwargs_dict)
+    assert isinstance(parc_kwargs, dict)
+    for param in ["true_label", "dist_std_local", "jac_std_global",
+                  "keep_all_local_dist", "too_big_factor", "small_pop",
+                  "jac_weighted_edges", "knn", "n_iter_leiden",
+                  "random_seed", "num_threads", "distance", "time_smallpop",
+                  "partition_type", "resolution_parameter", "knn_struct",
+                  "neighbor_graph", "hnsw_param_ef_construction"]:
+        assert param in parc_kwargs
 
 def test_choose_use_rep_as_scanpy(mock_dataset: AnnData):
     adata = mock_dataset
