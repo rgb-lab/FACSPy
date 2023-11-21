@@ -16,6 +16,7 @@ from FACSPy.tools._utils import (_extract_valid_pca_kwargs,
                                  _extract_valid_tsne_kwargs,
                                  _extract_valid_umap_kwargs,
                                  _extract_valid_parc_kwargs,
+                                 _extract_valid_leiden_kwargs,
                                  _save_dr_settings,
                                  _save_cluster_settings,
                                  _save_samplewise_dr_settings)
@@ -373,7 +374,9 @@ def kwargs_dict():
             "jac_weighted_edges": True, "n_iter_leiden": 100, "random_seed": 10,
             "num_threads": 10, "distance": "wide", "time_smallpop": 10, "partition_type": "part",
             "resolution_parameter": 1.0, "knn_struct": "beautiful", "neighbor_graph": "sparse_matrix",
-            "hnsw_param_ef_construction": "what"}
+            "hnsw_param_ef_construction": "what", "resolution": 4, "restrict_to": "something",
+            "adjacency": "some_matrix", "directed": True, "use_weights": True,
+            "n_iterations": 100, "obsp": "what", "copy": True}
 
 def test_extract_valid_pca_kwargs(kwargs_dict: dict):
     pca_kwargs = _extract_valid_pca_kwargs(kwargs_dict)
@@ -420,6 +423,15 @@ def test_extract_valid_parc_kwargs(kwargs_dict: dict):
                   "partition_type", "resolution_parameter", "knn_struct",
                   "neighbor_graph", "hnsw_param_ef_construction"]:
         assert param in parc_kwargs
+
+def test_extract_valid_leiden_kwargs(kwargs_dict: dict):
+    leiden_kwargs = _extract_valid_leiden_kwargs(kwargs_dict)
+    assert isinstance(leiden_kwargs, dict)
+    for param in ["resolution", "restrict_to", "random_state",
+                  "key_added", "adjacency", "directed", "use_weights",
+                  "n_iterations", "partition_type", "neighbors_key",
+                  "obsp", "copy"]:
+        assert param in leiden_kwargs 
 
 def test_choose_use_rep_as_scanpy(mock_dataset: AnnData):
     adata = mock_dataset
