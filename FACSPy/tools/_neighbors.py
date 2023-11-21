@@ -54,7 +54,6 @@ def _neighbors(adata: AnnData,
     (distances,
      connectivities,
      neighbors_dict) = _compute_neighbors(preprocessed_adata,
-                                          random_state = 187,
                                           key_added = neighbors_key,
                                           **kwargs)
 
