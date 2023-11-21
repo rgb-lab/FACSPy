@@ -2,8 +2,60 @@
 from anndata import AnnData
 from typing import Optional
 import numpy as np
-
+from typing import Union, Literal
 from scipy.sparse._base import issparse
+
+from ._utils import _merge_pca_info_into_adata
+from ._dr_samplewise import _perform_samplewise_dr
+
+def pca_samplewise(adata: AnnData,
+                   data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                   data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                   layer: Literal["compensated", "transformed"] = "compensated",
+                   use_only_fluo: bool = True,
+                   exclude: Optional[Union[str, list, str]] = None,
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
+                   n_components: int = 3,
+                   copy = False,
+                   *args,
+                   **kwargs) -> Optional[AnnData]:
+
+    adata = adata.copy() if copy else adata
+
+    adata = _perform_samplewise_dr(adata = adata,
+                                   reduction = "PCA",
+                                   data_metric = data_metric,
+                                   data_group = data_group,
+                                   layer = layer,
+                                   use_only_fluo = use_only_fluo,
+                                   exclude = exclude,
+                                   scaling = scaling,
+                                   n_components = n_components,
+                                   *args,
+                                   **kwargs)
+
+    return adata if copy else None
+
+def _pca(adata: AnnData,
+         preprocessed_adata: AnnData,
+         dimred_key: str,
+         **kwargs) -> AnnData:
+    """internal pca function to handle preprocessed datasets"""
+    (coordinates,
+     components,
+     settings,
+     variances) = _compute_pca(adata = preprocessed_adata,
+                               **kwargs)
+    
+    adata = _merge_pca_info_into_adata(adata,
+                                       preprocessed_adata,
+                                       coordinates,
+                                       components,
+                                       settings,
+                                       variances,
+                                       dimred_key = dimred_key)
+    
+    return adata
 
 def _compute_pca(adata: AnnData,
                  n_comps: Optional[int] = None,
