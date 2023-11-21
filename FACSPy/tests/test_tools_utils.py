@@ -14,7 +14,10 @@ from FACSPy.tools._utils import _merge_symmetrical_csr_matrix
 from FACSPy.tools._utils import (_extract_valid_pca_kwargs,
                                  _extract_valid_neighbors_kwargs,
                                  _extract_valid_tsne_kwargs,
-                                 _extract_valid_umap_kwargs)
+                                 _extract_valid_umap_kwargs,
+                                 _save_dr_settings,
+                                 _save_cluster_settings,
+                                 _save_samplewise_dr_settings)
 
 from FACSPy.tools._neighbors import _compute_neighbors
 from FACSPy.dataset._supplements import Metadata, Panel
@@ -48,6 +51,76 @@ def mock_dataset() -> AnnData:
                               metadata = metadata,
                               workspace = workspace)
     return adata
+
+def test_save_settings_function_dr(mock_dataset: AnnData):
+    _save_dr_settings(adata = mock_dataset,
+                      gate = "live",
+                      layer = "compensated",
+                      use_only_fluo = True,
+                      exclude = ["CD16", "live_dead"],
+                      scaling = "MinMaxScaler",
+                      reduction = "umap",
+                      some_parameter = "some_value",
+                      some_other_parameter = "some_other_value")
+    
+    assert mock_dataset.uns["settings"]
+    settings: dict = mock_dataset.uns["settings"]
+    assert "_umap_live_compensated" in settings
+    settings["_umap_live_compensated"]["gate"] == "live"
+    assert settings["_umap_live_compensated"]["layer"] == "compensated"
+    assert settings["_umap_live_compensated"]["use_only_fluo"] == True
+    assert settings["_umap_live_compensated"]["scaling"] == "MinMaxScaler"
+    assert settings["_umap_live_compensated"]["exclude"] == ["CD16", "live_dead"]
+    assert settings["_umap_live_compensated"]["some_parameter"] == "some_value"
+    assert settings["_umap_live_compensated"]["some_other_parameter"] == "some_other_value"
+
+def test_save_settings_function_clustering(mock_dataset: AnnData):
+    _save_cluster_settings(adata = mock_dataset,
+                           gate = "live",
+                           layer = "compensated",
+                           use_only_fluo = True,
+                           exclude = ["CD16", "live_dead"],
+                           scaling = "MinMaxScaler",
+                           clustering = "flowsom",
+                           some_parameter = "some_value",
+                           some_other_parameter = "some_other_value")
+    
+    assert mock_dataset.uns["settings"]
+    settings: dict = mock_dataset.uns["settings"]
+    assert "_flowsom_live_compensated" in settings
+    settings["_flowsom_live_compensated"]["gate"] == "live"
+    assert settings["_flowsom_live_compensated"]["layer"] == "compensated"
+    assert settings["_flowsom_live_compensated"]["use_only_fluo"] == True
+    assert settings["_flowsom_live_compensated"]["scaling"] == "MinMaxScaler"
+    assert settings["_flowsom_live_compensated"]["exclude"] == ["CD16", "live_dead"]
+    assert settings["_flowsom_live_compensated"]["some_parameter"] == "some_value"
+    assert settings["_flowsom_live_compensated"]["some_other_parameter"] == "some_other_value"
+
+def test_save_settings_function_dr_samplewise(mock_dataset: AnnData):
+    _save_samplewise_dr_settings(adata = mock_dataset,
+                                 data_metric = "mfi",
+                                 data_group = "group",
+                                 layer = "compensated",
+                                 use_only_fluo = True,
+                                 n_components = 50,
+                                 exclude = ["CD16", "live_dead"],
+                                 scaling = "MinMaxScaler",
+                                 reduction = "pca",
+                                 some_parameter = "some_value",
+                                 some_other_parameter = "some_other_value")
+    
+    assert mock_dataset.uns["settings"]
+    settings: dict = mock_dataset.uns["settings"]
+    assert "_pca_samplewise_mfi_compensated" in settings
+    assert settings["_pca_samplewise_mfi_compensated"]["data_metric"] == "mfi"
+    assert settings["_pca_samplewise_mfi_compensated"]["data_group"] == "group"
+    assert settings["_pca_samplewise_mfi_compensated"]["layer"] == "compensated"
+    assert settings["_pca_samplewise_mfi_compensated"]["use_only_fluo"] == True
+    assert settings["_pca_samplewise_mfi_compensated"]["n_components"] == 50
+    assert settings["_pca_samplewise_mfi_compensated"]["scaling"] == "MinMaxScaler"
+    assert settings["_pca_samplewise_mfi_compensated"]["exclude"] == ["CD16", "live_dead"]
+    assert settings["_pca_samplewise_mfi_compensated"]["some_parameter"] == "some_value"
+    assert settings["_pca_samplewise_mfi_compensated"]["some_other_parameter"] == "some_other_value"
 
 def test_concat_gate_info_and_obs(mock_dataset: AnnData):
     df = _concat_gate_info_and_obs(mock_dataset)
