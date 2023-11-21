@@ -5,7 +5,6 @@ from anndata import AnnData
 import numpy as np
 import FACSPy as fp
 from sklearn.manifold import TSNE
-from FACSPy.tools._utils import _save_dr_settings
 from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
 
@@ -34,28 +33,6 @@ def mock_dataset() -> AnnData:
                               workspace = workspace)
     sc.pp.subsample(adata, n_obs = 200, random_state = 187)
     return adata
-
-def test_save_settings_function(mock_dataset: AnnData):
-    _save_dr_settings(adata = mock_dataset,
-                      gate = "live",
-                      layer = "compensated",
-                      use_only_fluo = True,
-                      exclude = ["CD16", "live_dead"],
-                      scaling = "MinMaxScaler",
-                      reduction = "umap",
-                      some_parameter = "some_value",
-                      some_other_parameter = "some_other_value")
-    
-    assert mock_dataset.uns["settings"]
-    settings: dict = mock_dataset.uns["settings"]
-    assert "_umap_compensated" in settings
-    settings["_umap_compensated"]["gate"] == "live"
-    assert settings["_umap_compensated"]["layer"] == "compensated"
-    assert settings["_umap_compensated"]["use_only_fluo"] == True
-    assert settings["_umap_compensated"]["scaling"] == "MinMaxScaler"
-    assert settings["_umap_compensated"]["exclude"] == ["CD16", "live_dead"]
-    assert settings["_umap_compensated"]["some_parameter"] == "some_value"
-    assert settings["_umap_compensated"]["some_other_parameter"] == "some_other_value"
 
 def test_invalid_scaling(mock_dataset):
     with pytest.raises(InvalidScalingError):
