@@ -17,12 +17,12 @@ from FACSPy.exceptions._exceptions import (AnalysisNotPerformedError,
                                            InsufficientSampleNumberWarning,
                                            DimredSettingModificationWarning)
 from FACSPy._utils import find_gate_path_of_gate, _fetch_fluo_channels
-from FACSPy.tools._dr_samplewise import (pca_samplewise,
-                                         mds_samplewise,
-                                         umap_samplewise,
-                                         tsne_samplewise,
-                                         _save_samplewise_dr_settings,
+from FACSPy.tools._dr_samplewise import (_save_samplewise_dr_settings,
                                          _perform_dr)
+from FACSPy.tools._pca import pca_samplewise
+from FACSPy.tools._mds import mds_samplewise
+from FACSPy.tools._umap import umap_samplewise
+from FACSPy.tools._tsne import tsne_samplewise 
 
 WSP_FILE_PATH = "FACSPy/_resources/"
 WSP_FILE_NAME = "test_wsp.wsp"
