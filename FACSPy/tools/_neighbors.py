@@ -83,6 +83,12 @@ def _compute_neighbors(adata: AnnData,
     from scanpy.neighbors import Neighbors
     if metric_kwds is None:
         metric_kwds = {}
+    if use_rep is None:
+        uns_key = "_".join(key_added.split("_")[0:2])
+        use_rep = _choose_use_rep_as_scanpy(adata,
+                                            uns_key = uns_key,
+                                            use_rep = use_rep,
+                                            n_pcs = n_pcs)
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
         n_neighbors = n_neighbors,
