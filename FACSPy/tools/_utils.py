@@ -376,32 +376,6 @@ def _extract_valid_umap_kwargs(kwargs: dict) -> dict:
     return {k: v for (k, v) in kwargs.items()
             if k in valid_kwargs}
 
-def _save_samplewise_dr_settings(adata: AnnData,
-                                 data_group,
-                                 data_metric,
-                                 layer,
-                                 use_only_fluo,
-                                 exclude,
-                                 scaling,
-                                 reduction,
-                                 n_components,
-                                 **kwargs) -> None:
-    if "settings" not in adata.uns:
-        adata.uns["settings"] = {}
-
-    settings_dict = {
-        "data_group": data_group,
-        "data_metric": data_metric,
-        "layer": layer,
-        "use_only_fluo": use_only_fluo,
-        "exclude": exclude,
-        "scaling": scaling,
-        "n_components": n_components
-    }
-    settings_dict = {**settings_dict, **kwargs}
-    adata.uns["settings"][f"_{reduction}_samplewise_{data_metric}_{layer}"] = settings_dict
-    
-    return
 
 def _warn_user_about_changed_setting(dimred: str,
                                      parameter: str,
@@ -491,8 +465,56 @@ def _save_dr_settings(adata: AnnData,
         "scaling": scaling,
     }
     settings_dict = {**settings_dict, **kwargs}
-    adata.uns["settings"][f"_{reduction}_{layer}"] = settings_dict
+    adata.uns["settings"][f"_{reduction}_{gate}_{layer}"] = settings_dict
     
     return
 
+def _save_cluster_settings(adata: AnnData,
+                           gate: str,
+                           layer: str,
+                           use_only_fluo: bool,
+                           exclude: list[str],
+                           scaling: str,
+                           clustering: str,
+                           **kwargs) -> None:
+    if "settings" not in adata.uns:
+        adata.uns["settings"] = {}
 
+    settings_dict = {
+        "gate": gate,
+        "layer": layer,
+        "use_only_fluo": use_only_fluo,
+        "exclude": exclude,
+        "scaling": scaling,
+    }
+    settings_dict = {**settings_dict, **kwargs}
+    adata.uns["settings"][f"_{clustering}_{gate}_{layer}"] = settings_dict
+    
+    return
+
+def _save_samplewise_dr_settings(adata: AnnData,
+                                 data_group,
+                                 data_metric,
+                                 layer,
+                                 use_only_fluo,
+                                 exclude,
+                                 scaling,
+                                 reduction,
+                                 n_components,
+                                 **kwargs) -> None:
+    if "settings" not in adata.uns:
+        adata.uns["settings"] = {}
+
+    settings_dict = {
+        "data_group": data_group,
+        "data_metric": data_metric,
+        "layer": layer,
+        "use_only_fluo": use_only_fluo,
+        "exclude": exclude,
+        "scaling": scaling,
+        "n_components": n_components
+    }
+    settings_dict = {**settings_dict, **kwargs}
+    adata.uns["settings"][f"_{reduction}_samplewise_{data_metric}_{layer}"] = settings_dict
+    
+    return
