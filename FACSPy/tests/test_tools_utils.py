@@ -7,7 +7,6 @@ from scipy.sparse import csr_matrix
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 import FACSPy as fp
-from FACSPy.tools._dr import umap, diffmap, pca, tsne
 from FACSPy.tools._utils import _merge_dimred_varm_info_into_adata
 from FACSPy.tools._utils import _add_uns_data
 from FACSPy.tools._utils import _merge_dimred_coordinates_into_adata
@@ -20,7 +19,6 @@ from FACSPy.tools._utils import (_extract_valid_pca_kwargs,
 from FACSPy.tools._neighbors import _compute_neighbors
 from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
-from FACSPy._utils import _fetch_fluo_channels
 from sklearn.preprocessing import MinMaxScaler
 
 from FACSPy.tools._utils import (_concat_gate_info_and_obs,
@@ -399,6 +397,86 @@ def test_choose_use_rep_as_scanpy(mock_dataset: AnnData):
                                             use_rep = None,
                                             n_pcs = None)
 
+def test_choose_representation(mock_dataset: AnnData):
+    adata = mock_dataset
+    adata.X = adata.layers["compensated"]
+    from FACSPy.tools._utils import _choose_representation
+    use_rep = _choose_representation(adata,
+                                     uns_key = "live_compensated",
+                                     use_rep = "X",
+                                     n_pcs = None)
 
+    assert np.array_equal(adata.X, use_rep)
+    with pytest.raises(ValueError):
+        use_rep = _choose_representation(adata,
+                                         uns_key = "live_compensated",
+                                         use_rep = "X_pca_live_compensated",
+                                         n_pcs = None)
 
-    
+    with pytest.raises(ValueError):
+        """passing use_rep = None will result in selected PCA, which is not calculated"""
+        use_rep = _choose_representation(adata,
+                                         uns_key = "live_compensated",
+                                         use_rep = None,
+                                         n_pcs = None)
+
+    fluo_set = fp.subset_fluo_channels(adata, copy = True)
+    # adata.var is now 14, the function should return use_rep == "X"
+    use_rep = _choose_representation(fluo_set,
+                                     uns_key = "live_compensated",
+                                     use_rep = None,
+                                     n_pcs = None)
+    assert np.array_equal(fluo_set.X, use_rep)
+
+    fp.tl.pca(adata,
+              gate = "live",
+              layer = "compensated")
+    use_rep = _choose_representation(adata,
+                                     uns_key = "live_compensated",
+                                     use_rep = None,
+                                     n_pcs = None)
+    # note: array_equal fails
+    # this is again some weird behaviour of arrays...
+    # the following code executes:
+    # def return_pca(adata):
+    #   return adata.obsm["X_pca_live_compensated"]
+    # np.array_equal(dataset.obsm["X_pca_live_transformed"], return_pca(dataset))
+    # >>> False
+    # np.testing.assert_array_almost_equal(dataset.obsm["X_pca_live_transformed"], return_pca(dataset), 12)
+    np.testing.assert_array_almost_equal(adata.obsm["X_pca_live_compensated"], use_rep)
+
+    use_rep = _choose_representation(adata,
+                                     uns_key = "live_compensated",
+                                     use_rep = "X_pca_live_compensated",
+                                     n_pcs = None)
+    # note: array_equal fails
+    # this is again some weird behaviour of arrays...
+    # the following code executes:
+    # def return_pca(adata):
+    #   return adata.obsm["X_pca_live_compensated"]
+    # np.array_equal(dataset.obsm["X_pca_live_transformed"], return_pca(dataset))
+    # >>> False
+    # np.testing.assert_array_almost_equal(dataset.obsm["X_pca_live_transformed"], return_pca(dataset), 12)
+    np.testing.assert_array_almost_equal(adata.obsm["X_pca_live_compensated"], use_rep)
+
+    with pytest.raises(ValueError):
+        # if we request too many PCs, this will error out
+        use_rep = _choose_representation(adata,
+                                         uns_key = "live_compensated",
+                                         use_rep = None,
+                                         n_pcs = 21)
+
+    with pytest.raises(ValueError):
+        # if we request too many PCs, this will error out
+        use_rep = _choose_representation(adata,
+                                         uns_key = "live_compensated",
+                                         use_rep = "X_pca_live_compensated",
+                                         n_pcs = 21)
+
+    with pytest.raises(ValueError):
+        # if we request a non_existent_key, this should error
+        # the same way as if we didnt calculate pca at all
+        use_rep = _choose_representation(adata,
+                                         uns_key = "some_key",
+                                         use_rep = None,
+                                         n_pcs = None)
