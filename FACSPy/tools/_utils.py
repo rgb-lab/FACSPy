@@ -472,3 +472,27 @@ def _choose_use_rep_as_scanpy(adata: AnnData,
                 'You need to compute it first.'.format(use_rep)
             )
 
+def _save_dr_settings(adata: AnnData,
+                      gate,
+                      layer,
+                      use_only_fluo,
+                      exclude,
+                      scaling,
+                      reduction,
+                      **kwargs) -> None:
+    if "settings" not in adata.uns:
+        adata.uns["settings"] = {}
+
+    settings_dict = {
+        "gate": gate,
+        "layer": layer,
+        "use_only_fluo": use_only_fluo,
+        "exclude": exclude,
+        "scaling": scaling,
+    }
+    settings_dict = {**settings_dict, **kwargs}
+    adata.uns["settings"][f"_{reduction}_{layer}"] = settings_dict
+    
+    return
+
+
