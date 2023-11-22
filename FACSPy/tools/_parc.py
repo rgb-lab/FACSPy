@@ -1,58 +1,80 @@
 import parc as _parc
-import scanpy as sc
 from anndata import AnnData
 
 from typing import Optional, Union, Literal
 
-from ._utils import (preprocess_adata,
-                    merge_cluster_info_into_adata,
-                    merge_neighbors_info_into_adata)
+from ._utils import (_preprocess_adata,
+                     _merge_cluster_info_into_adata,
+                     _extract_valid_neighbors_kwargs,
+                     _extract_valid_parc_kwargs,
+                     _save_cluster_settings,
+                     _choose_use_rep_as_scanpy,
+                     _recreate_preprocessed_view)
+from ._neighbors import _neighbors
+
+from .._utils import IMPLEMENTED_SCALERS
+from ..exceptions._exceptions import InvalidScalingError
 
 def parc(adata: AnnData,
          gate: str,
-         data_origin: Literal["compensated", "transformed"] = "transformed",
+         layer: Literal["compensated", "transformed"] = "transformed",
          use_only_fluo: bool = True,
          exclude: Optional[Union[str, list[str]]] = None,
          scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
          copy: bool = False,
-         *args,
          **kwargs) -> Optional[AnnData]:
     
     adata = adata.copy() if copy else adata
 
-    uns_key = f"{gate}_{data_origin}"
+    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+        raise InvalidScalingError(scaler = scaling)
+
+    _save_cluster_settings(adata = adata,
+                           gate = gate,
+                           layer = layer,
+                           use_only_fluo = use_only_fluo,
+                           exclude = exclude,
+                           scaling = scaling,
+                           clustering = "parc",
+                           **kwargs)
+
+    uns_key = f"{gate}_{layer}"
     cluster_key = f"{uns_key}_parc"
     neighbors_key = f"{uns_key}_neighbors"
     connectivities_key = f"{neighbors_key}_connectivities"
 
-    preprocessed_adata = preprocess_adata(adata,
-                                          gate = gate,
-                                          data_origin = data_origin,
-                                          use_only_fluo = use_only_fluo,
-                                          exclude = exclude,
-                                          scaling = scaling)
+    preprocessed_adata = _preprocess_adata(adata,
+                                           gate = gate,
+                                           layer = layer,
+                                           use_only_fluo = use_only_fluo,
+                                           exclude = exclude,
+                                           scaling = scaling)
 
-    ### we take the raw data as they are mostly below 50 markers anyway and would probably be not too much higher
     if connectivities_key not in adata.obsp:
-        print("computing neighbors in parc")
-        sc.pp.neighbors(preprocessed_adata,
-                        random_state = 187,
-                        key_added = neighbors_key)
-        adata = merge_neighbors_info_into_adata(adata,
-                                                preprocessed_adata,
-                                                neighbors_key = neighbors_key)
- 
-    
-    parcer = _parc.PARC(preprocessed_adata.layers[data_origin],
-                        neighbor_graph = preprocessed_adata.obsp[connectivities_key]
-                                         if connectivities_key in preprocessed_adata.obsp else None,
-                        *args,
-                        **kwargs)
+        print("computing neighbors for parc!")
+        neighbors_kwargs = _extract_valid_neighbors_kwargs(kwargs)
+        if not "use_rep" in neighbors_kwargs:
+            neighbors_kwargs["use_rep"] = _choose_use_rep_as_scanpy(adata,
+                                                                    uns_key = uns_key,
+                                                                    use_rep = None,
+                                                                    n_pcs = neighbors_kwargs.get("n_pcs"))
+        adata = _neighbors(adata = adata,
+                           preprocessed_adata = preprocessed_adata,
+                           neighbors_key = neighbors_key,
+                           **neighbors_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
+
+    parc_kwargs = _extract_valid_parc_kwargs(kwargs)
+    parcer = _parc.PARC(preprocessed_adata.X,
+                        neighbor_graph = adata.obsp[connectivities_key]
+                                         if connectivities_key in adata.obsp else None,
+                        **parc_kwargs)
     parcer.run_PARC()
 
-    adata = merge_cluster_info_into_adata(adata,
-                                          preprocessed_adata,
-                                          cluster_key = cluster_key,
-                                          cluster_assignments = parcer.labels)
+    adata = _merge_cluster_info_into_adata(adata,
+                                           preprocessed_adata,
+                                           cluster_key = cluster_key,
+                                           cluster_assignments = parcer.labels)
        
     return adata if copy else None
