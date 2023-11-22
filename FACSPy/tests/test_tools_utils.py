@@ -19,7 +19,8 @@ from FACSPy.tools._utils import (_extract_valid_pca_kwargs,
                                  _extract_valid_leiden_kwargs,
                                  _save_dr_settings,
                                  _save_cluster_settings,
-                                 _save_samplewise_dr_settings)
+                                 _save_samplewise_dr_settings,
+                                 _recreate_preprocessed_view)
 
 from FACSPy.tools._neighbors import _compute_neighbors
 from FACSPy.dataset._supplements import Metadata, Panel
@@ -343,7 +344,8 @@ def test_merge_symmetrical_csr_matrix_facspy(mock_dataset: AnnData):
     adata = mock_dataset
     adata.X = adata.layers["compensated"] # needed for scanpy
     live_subset = fp.subset_gate(adata, "live", copy = True)
-    _, connectivities, _ = _compute_neighbors(live_subset)
+    _, connectivities, _ = _compute_neighbors(live_subset,
+                                              use_rep = "X")
     adata.obsp["connectivities"] = _merge_symmetrical_csr_matrix(adata,
                                                                  live_subset,
                                                                  connectivities)
@@ -583,3 +585,21 @@ def test_choose_representation(mock_dataset: AnnData):
                                          uns_key = "some_key",
                                          use_rep = None,
                                          n_pcs = None)
+        
+def test_recreate_preprocessed_view(mock_dataset: AnnData):
+    preprocessed_adata = _preprocess_adata(mock_dataset,
+                                           gate = "live",
+                                           layer = "compensated",
+                                           use_only_fluo = True,
+                                           exclude = ["CD16", "live_dead"],
+                                           scaling = "MinMaxScaler")
+    test_view = _recreate_preprocessed_view(mock_dataset,
+                                            preprocessed_adata,
+                                            layer = "compensated")
+    assert all(test_view.obs_names == preprocessed_adata.obs_names)
+    assert all(test_view.var_names == preprocessed_adata.var_names)
+    assert test_view.shape == preprocessed_adata.shape
+    assert test_view.shape != mock_dataset.shape
+    assert "CD16" not in test_view.var_names
+    assert "live_dead" not in test_view.var_names
+    assert test_view.is_view
