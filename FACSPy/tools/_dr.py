@@ -11,7 +11,9 @@ from ._utils import (_preprocess_adata,
                      _extract_valid_neighbors_kwargs,
                      _extract_valid_tsne_kwargs,
                      _extract_valid_umap_kwargs,
-                     _save_dr_settings)
+                     _save_dr_settings,
+                     _choose_use_rep_as_scanpy,
+                     _recreate_preprocessed_view)
 
 from .._utils import IMPLEMENTED_SCALERS
 from ..exceptions._exceptions import InvalidScalingError
@@ -105,16 +107,25 @@ def diffmap(adata: AnnData,
         pca_kwargs = _extract_valid_pca_kwargs(kwargs)
         adata = _pca(adata = adata,
                      preprocessed_adata = preprocessed_adata,
-                     dimred_key = dimred_key,
-                     **pca_kwargs)    
+                     dimred_key = f"pca_{uns_key}",
+                     **pca_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
 
     if connectivities_key not in adata.obsp:
         print("computing neighbors for diffmap")
         neighbors_kwargs = _extract_valid_neighbors_kwargs(kwargs)
+        if not "use_rep" in neighbors_kwargs:
+            neighbors_kwargs["use_rep"] = _choose_use_rep_as_scanpy(adata,
+                                                                    uns_key = uns_key,
+                                                                    use_rep = None,
+                                                                    n_pcs = neighbors_kwargs.get("n_pcs"))
         adata = _neighbors(adata = adata,
                            preprocessed_adata = preprocessed_adata,
                            neighbors_key = neighbors_key,
                            **neighbors_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
 
     adata = _diffmap(adata = adata,
                      preprocessed_adata = preprocessed_adata,
@@ -170,16 +181,31 @@ def umap(adata: AnnData,
             pca_kwargs = _extract_valid_pca_kwargs(kwargs)
             adata = _pca(adata = adata,
                          preprocessed_adata = preprocessed_adata,
-                         dimred_key = dimred_key,
+                         dimred_key = f"pca_{uns_key}",
                          **pca_kwargs)
+            preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                             preprocessed_adata)
+            print(adata)
+            print(preprocessed_adata)
+            assert "X_pca_live_compensated" in preprocessed_adata.obsm
+            
+
 
     if connectivities_key not in adata.obsp:
-        print("computing neighbors for diffmap")
+        print("computing neighbors for umap")
         neighbors_kwargs = _extract_valid_neighbors_kwargs(kwargs)
+        if not "use_rep" in neighbors_kwargs:
+            neighbors_kwargs["use_rep"] = _choose_use_rep_as_scanpy(adata,
+                                                                    uns_key = uns_key,
+                                                                    use_rep = None,
+                                                                    n_pcs = neighbors_kwargs.get("n_pcs"))
         adata = _neighbors(adata = adata,
                            preprocessed_adata = preprocessed_adata,
                            neighbors_key = neighbors_key,
                            **neighbors_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
+        print(preprocessed_adata)
 
     umap_kwargs = _extract_valid_umap_kwargs(kwargs)
     adata = _umap(adata = adata,
