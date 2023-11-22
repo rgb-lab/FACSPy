@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
-import scanpy as sc
 
 from natsort import natsorted
 from anndata import AnnData
 from scipy import sparse
 
 from scanpy import _utils
-from scanpy import logging as logg
 
 from scanpy.tools._utils_clustering import rename_groups, restrict_adjacency
 
@@ -22,50 +20,78 @@ except ImportError:
 
 from typing import Optional, Tuple, Sequence, Type, Union, Literal
 
-from ._utils import preprocess_adata, merge_neighbors_info_into_adata, merge_cluster_info_into_adata
+from ._utils import (_preprocess_adata,
+                     _merge_cluster_info_into_adata,
+                     _extract_valid_neighbors_kwargs,
+                     _save_cluster_settings,
+                     _extract_valid_leiden_kwargs,
+                     _choose_use_rep_as_scanpy,
+                     _recreate_preprocessed_view)
+from ._neighbors import _neighbors
+from .._utils import IMPLEMENTED_SCALERS
+from ..exceptions._exceptions import InvalidScalingError
 
 def leiden(adata: AnnData,
            gate: str,
-           data_origin: Literal["compensated", "transformed"] = "transformed",
+           layer: Literal["compensated", "transformed"] = "transformed",
            use_only_fluo: bool = True,
            exclude: Optional[Union[str, list[str]]] = None,
            scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
            copy: bool = False,
-           *args,
            **kwargs) -> Optional[AnnData]:
     
     adata = adata.copy() if copy else adata
 
-    uns_key = f"{gate}_{data_origin}"
+    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+        raise InvalidScalingError(scaler = scaling)
+
+    _save_cluster_settings(adata = adata,
+                           gate = gate,
+                           layer = layer,
+                           use_only_fluo = use_only_fluo,
+                           exclude = exclude,
+                           scaling = scaling,
+                           clustering = "leiden",
+                           **kwargs)
+
+    uns_key = f"{gate}_{layer}"
     cluster_key = f"{uns_key}_leiden"
     neighbors_key = f"{uns_key}_neighbors"
     connectivities_key = f"{neighbors_key}_connectivities"
 
-    preprocessed_adata = preprocess_adata(adata,
-                                          gate = gate,
-                                          data_origin = data_origin,
-                                          use_only_fluo = use_only_fluo,
-                                          exclude = exclude,
-                                          scaling = scaling)
+    preprocessed_adata = _preprocess_adata(adata,
+                                           gate = gate,
+                                           layer = layer,
+                                           use_only_fluo = use_only_fluo,
+                                           exclude = exclude,
+                                           scaling = scaling)
 
     if connectivities_key not in adata.obsp:
-        sc.pp.neighbors(preprocessed_adata,
-                        random_state = 187,
-                        key_added = neighbors_key)
-        adata = merge_neighbors_info_into_adata(adata,
-                                                preprocessed_adata,
-                                                neighbors_key = neighbors_key)
- 
+        print("computing neighbors for leiden!")
+        neighbors_kwargs = _extract_valid_neighbors_kwargs(kwargs)
+        if not "use_rep" in neighbors_kwargs:
+            neighbors_kwargs["use_rep"] = _choose_use_rep_as_scanpy(adata,
+                                                                    uns_key = uns_key,
+                                                                    use_rep = None,
+                                                                    n_pcs = neighbors_kwargs.get("n_pcs"))
+        adata = _neighbors(adata = adata,
+                           preprocessed_adata = preprocessed_adata,
+                           neighbors_key = neighbors_key,
+                           **neighbors_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
+
+    leiden_kwargs = _extract_valid_leiden_kwargs(kwargs)
+
     cluster_assignments, parameter_dict = _scanpy_leiden(preprocessed_adata,
                                                          key_added = cluster_key,
                                                          neighbors_key = neighbors_key,
-                                                         *args,
-                                                         **kwargs)
+                                                         **leiden_kwargs)
     
-    adata = merge_cluster_info_into_adata(adata,
-                                          preprocessed_adata,
-                                          cluster_key = cluster_key,
-                                          cluster_assignments = cluster_assignments)
+    adata = _merge_cluster_info_into_adata(adata,
+                                           preprocessed_adata,
+                                           cluster_key = cluster_key,
+                                           cluster_assignments = cluster_assignments)
     adata.uns[cluster_key] = parameter_dict
 
     return adata if copy else None
@@ -167,7 +193,6 @@ def _scanpy_leiden(
         )
     partition_kwargs = dict(partition_kwargs)
 
-    start = logg.info('running Leiden clustering')
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
     if adjacency is None:
