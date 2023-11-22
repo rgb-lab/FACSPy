@@ -445,51 +445,255 @@ def test_tsne_kwargs_2(mock_dataset: AnnData):
     assert adata.X is None
 
 def test_umap_same_as_scanpy(mock_dataset: AnnData):
+    """
+    we first compute everything after one another
+    and only change the umap call
+    """
     adata = mock_dataset
     fp.subset_gate(adata, "live")
-    fp.tl.pca(adata,
-              gate = "live",
-              layer = "compensated")
-    fp.tl.neighbors(adata,
-                    gate = "live",
-                    layer = "compensated")
     scanpy_adata = adata.copy()
+    scanpy_adata.X = scanpy_adata.layers["compensated"]
+    fp.tl.pca(scanpy_adata,
+              gate = "live",
+              layer = "compensated",
+              use_only_fluo = False,
+              scaling = None,
+              exclude = None)
+    fp.tl.neighbors(scanpy_adata,
+                    gate = "live",
+                    layer = "compensated",
+                    use_only_fluo = False,
+                    scaling = None,
+                    exclude = None)
     sc.tl.umap(scanpy_adata,
+               n_components = 2,
                neighbors_key = "live_compensated_neighbors",
                random_state = 187)
-    
     facspy_adata = adata.copy()
+    fp.tl.pca(facspy_adata,
+              gate = "live",
+              layer = "compensated",
+              use_only_fluo = False,
+              scaling = None,
+              exclude = None)
+    fp.tl.neighbors(facspy_adata,
+                    gate = "live",
+                    layer = "compensated",
+                    use_only_fluo = False,
+                    scaling = None,
+                    exclude = None)
     fp.tl.umap(facspy_adata,
                gate = "live",
                layer = "compensated",
                n_components = 2,
-               random_state = 187)
+               random_state = 187,
+               use_only_fluo = False,
+               exclude = None,
+               scaling = None)
+    np.testing.assert_array_almost_equal(scanpy_adata.obsm["X_pca_live_compensated"], facspy_adata.obsm["X_pca_live_compensated"])
+    assert (scanpy_adata.obsp["live_compensated_neighbors_connectivities"] != facspy_adata.obsp["live_compensated_neighbors_connectivities"]).nnz == 0
     
     assert np.array_equal(scanpy_adata.obsm["X_umap"],
                           facspy_adata.obsm["X_umap_live_compensated"])
 
-def test_umap_same_as_scanpy_kwargs(mock_dataset: AnnData):
+def test_umap_same_as_scanpy_no_precompute_pca_neighbors(mock_dataset: AnnData):
+    """
+    now we see if the pca and neighbors get computed correctly
+    within the umap function
+    """
     adata = mock_dataset
     fp.subset_gate(adata, "live")
-    fp.tl.pca(adata,
-              gate = "live",
-              layer = "compensated")
-    fp.tl.neighbors(adata,
-                    gate = "live",
-                    layer = "compensated")
     scanpy_adata = adata.copy()
+    scanpy_adata.X = scanpy_adata.layers["compensated"]
+    fp.tl.pca(scanpy_adata,
+              gate = "live",
+              layer = "compensated",
+              use_only_fluo = False,
+              scaling = None,
+              exclude = None)
+    fp.tl.neighbors(scanpy_adata,
+                    gate = "live",
+                    layer = "compensated",
+                    use_only_fluo = False,
+                    scaling = None,
+                    exclude = None)
     sc.tl.umap(scanpy_adata,
+               n_components = 2,
                neighbors_key = "live_compensated_neighbors",
-               random_state = 187,
-               min_dist = 1)
-    
+               random_state = 187)
     facspy_adata = adata.copy()
     fp.tl.umap(facspy_adata,
                gate = "live",
                layer = "compensated",
                n_components = 2,
                random_state = 187,
+               use_only_fluo = False,
+               exclude = None,
+               scaling = None)
+    np.testing.assert_array_almost_equal(scanpy_adata.obsm["X_pca_live_compensated"], facspy_adata.obsm["X_pca_live_compensated"])
+    assert (scanpy_adata.obsp["live_compensated_neighbors_connectivities"] != facspy_adata.obsp["live_compensated_neighbors_connectivities"]).nnz == 0
+    
+    assert np.array_equal(scanpy_adata.obsm["X_umap"],
+                          facspy_adata.obsm["X_umap_live_compensated"])
+
+def test_umap_same_as_scanpy_no_precompute_pca_neighbors_scanpy_funcs(mock_dataset: AnnData):
+    """
+    now we see if the pca and neighbors get computed correctly
+    within the umap function and compare this to the scanpy
+    pca and neighbors call
+    """
+    adata = mock_dataset
+    fp.subset_gate(adata, "live")
+    scanpy_adata = adata.copy()
+    scanpy_adata.X = scanpy_adata.layers["compensated"]
+    sc.pp.pca(scanpy_adata, random_state = 187)
+    sc.pp.neighbors(scanpy_adata,
+                    use_rep = "X_pca",
+                    random_state = 187)
+    sc.tl.umap(scanpy_adata,
+               n_components = 2,
+               random_state = 187)
+    facspy_adata = adata.copy()
+    fp.tl.umap(facspy_adata,
+               gate = "live",
+               layer = "compensated",
+               n_components = 2,
+               random_state = 187,
+               use_only_fluo = False,
+               exclude = None,
+               scaling = None)
+    np.testing.assert_array_almost_equal(scanpy_adata.obsm["X_pca"], facspy_adata.obsm["X_pca_live_compensated"])
+    assert (scanpy_adata.obsp["connectivities"] != facspy_adata.obsp["live_compensated_neighbors_connectivities"]).nnz == 0
+    
+    assert np.array_equal(scanpy_adata.obsm["X_umap"],
+                          facspy_adata.obsm["X_umap_live_compensated"])
+
+def test_umap_same_as_scanpy_no_precompute_pca_neighbors_scanpy_funcs_kwargs(mock_dataset: AnnData):
+    """
+    now we see if the pca and neighbors get computed correctly
+    within the umap function and compare this to the scanpy
+    pca and neighbors call
+    """
+    adata = mock_dataset
+    fp.subset_gate(adata, "live")
+    scanpy_adata = adata.copy()
+    scanpy_adata.X = scanpy_adata.layers["compensated"]
+    sc.pp.pca(scanpy_adata, random_state = 187, n_comps = 12)
+    sc.pp.neighbors(scanpy_adata,
+                    use_rep = "X_pca",
+                    random_state = 187,
+                    n_neighbors = 10)
+    sc.tl.umap(scanpy_adata,
+               n_components = 2,
+               random_state = 187)
+    facspy_adata = adata.copy()
+    fp.tl.umap(facspy_adata,
+               gate = "live",
+               layer = "compensated",
+               n_components = 2,
+               random_state = 187,
+               use_only_fluo = False,
+               exclude = None,
+               scaling = None,
+               n_comps = 12,
+               n_neighbors = 10)
+    np.testing.assert_array_almost_equal(scanpy_adata.obsm["X_pca"], facspy_adata.obsm["X_pca_live_compensated"])
+    assert (scanpy_adata.obsp["connectivities"] != facspy_adata.obsp["live_compensated_neighbors_connectivities"]).nnz == 0
+    
+    assert np.array_equal(scanpy_adata.obsm["X_umap"],
+                          facspy_adata.obsm["X_umap_live_compensated"])
+
+
+def test_umap_same_as_scanpy_kwargs(mock_dataset: AnnData):
+    """
+    we first compute everything after one another
+    and only change the umap call
+    """
+    adata = mock_dataset
+    fp.subset_gate(adata, "live")
+    scanpy_adata = adata.copy()
+    scanpy_adata.X = scanpy_adata.layers["compensated"]
+    fp.tl.pca(scanpy_adata,
+              gate = "live",
+              layer = "compensated",
+              use_only_fluo = False,
+              scaling = None,
+              exclude = None)
+    fp.tl.neighbors(scanpy_adata,
+                    gate = "live",
+                    layer = "compensated",
+                    use_only_fluo = False,
+                    scaling = None,
+                    exclude = None)
+    sc.tl.umap(scanpy_adata,
+               n_components = 2,
+               neighbors_key = "live_compensated_neighbors",
+               random_state = 187)
+    facspy_adata = adata.copy()
+    fp.tl.pca(facspy_adata,
+              gate = "live",
+              layer = "compensated",
+              use_only_fluo = False,
+              scaling = None,
+              exclude = None)
+    fp.tl.neighbors(facspy_adata,
+                    gate = "live",
+                    layer = "compensated",
+                    use_only_fluo = False,
+                    scaling = None,
+                    exclude = None)
+    fp.tl.umap(facspy_adata,
+               gate = "live",
+               layer = "compensated",
+               n_components = 2,
+               random_state = 187,
+               use_only_fluo = False,
+               exclude = None,
+               scaling = None)
+    np.testing.assert_array_almost_equal(scanpy_adata.obsm["X_pca_live_compensated"], facspy_adata.obsm["X_pca_live_compensated"])
+    assert (scanpy_adata.obsp["live_compensated_neighbors_connectivities"] != facspy_adata.obsp["live_compensated_neighbors_connectivities"]).nnz == 0
+    
+    assert np.array_equal(scanpy_adata.obsm["X_umap"],
+                          facspy_adata.obsm["X_umap_live_compensated"])
+
+def test_umap_same_as_scanpy_no_precompute_pca_neighbors_kwargs(mock_dataset: AnnData):
+    """
+    now we see if the pca and neighbors get computed correctly
+    within the umap function
+    """
+    adata = mock_dataset
+    fp.subset_gate(adata, "live")
+    scanpy_adata = adata.copy()
+    scanpy_adata.X = scanpy_adata.layers["compensated"]
+    fp.tl.pca(scanpy_adata,
+              gate = "live",
+              layer = "compensated",
+              use_only_fluo = False,
+              scaling = None,
+              exclude = None)
+    fp.tl.neighbors(scanpy_adata,
+                    gate = "live",
+                    layer = "compensated",
+                    use_only_fluo = False,
+                    scaling = None,
+                    exclude = None)
+    sc.tl.umap(scanpy_adata,
+               n_components = 2,
+               neighbors_key = "live_compensated_neighbors",
+               random_state = 187,
                min_dist = 1)
+    facspy_adata = adata.copy()
+    fp.tl.umap(facspy_adata,
+               gate = "live",
+               layer = "compensated",
+               n_components = 2,
+               random_state = 187,
+               use_only_fluo = False,
+               exclude = None,
+               scaling = None,
+               min_dist = 1)
+    np.testing.assert_array_almost_equal(scanpy_adata.obsm["X_pca_live_compensated"], facspy_adata.obsm["X_pca_live_compensated"])
+    assert (scanpy_adata.obsp["live_compensated_neighbors_connectivities"] != facspy_adata.obsp["live_compensated_neighbors_connectivities"]).nnz == 0
     
     assert np.array_equal(scanpy_adata.obsm["X_umap"],
                           facspy_adata.obsm["X_umap_live_compensated"])
@@ -500,10 +704,10 @@ def test_diffmap_same_as_scanpy(mock_dataset: AnnData):
     fp.tl.pca(adata,
               gate = "live",
               layer = "compensated")
-    fp.tl.neighbors(adata,
+    scanpy_adata = adata.copy()
+    fp.tl.neighbors(scanpy_adata,
                     gate = "live",
                     layer = "compensated")
-    scanpy_adata = adata.copy()
     sc.tl.diffmap(scanpy_adata,
                   neighbors_key = "live_compensated_neighbors",
                   random_state = 187)
@@ -523,16 +727,17 @@ def test_diffmap_same_as_scanpy_kwargs(mock_dataset: AnnData):
     fp.tl.pca(adata,
               gate = "live",
               layer = "compensated")
-    fp.tl.neighbors(adata,
+    scanpy_adata = adata.copy()
+    fp.tl.neighbors(scanpy_adata,
                     gate = "live",
                     layer = "compensated")
-    scanpy_adata = adata.copy()
     sc.tl.diffmap(scanpy_adata,
                   neighbors_key = "live_compensated_neighbors",
                   random_state = 187,
                   n_comps = 20)
     
     facspy_adata = adata.copy()
+    # neighbors should be calculated internally
     fp.tl.diffmap(facspy_adata,
                   gate = "live",
                   layer = "compensated",
