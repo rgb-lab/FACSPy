@@ -535,3 +535,11 @@ def _save_samplewise_dr_settings(adata: AnnData,
     adata.uns["settings"][f"_{reduction}_samplewise_{data_metric}_{layer}"] = settings_dict
     
     return
+
+def _recreate_preprocessed_view(adata: AnnData,
+                                preprocessed_adata: AnnData) -> AnnData:
+    """function to recreate anndata view from anndata"""
+    adata_view = adata[preprocessed_adata.obs_names, preprocessed_adata.var_names]
+    adata_view.X = preprocessed_adata.X
+    assert adata_view.is_view
+    return adata_view
