@@ -594,8 +594,7 @@ def test_recreate_preprocessed_view(mock_dataset: AnnData):
                                            exclude = ["CD16", "live_dead"],
                                            scaling = "MinMaxScaler")
     test_view = _recreate_preprocessed_view(mock_dataset,
-                                            preprocessed_adata,
-                                            layer = "compensated")
+                                            preprocessed_adata)
     assert all(test_view.obs_names == preprocessed_adata.obs_names)
     assert all(test_view.var_names == preprocessed_adata.var_names)
     assert test_view.shape == preprocessed_adata.shape
