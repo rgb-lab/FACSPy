@@ -46,9 +46,8 @@ def test_save_settings_from_phenograph(mock_dataset: AnnData):
     fp.tl.phenograph(adata,
                      gate = "live",
                      layer = "compensated",
-                     random_state = 187,
+                     seed = 187,
                      use_only_fluo = False,
-                     clustering_algo = "leiden",
                      scaling = None,
                      exclude = None)
     assert "settings" in adata.uns
