@@ -26,7 +26,9 @@ from ._utils import (_preprocess_adata,
                      _save_cluster_settings,
                      _extract_valid_leiden_kwargs,
                      _choose_use_rep_as_scanpy,
+                     _extract_valid_pca_kwargs,
                      _recreate_preprocessed_view)
+from ._pca import _pca
 from ._neighbors import _neighbors
 from .._utils import IMPLEMENTED_SCALERS
 from ..exceptions._exceptions import InvalidScalingError
@@ -65,6 +67,16 @@ def leiden(adata: AnnData,
                                            use_only_fluo = use_only_fluo,
                                            exclude = exclude,
                                            scaling = scaling)
+
+    if f"X_pca_{uns_key}" not in adata.obsm:
+        print("computing PCA for leiden")
+        pca_kwargs = _extract_valid_pca_kwargs(kwargs)
+        adata = _pca(adata = adata,
+                     preprocessed_adata = preprocessed_adata,
+                     dimred_key = f"pca_{uns_key}",
+                     **pca_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
 
     if connectivities_key not in adata.obsp:
         print("computing neighbors for leiden!")
