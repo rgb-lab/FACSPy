@@ -1,17 +1,16 @@
 import pandas as pd
 from anndata import AnnData
-from matplotlib import pyplot as plt
 
 from matplotlib.figure import Figure
 from typing import Literal, Optional, Union
 
-from ._utils import (scale_data,
-                    get_uns_dataframe,
-                    remove_ticklabels,
-                    remove_ticks,
-                    scale_cbar_to_heatmap,
-                    calculate_correlation_data,
-                    savefig_or_show)
+from ._utils import (_scale_data,
+                     _get_uns_dataframe,
+                     _remove_ticklabels,
+                     _remove_ticks,
+                     _scale_cbar_to_heatmap,
+                     _calculate_correlation_data,
+                     savefig_or_show)
 
 from ._clustermap import create_clustermap
 
@@ -24,9 +23,9 @@ def prepare_plot_data(adata: AnnData,
     plot_data = raw_data.copy() if copy else raw_data
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     if scaling is not None:
-        plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
-    correlations = calculate_correlation_data(plot_data[fluo_columns],
-                                              corr_method = corr_method)
+        plot_data[fluo_columns] = _scale_data(plot_data[fluo_columns], scaling)
+    correlations = _calculate_correlation_data(plot_data[fluo_columns],
+                                               corr_method = corr_method)
     correlations = correlations.fillna(0)
     plot_data = pd.DataFrame(data = correlations,
                              columns = fluo_columns,
@@ -51,9 +50,9 @@ def marker_correlation(adata: AnnData,
                        save: bool = None,
                        show: bool = None) -> Optional[Figure]:
     
-    raw_data = get_uns_dataframe(adata = adata,
-                                 gate = gate,
-                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    raw_data = _get_uns_dataframe(adata = adata,
+                                  gate = gate,
+                                  table_identifier = f"{data_metric}_{data_group}_{data_origin}")
     
     plot_data = prepare_plot_data(adata = adata,
                                   raw_data = raw_data,
@@ -76,11 +75,11 @@ def marker_correlation(adata: AnnData,
     ax = clustermap.ax_heatmap
     heatmap_position = ax.get_position()
     
-    scale_cbar_to_heatmap(clustermap,
+    _scale_cbar_to_heatmap(clustermap,
                           heatmap_position = heatmap_position,
                           cbar_padding = 0.8)
-    remove_ticklabels(ax, which = "x")
-    remove_ticks(ax, which = "x")
+    _remove_ticklabels(ax, which = "x")
+    _remove_ticks(ax, which = "x")
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)
     if return_fig:
         return clustermap

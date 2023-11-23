@@ -9,7 +9,7 @@ from matplotlib.figure import Figure
 
 from typing import Literal, Union, Optional
 
-from ._utils import get_uns_dataframe, turn_off_missing_plots, savefig_or_show
+from ._utils import _get_uns_dataframe, turn_off_missing_plots, savefig_or_show
 from .._utils import reduction_names
 
 def samplewise_dr_plot(adata: AnnData,
@@ -131,9 +131,9 @@ def pca_samplewise(adata: AnnData,
     if gate is None:
         raise TypeError("A Gate has to be provided")
     
-    data = get_uns_dataframe(adata = adata,
-                             gate = gate,
-                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
 
     if return_dataframe:
         return data
@@ -163,9 +163,9 @@ def mds_samplewise(adata: AnnData,
     if gate is None:
         raise TypeError("A Gate has to be provided")
     
-    data = get_uns_dataframe(adata = adata,
-                             gate = gate,
-                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
 
     if return_dataframe:
         return data

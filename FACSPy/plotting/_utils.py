@@ -1,71 +1,60 @@
+import warnings
+
 from matplotlib.axes import Axes
 from matplotlib.patches import Patch
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.transforms import Bbox
 from matplotlib import pyplot as plt
 import matplotlib.ticker as mticker
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 import numpy as np
 import pandas as pd
-
 import seaborn as sns
-
 from anndata import AnnData
-
-from typing import Literal, Union, Optional
-
-from sklearn.preprocessing import (MinMaxScaler,
-                                   RobustScaler,
-                                   StandardScaler)
-
-from ..exceptions._exceptions import AnalysisNotPerformedError
-
-from .._utils import find_gate_path_of_gate
 
 from scipy.cluster.hierarchy import cut_tree
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from scipy.spatial import distance_matrix
+from sklearn.preprocessing import (MinMaxScaler,
+                                   RobustScaler,
+                                   StandardScaler)
+
+from typing import Literal, Union, Optional
+
+from ..dataset.supplements import Metadata
+from ..exceptions._exceptions import (AnalysisNotPerformedError,
+                                      InvalidScalingError,
+                                      MetaclusterOverwriteWarning)
+from .._utils import find_gate_path_of_gate
 
 ANNOTATION_CMAPS = ["Set1", "Set2", "tab10", "hls", "Paired"]
 CONTINUOUS_CMAPS = ["YlOrRd", "Reds", "YlOrBr", "PuRd", "Oranges", "Greens"]
 
-def remove_ticks(ax: Axes,
-                 which: Literal["x", "y", "both"]) -> None:
+def _remove_ticks(ax: Axes,
+                  which: Literal["x", "y", "both"]) -> None:
     if which == "x":
         ax.set_xticks([])
-    if which == "y":
+    elif which == "y":
         ax.set_yticks([])
-    if which == "both":
+    elif which == "both":
         ax.set_xticks([])
         ax.set_yticks([])
+    return
 
-def remove_ticklabels(ax: Axes,
-                      which: Literal["x", "y", "both"]) -> None:
+def _remove_ticklabels(ax: Axes,
+                       which: Literal["x", "y", "both"]) -> None:
     if which == "x":
         ax.set_xticklabels([])
-    if which == "y":
+    elif which == "y":
         ax.set_yticklabels([])
-    if which == "both":
+    elif which == "both":
         ax.set_xticklabels([])
         ax.set_yticklabels([])
+    return
 
-
-def label_metaclusters_in_dataset(adata: AnnData,
-                                  data: pd.DataFrame,
-                                  label_metaclusters_key: Optional[str] = None) -> None:
-    if "metacluster" in adata.uns["metadata"].dataframe:
-        print("warninig... overwriting metaclusters")
-        adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
-
-    adata.uns["metadata"].dataframe = pd.merge(adata.uns["metadata"].dataframe,
-                                               data[["sample_ID", "metacluster"]],
-                                               on = "sample_ID")
-    if label_metaclusters_key is not None:
-        adata.uns["metadata"].dataframe[label_metaclusters_key] = adata.uns["metadata"].dataframe["metacluster"]
-        adata.uns["metadata"].dataframe = adata.uns["metadata"].dataframe.drop(["metacluster"], axis = 1)
-
-def remove_dendrogram(clmap: sns.matrix.ClusterGrid,
-                      which: Literal["x", "y", "both"]) -> None:
+def _remove_dendrogram(clmap: sns.matrix.ClusterGrid,
+                       which: Literal["x", "y", "both"]) -> None:
     if which == "x":
         clmap.ax_col_dendrogram.set_visible(False)
     if which == "y":
@@ -74,49 +63,106 @@ def remove_dendrogram(clmap: sns.matrix.ClusterGrid,
         clmap.ax_col_dendrogram.set_visible(False)
         clmap.ax_row_dendrogram.set_visible(False)
 
-def add_metaclusters(adata: AnnData,
-                     data: pd.DataFrame,
-                     row_linkage: np.ndarray,
-                     n_clusters: int,
-                     sample_IDs: Union[pd.Index, pd.Series, list[int], list[str]],
-                     label_metaclusters: bool,
-                     label_metaclusters_key: str
-                     ):
-    metaclusters = calculate_metaclusters(row_linkage, n_clusters = n_clusters)
-    metacluster_mapping = map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
-    data = merge_metaclusters_into_dataframe(data, metacluster_mapping)
+def _add_metaclusters(adata: AnnData,
+                      data: pd.DataFrame,
+                      row_linkage: np.ndarray,
+                      n_clusters: int,
+                      sample_IDs: Union[pd.Index, pd.Series, list[int], list[str]],
+                      label_metaclusters: bool,
+                      label_metaclusters_key: str
+                      ):
+    metaclusters = _calculate_metaclusters(row_linkage, n_clusters = n_clusters)
+    metacluster_mapping = _map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
+    data = _merge_metaclusters_into_dataframe(data, metacluster_mapping)
     
     if label_metaclusters:
-        label_metaclusters_in_dataset(adata = adata,
-                                      data = data,
-                                      label_metaclusters_key = label_metaclusters_key)
+        _label_metaclusters_in_dataset(adata = adata,
+                                       data = data,
+                                       label_metaclusters_key = label_metaclusters_key)
     
-    #data = data.set_index("sample_ID")
     return data
 
+def _calculate_metaclusters(linkage: np.ndarray,
+                            n_clusters: int) -> dict[int: set[int]]:
+    ### stackoverflow https://stackoverflow.com/questions/65034792/print-all-clusters-and-samples-at-each-step-of-hierarchical-clustering-in-python
+    linkage_matrix = linkage
+    clusters = cut_tree(linkage_matrix,
+                        n_clusters = n_clusters)
+    # transpose matrix
+    clusters = clusters.T
+    for row in clusters[::-1]:
+        # create empty dictionary
+        groups = {}
+        for i, g in enumerate(row):
+            if g not in groups:
+                # add new key to dict and assign empty set
+                groups[g] = set([])
+            # add to set of certain group
+            groups[g].add(i)
 
-def calculate_linkage(dataframe: pd.DataFrame) -> np.ndarray:
+    return groups
+
+def _map_metaclusters_to_sample_ID(metaclusters: dict,
+                                   sample_IDs: list) -> pd.DataFrame:
+    sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
+    for metacluster in metaclusters:
+        sample_IDs.loc[sample_IDs["sample_ID"].isin(metaclusters[metacluster]), "metacluster"] = metacluster
+    return sample_IDs
+
+def _merge_metaclusters_into_dataframe(data: pd.DataFrame,
+                                       metacluster_mapping: pd.DataFrame) -> pd.DataFrame:
+    if "metacluster" in data.columns:
+        warnings.warn("Overwriting metaclusters in dataset. To avoid that, set a label_metaclusters_key. ",
+                      MetaclusterOverwriteWarning)
+        data = data.drop(["metacluster"],
+                          axis = 1)
+    return pd.merge(data, metacluster_mapping, on = "sample_ID")
+
+def _label_metaclusters_in_dataset(adata: AnnData,
+                                   data: pd.DataFrame,
+                                   label_metaclusters_key: Optional[str] = None) -> None:
+    metadata: Metadata = adata.uns["metadata"]
+    metadata.dataframe = _merge_metaclusters_into_dataframe(data = metadata.dataframe,
+                                                            metacluster_mapping = data[["sample_ID", "metacluster"]])
+
+    if label_metaclusters_key is not None:
+        if label_metaclusters_key in metadata.dataframe.columns:
+            warnings.warn("Overwriting metaclusters in dataset.",
+                        MetaclusterOverwriteWarning)
+            metadata.dataframe = metadata.dataframe.drop([label_metaclusters_key],
+                                                        axis = 1)
+        metadata.dataframe.rename(columns = {"metacluster": label_metaclusters_key},
+                                  inplace = True)
+    
+    return
+
+def _calculate_linkage(dataframe: pd.DataFrame) -> np.ndarray:
     """calculates the linkage"""
     return hierarchy.linkage(distance.pdist(dataframe), method='average')
 
-def calculate_sample_distance(dataframe: pd.DataFrame) -> np.ndarray:
+def _calculate_sample_distance(dataframe: pd.DataFrame) -> np.ndarray:
     """ returns sample distance matrix of given dataframe"""
     return distance_matrix(dataframe.to_numpy(),
                            dataframe.to_numpy())
 
-def remove_unused_categories(dataframe: pd.DataFrame) -> pd.DataFrame:
+def _remove_unused_categories(dataframe: pd.DataFrame) -> pd.DataFrame:
     """ handles the case where categorical variables are still there that are not present anymore """
-    categorical_columns = [col for col in dataframe.columns if dataframe[col].dtype == "category"]
-    for col in categorical_columns:
-        dataframe[col] = dataframe[col].cat.remove_unused_categories()
+    for col in dataframe.columns:
+        if isinstance(dataframe[col].dtype, pd.CategoricalDtype):
+            dataframe[col] = dataframe[col].cat.remove_unused_categories()
     return dataframe
 
-def append_metadata(adata: AnnData,
-                    dataframe_to_merge: pd.DataFrame) -> pd.DataFrame:
-    
-    metadata = adata.uns["metadata"].to_df().copy()
+def _append_metadata(adata: AnnData,
+                     dataframe_to_merge: pd.DataFrame) -> pd.DataFrame:
+    metadata: pd.DataFrame = adata.uns["metadata"].to_df().copy()
 
-    return remove_unused_categories(
+    if any(col in dataframe_to_merge.columns for col in metadata.columns):
+        metadata = metadata.drop([col for col in metadata.columns
+                                  if col in dataframe_to_merge.columns
+                                  and not col == "sample_ID"],
+                                 axis = 1)
+
+    return _remove_unused_categories(
         pd.merge(dataframe_to_merge.reset_index(),
                  metadata,
                  on = "sample_ID",
@@ -124,9 +170,9 @@ def append_metadata(adata: AnnData,
         )
     )
 
-def get_uns_dataframe(adata: AnnData,
-                      gate: str,
-                      table_identifier: str) -> pd.DataFrame:
+def _get_uns_dataframe(adata: AnnData,
+                       gate: str,
+                       table_identifier: str) -> pd.DataFrame:
     
     if table_identifier not in adata.uns:
         raise AnalysisNotPerformedError(table_identifier)
@@ -135,39 +181,25 @@ def get_uns_dataframe(adata: AnnData,
     data = data.loc[data.index.get_level_values("gate") == find_gate_path_of_gate(adata, gate),:]
     data = data.reset_index()
     if "sample_ID" in data.columns:
-        data = append_metadata(adata, data)
+        data = _append_metadata(adata, data)
     return data
 
-# def extract_uns_dataframe(adata: AnnData,
-#                        data: pd.DataFrame,
-#                        column_identifier_name: str) -> pd.DataFrame:
-#     data = data.T
-#     data.index = data.index.set_names([column_identifier_name, "gate_path"])
-#     data = data.reset_index()
-#     data[column_identifier_name] = data[column_identifier_name].astype("str")
-#     return data
-
-
-def select_gate_from_multiindex_dataframe(dataframe: pd.DataFrame,
-                                          gate: str) -> pd.DataFrame:
+def _select_gate_from_multiindex_dataframe(dataframe: pd.DataFrame,
+                                           gate: str) -> pd.DataFrame:
     return dataframe.loc[dataframe.index.get_level_values("gate") == gate,:]
 
-# def select_gate_from_singleindex_dataframe(dataframe: pd.DataFrame,
-#                                gate: str) -> pd.DataFrame:
-#     return dataframe[dataframe["gate_path"] == gate]
-
-def scale_data(dataframe: pd.DataFrame,
-               scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]) -> np.ndarray:
+def _scale_data(dataframe: pd.DataFrame,
+                scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]) -> np.ndarray:
     if scaling == "MinMaxScaler":
         return MinMaxScaler().fit_transform(dataframe)
-    if scaling == "RobustScaler":
+    elif scaling == "RobustScaler":
         return RobustScaler().fit_transform(dataframe)
-    if scaling == "StandardScaler":
+    elif scaling == "StandardScaler":
         return StandardScaler().fit_transform(dataframe)
-    return
+    raise InvalidScalingError(scaler = scaling)
 
-def calculate_correlation_data(data: pd.DataFrame,
-                               corr_method: Literal["pearson", "spearman", "kendall"]) -> pd.DataFrame:
+def _calculate_correlation_data(data: pd.DataFrame,
+                                corr_method: Literal["pearson", "spearman", "kendall"]) -> pd.DataFrame:
     return data.corr(method = corr_method)
 
 def add_annotation_plot(adata: AnnData,
@@ -191,32 +223,31 @@ def add_annotation_plot(adata: AnnData,
     ax.legend(bbox_to_anchor = (1.01, 0.5), loc = "center left")
     ax.set_ylabel(y_label)
 
-    remove_ticklabels(ax, which = "x")
-    remove_ticks(ax, which = "x")
+    _remove_ticklabels(ax, which = "x")
+    _remove_ticks(ax, which = "x")
     ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1] * 1.4)
     ax.set_xlabel("")
 
     ticks_loc = ax.get_yticks().tolist()
     ax.yaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-    label_format = '{:,.2f}'
     ax.yaxis.set_ticklabels(ax.yaxis.get_ticklabels(),
                             fontsize = y_label_fontsize)
 
-def has_interval_index(column: pd.Series) -> bool:
+def _has_interval_index(column: pd.Series) -> bool:
     return isinstance(column.dtype, pd.CategoricalDtype) and isinstance(column.cat.categories, pd.IntervalIndex)
 
-def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
-                                         heatmap: Axes,
-                                         data: pd.DataFrame,
-                                         annotate: list[str]) -> None:
+def _add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
+                                          heatmap: Axes,
+                                          data: pd.DataFrame,
+                                          annotate: list[str]) -> None:
     next_legend = 0
     for i, group in enumerate(annotate):
-        group_lut = map_obs_to_cmap(data,
-                                    group,
-                                    CONTINUOUS_CMAPS[i] if has_interval_index(data[group])
-                                                        else ANNOTATION_CMAPS[i],
-                                    return_mapping = True)
-        if has_interval_index(data[group]):
+        group_lut = _map_obs_to_cmap(data,
+                                     group,
+                                     CONTINUOUS_CMAPS[i] if _has_interval_index(data[group])
+                                                         else ANNOTATION_CMAPS[i],
+                                     return_mapping = True)
+        if _has_interval_index(data[group]):
             sorted_index = list(data[group].cat.categories.values)
             if np.nan in group_lut.keys():
                 sorted_index = [np.nan] + sorted_index
@@ -234,11 +265,11 @@ def add_categorical_legend_to_clustermap(clustermap: sns.matrix.ClusterGrid,
         next_legend += legend_space
         clustermap.fig.add_artist(group_legend)
 
-def scale_cbar_to_heatmap(clustermap: sns.matrix.ClusterGrid,
-                          heatmap_position: Bbox,
-                          cbar_padding: Optional[float] = 0.7,
-                          cbar_height: Optional[float] = 0.02,
-                          loc: Literal["bottom", "right"] = "bottom") -> None:
+def _scale_cbar_to_heatmap(clustermap: sns.matrix.ClusterGrid,
+                           heatmap_position: Bbox,
+                           cbar_padding: Optional[float] = 0.7,
+                           cbar_height: Optional[float] = 0.02,
+                           loc: Literal["bottom", "right"] = "bottom") -> None:
     if loc == "bottom":
         clustermap.ax_cbar.set_position([heatmap_position.x0,
                                          heatmap_position.y0 * cbar_padding,
@@ -251,12 +282,12 @@ def scale_cbar_to_heatmap(clustermap: sns.matrix.ClusterGrid,
                                          heatmap_position.x1 - heatmap_position.x0])
     return
 
-def map_obs_to_cmap(data: pd.DataFrame,
-                    parameter_to_map: str,
-                    cmap: str = "Set1",
-                    return_mapping: bool = False,
-                    as_series: bool = True) -> dict[str, tuple[float, float, float]]:
-    if has_interval_index(data[parameter_to_map]):
+def _map_obs_to_cmap(data: pd.DataFrame,
+                     parameter_to_map: str,
+                     cmap: str = "Set1",
+                     return_mapping: bool = False,
+                     as_series: bool = True) -> dict[str, tuple[float, float, float]]:
+    if _has_interval_index(data[parameter_to_map]):
         obs = list(data[parameter_to_map].cat.categories.values)
         if np.nan in data[parameter_to_map].unique():
             obs = [np.nan] + obs
@@ -269,40 +300,6 @@ def map_obs_to_cmap(data: pd.DataFrame,
     if as_series:
         return pd.Series(data[parameter_to_map].astype("object").map(mapping), name = parameter_to_map)
     return data[parameter_to_map].astype("object").map(mapping)
-
-def calculate_metaclusters(linkage: np.ndarray,
-                           n_clusters: int) -> dict[int: list[int]]:
-    ### stackoverflow https://stackoverflow.com/questions/65034792/print-all-clusters-and-samples-at-each-step-of-hierarchical-clustering-in-python
-    linkage_matrix = linkage
-    clusters = cut_tree(linkage_matrix, n_clusters=n_clusters)
-    # transpose matrix
-    clusters = clusters.T
-    for row in clusters[::-1]:
-        # create empty dictionary
-        groups = {}
-        for i, g in enumerate(row):
-            if g not in groups:
-                # add new key to dict and assign empty set
-                groups[g] = set([])
-            # add to set of certain group
-            groups[g].add(i)
-
-    return groups
-
-def map_metaclusters_to_sample_ID(metaclusters: dict,
-                                  sample_IDs: list) -> pd.DataFrame:
-    sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
-    for i, sample_ID in enumerate(sample_IDs["sample_ID"].to_list()):
-        sample_IDs.loc[sample_IDs["sample_ID"] == sample_ID, "metacluster"] = int([metacluster
-                                                                                   for metacluster in metaclusters
-                                                                                   if i in metaclusters[metacluster]][0])
-    
-    return sample_IDs
-
-def merge_metaclusters_into_dataframe(data, metacluster_mapping) -> pd.DataFrame:
-    if "metacluster" in data.columns:
-        data = data.drop(["metacluster"], axis = 1)
-    return pd.merge(data, metacluster_mapping, on = "sample_ID")
 
 def calculate_nrows(ncols: int, 
                     dataset: pd.DataFrame):

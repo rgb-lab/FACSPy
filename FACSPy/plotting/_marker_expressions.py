@@ -10,7 +10,7 @@ from matplotlib.patches import Patch
 
 from typing import Literal, Union, Optional
 
-from .._utils import flatten_nested_list
+from .._utils import _flatten_nested_list
 
 from ._utils import savefig_or_show
 
@@ -34,7 +34,7 @@ def convert_expression_to_histogram_data(expression_data: pd.DataFrame,
                                          groupby: str) -> pd.DataFrame:
     group_values = list(expression_data[groupby[0]].unique())
     histogram_df = pd.DataFrame(
-        data = {groupby[0]: flatten_nested_list([[group for _ in range (100)] for group in group_values])},
+        data = {groupby[0]: _flatten_nested_list([[group for _ in range (100)] for group in group_values])},
         columns = [groupby[0], "x", "y"],
         index = range(100 * len(group_values))
     )

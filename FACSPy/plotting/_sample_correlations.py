@@ -4,21 +4,21 @@ from anndata import AnnData
 from matplotlib.figure import Figure
 from typing import Literal, Union, Optional
 
-from ._utils import (scale_data,
-                    map_obs_to_cmap,
-                    append_metadata,
-                    get_uns_dataframe,
-                    calculate_linkage,
-                    add_metaclusters,
-                    remove_ticklabels,
-                    remove_ticks,
-                    scale_cbar_to_heatmap,
-                    add_categorical_legend_to_clustermap,
-                    calculate_correlation_data,
-                    ANNOTATION_CMAPS,
-                    CONTINUOUS_CMAPS,
-                    savefig_or_show,
-                    has_interval_index)
+from ._utils import (_scale_data,
+                     _map_obs_to_cmap,
+                     _append_metadata,
+                     _get_uns_dataframe,
+                     _calculate_linkage,
+                     _add_metaclusters,
+                     _remove_ticklabels,
+                     _remove_ticks,
+                     _scale_cbar_to_heatmap,
+                     _add_categorical_legend_to_clustermap,
+                     _calculate_correlation_data,
+                     ANNOTATION_CMAPS,
+                     CONTINUOUS_CMAPS,
+                     savefig_or_show,
+                     _has_interval_index)
 
 from ._clustermap import create_clustermap
 
@@ -31,15 +31,15 @@ def prepare_plot_data(adata: AnnData,
     plot_data = raw_data.copy() if copy else raw_data
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     if scaling is not None:
-        plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
-    correlations = calculate_correlation_data(plot_data[fluo_columns].T,
-                                              corr_method = corr_method)
+        plot_data[fluo_columns] = _scale_data(plot_data[fluo_columns], scaling)
+    correlations = _calculate_correlation_data(plot_data[fluo_columns].T,
+                                               corr_method = corr_method)
     plot_data = pd.DataFrame(data = correlations.values,
                              columns = raw_data["sample_ID"].to_list(),
                              index = raw_data["sample_ID"].to_list())
     plot_data = plot_data.fillna(0)
     plot_data["sample_ID"] = raw_data["sample_ID"].to_list()
-    plot_data = append_metadata(adata, plot_data)
+    plot_data = _append_metadata(adata, plot_data)
     return plot_data
 
 def sample_correlation(adata: AnnData,
@@ -66,9 +66,9 @@ def sample_correlation(adata: AnnData,
     if not isinstance(annotate, list):
         annotate = [annotate] 
     
-    raw_data = get_uns_dataframe(adata = adata,
-                                 gate = gate,
-                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    raw_data = _get_uns_dataframe(adata = adata,
+                                  gate = gate,
+                                  table_identifier = f"{data_metric}_{data_group}_{data_origin}")
     
     
     plot_data = prepare_plot_data(adata = adata,
@@ -79,31 +79,31 @@ def sample_correlation(adata: AnnData,
     if return_dataframe:
         return plot_data
 
-    row_linkage = calculate_linkage(plot_data[plot_data["sample_ID"].to_list()])
+    row_linkage = _calculate_linkage(plot_data[plot_data["sample_ID"].to_list()])
 
     if metaclusters is not None:
         annotate += ["metacluster"]
-        plot_data = add_metaclusters(adata = adata,
-                                     data = plot_data,
-                                     row_linkage = row_linkage,
-                                     n_clusters = metaclusters,
-                                     sample_IDs = plot_data["sample_ID"],
-                                     label_metaclusters = label_metaclusters_in_dataset,
-                                     label_metaclusters_key = label_metaclusters_key)
+        plot_data = _add_metaclusters(adata = adata,
+                                      data = plot_data,
+                                      row_linkage = row_linkage,
+                                      n_clusters = metaclusters,
+                                      sample_IDs = plot_data["sample_ID"],
+                                      label_metaclusters = label_metaclusters_in_dataset,
+                                      label_metaclusters_key = label_metaclusters_key)
     
     clustermap = create_clustermap(data = plot_data[plot_data["sample_ID"].to_list()],
                                    row_colors = [
-                                       map_obs_to_cmap(plot_data,
-                                                       group,
-                                                       CONTINUOUS_CMAPS[i] if has_interval_index(plot_data[group]) else ANNOTATION_CMAPS[i]
-                                                       )
+                                       _map_obs_to_cmap(plot_data,
+                                                        group,
+                                                        CONTINUOUS_CMAPS[i] if _has_interval_index(plot_data[group]) else ANNOTATION_CMAPS[i]
+                                                        )
                                        for i, group in enumerate(annotate)
                                    ],
                                    col_colors = [
-                                       map_obs_to_cmap(plot_data,
-                                                       group,
-                                                       CONTINUOUS_CMAPS[i] if has_interval_index(plot_data[group]) else ANNOTATION_CMAPS[i]
-                                                                        )
+                                       _map_obs_to_cmap(plot_data,
+                                                        group,
+                                                        CONTINUOUS_CMAPS[i] if _has_interval_index(plot_data[group]) else ANNOTATION_CMAPS[i]
+                                                        )
                                        for i, group in enumerate(annotate)
                                    ],
                                    row_linkage = row_linkage,
@@ -118,14 +118,14 @@ def sample_correlation(adata: AnnData,
     ax = clustermap.ax_heatmap
     heatmap_position = ax.get_position()
     
-    scale_cbar_to_heatmap(clustermap,
+    _scale_cbar_to_heatmap(clustermap,
                           heatmap_position = heatmap_position)
-    remove_ticklabels(ax, which = "both")
-    remove_ticks(ax, which = "both")
-    add_categorical_legend_to_clustermap(clustermap,
-                                         heatmap = ax,
-                                         data = plot_data,
-                                         annotate = annotate)
+    _remove_ticklabels(ax, which = "both")
+    _remove_ticks(ax, which = "both")
+    _add_categorical_legend_to_clustermap(clustermap,
+                                          heatmap = ax,
+                                          data = plot_data,
+                                          annotate = annotate)
     if return_fig:
         return clustermap
     savefig_or_show(save = save, show = show)

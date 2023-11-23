@@ -15,11 +15,11 @@ from typing import Union, Optional, Literal
 
 
 from .._utils import (create_gate_lut,
-                     GATE_SEPARATOR,
-                     find_parent_population,
-                     subset_gate,
-                     find_gate_indices,
-                     find_gate_path_of_gate)
+                      GATE_SEPARATOR,
+                      find_parent_population,
+                      subset_gate,
+                      find_gate_indices,
+                      find_gate_path_of_gate)
 
 from ._utils import turn_off_missing_plot, savefig_or_show
 

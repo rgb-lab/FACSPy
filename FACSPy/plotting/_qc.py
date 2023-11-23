@@ -19,14 +19,14 @@ from ._baseplot import (stripboxplot,
 from ._basestats import add_statistic
 
 from .._utils import (GATE_SEPARATOR,
-                     find_gate_path_of_gate,
-                     find_parent_gate,
-                     find_grandparent_gate,
-                     subset_gate,
-                     find_parent_population,
-                     find_grandparent_population,
-                     find_current_population,
-                     convert_gate_to_obs)
+                      find_gate_path_of_gate,
+                      find_parent_gate,
+                      find_grandparent_gate,
+                      subset_gate,
+                      find_parent_population,
+                      find_grandparent_population,
+                      find_current_population,
+                      convert_gate_to_obs)
 
 def find_y_label(adata: AnnData,
                  freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent"]]],

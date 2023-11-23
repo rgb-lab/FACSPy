@@ -11,7 +11,7 @@ from ._baseplot import adjust_legend
 
 from ._basestats import add_statistic
 from ._baseplot import barplot, stripboxplot, label_plot_basic
-from ._utils import (get_uns_dataframe,
+from ._utils import (_get_uns_dataframe,
                     savefig_or_show)
 
 def fop(adata: AnnData,
@@ -30,26 +30,26 @@ def fop(adata: AnnData,
         save: bool = None,
         show: bool = None):
     
-    data = get_uns_dataframe(adata = adata,
-                             gate = gate,
-                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
 
     if return_dataframe:
         return data
     
-    mfi_fop_baseplot(adata = adata,
-                     dataframe = data,
-                     marker = marker,
-                     groupby = groupby,
-                     colorby = colorby,
-                     gate = gate,
-                     assay = "fop",
-                     overview = overview,
-                     figsize = figsize,
-                     order = order,
-                     return_fig = return_fig,
-                     save = save,
-                     show = show)
+    _mfi_fop_baseplot(adata = adata,
+                      dataframe = data,
+                      marker = marker,
+                      groupby = groupby,
+                      colorby = colorby,
+                      gate = gate,
+                      assay = "fop",
+                      overview = overview,
+                      figsize = figsize,
+                      order = order,
+                      return_fig = return_fig,
+                      save = save,
+                      show = show)
 
 def mfi(adata: AnnData,
         gate: str,
@@ -67,40 +67,40 @@ def mfi(adata: AnnData,
         save: bool = None,
         show: bool = None):
 
-    data = get_uns_dataframe(adata = adata,
-                             gate = gate,
-                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
 
     if return_dataframe:
         return data
     
-    mfi_fop_baseplot(adata = adata,
-                     dataframe = data,
-                     marker = marker,
-                     groupby = groupby,
-                     colorby = colorby,
-                     gate = gate,
-                     assay = "mfi",
-                     overview = overview,
-                     figsize = figsize,
-                     order = order,
-                     return_fig = return_fig,
-                     save = save,
-                     show = show)
+    _mfi_fop_baseplot(adata = adata,
+                      dataframe = data,
+                      marker = marker,
+                      groupby = groupby,
+                      colorby = colorby,
+                      gate = gate,
+                      assay = "mfi",
+                      overview = overview,
+                      figsize = figsize,
+                      order = order,
+                      return_fig = return_fig,
+                      save = save,
+                      show = show)
 
-def mfi_fop_baseplot(adata: AnnData,
-                     dataframe: pd.DataFrame,
-                     marker: Union[str, list[str]],
-                     groupby: Union[str, list[str]],
-                     colorby: str,
-                     assay: Literal["mfi", "fop"],
-                     order: list[str] = None,
-                     gate: str = None,
-                     overview: bool = False,
-                     figsize: tuple[float, float] = None,
-                     return_fig: bool = False,
-                     save: bool = None,
-                     show: bool = None):
+def _mfi_fop_baseplot(adata: AnnData,
+                      dataframe: pd.DataFrame,
+                      marker: Union[str, list[str]],
+                      groupby: Union[str, list[str]],
+                      colorby: str,
+                      assay: Literal["mfi", "fop"],
+                      order: list[str] = None,
+                      gate: str = None,
+                      overview: bool = False,
+                      figsize: tuple[float, float] = None,
+                      return_fig: bool = False,
+                      save: bool = None,
+                      show: bool = None):
     
     if gate is None:
         raise TypeError("A Gate has to be provided")

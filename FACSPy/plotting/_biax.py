@@ -4,7 +4,6 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from anndata import AnnData
@@ -12,7 +11,9 @@ from anndata import AnnData
 from typing import Union, Optional, Literal
 
 from ._utils import savefig_or_show
-from .._utils import subset_gate, get_sample_ID_from_filename, is_valid_filename, is_valid_sample_ID
+from .._utils import (subset_gate,
+                      is_valid_filename,
+                      is_valid_sample_ID)
 
 #TODO: add legend
 def biax(adata: AnnData,

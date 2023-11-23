@@ -6,15 +6,15 @@ from matplotlib.figure import Figure
 
 from typing import Literal, Optional, Union
 
-from ._utils import (scale_data,
-                    calculate_sample_distance,
-                    calculate_linkage,
-                    get_uns_dataframe,
-                    scale_cbar_to_heatmap,
-                    calculate_correlation_data,
-                    remove_dendrogram,
-                    add_annotation_plot,
-                    savefig_or_show)
+from ._utils import (_scale_data,
+                     _calculate_sample_distance,
+                     _calculate_linkage,
+                     _get_uns_dataframe,
+                     _scale_cbar_to_heatmap,
+                     _calculate_correlation_data,
+                     _remove_dendrogram,
+                     add_annotation_plot,
+                     savefig_or_show)
 
 
 from ._clustermap import create_clustermap
@@ -55,7 +55,7 @@ def prepare_plot_data(adata: AnnData,
     plot_data = raw_data.copy() if copy else raw_data
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     if scaling is not None:
-        plot_data[fluo_columns] = scale_data(plot_data[fluo_columns], scaling)
+        plot_data[fluo_columns] = _scale_data(plot_data[fluo_columns], scaling)
     return plot_data
 
 def cluster_heatmap(adata: AnnData,
@@ -81,9 +81,9 @@ def cluster_heatmap(adata: AnnData,
                     save: bool = None,
                     show: bool = None) -> Optional[Figure]:
     
-    raw_data = get_uns_dataframe(adata = adata,
-                                 gate = gate,
-                                 table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    raw_data = _get_uns_dataframe(adata = adata,
+                                  gate = gate,
+                                  table_identifier = f"{data_metric}_{data_group}_{data_origin}")
     
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     plot_data = prepare_plot_data(adata = adata,
@@ -95,10 +95,10 @@ def cluster_heatmap(adata: AnnData,
         return plot_data
 
     if cluster_method == "correlation":
-        col_linkage = calculate_linkage(calculate_correlation_data(plot_data[fluo_columns].T, corr_method))
+        col_linkage = _calculate_linkage(_calculate_correlation_data(plot_data[fluo_columns].T, corr_method))
 
     elif cluster_method == "distance":
-        col_linkage = calculate_linkage(calculate_sample_distance(plot_data[fluo_columns]))
+        col_linkage = _calculate_linkage(_calculate_sample_distance(plot_data[fluo_columns]))
 
     clustermap = create_clustermap(data = plot_data[fluo_columns].T,
                                    row_cluster = True,
@@ -114,10 +114,10 @@ def cluster_heatmap(adata: AnnData,
     indices = [t.get_text() for t in np.array(clustermap.ax_heatmap.get_xticklabels())]
     
     ax = clustermap.ax_heatmap
-    scale_cbar_to_heatmap(clustermap = clustermap,
-                          heatmap_position = ax.get_position(),
-                          cbar_padding = 1.05,
-                          loc = "right")
+    _scale_cbar_to_heatmap(clustermap = clustermap,
+                           heatmap_position = ax.get_position(),
+                           cbar_padding = 1.05,
+                           loc = "right")
     # remove_ticklabels(ax = ax,
     #                   which = "x")
     # remove_ticks(ax = ax,
@@ -128,7 +128,7 @@ def cluster_heatmap(adata: AnnData,
     ax.set_yticklabels(ax.get_yticklabels(),
                        fontsize = y_label_fontsize)
     ax.set_ylabel("")
-    remove_dendrogram(clustermap, which = "y")
+    _remove_dendrogram(clustermap, which = "y")
     clustermap.ax_heatmap.set_xlabel("cluster")
 
     if annotate is not None:
