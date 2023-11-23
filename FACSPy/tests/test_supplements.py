@@ -4,10 +4,10 @@ import os
 
 from FACSPy.dataset._supplements import Panel, Metadata, CofactorTable
 from FACSPy.exceptions._supplements import (SupplementInputTypeError,
-                                           SupplementFileNotFoundError,
-                                           SupplementCreationError,
-                                           SupplementColumnError,
-                                           SupplementNoInputDirectoryError)
+                                            SupplementFileNotFoundError,
+                                            SupplementCreationError,
+                                            SupplementColumnError,
+                                            SupplementNoInputDirectoryError)
 
 ### Fixtures
 
@@ -211,8 +211,7 @@ def test_save_to_file_metadata_reread_with_fp(tmp_path, mock_metadata_correct):
     x = Metadata(metadata = mock_metadata_correct)
     output_directory = tmp_path
     x.write(output_directory = os.path.join(output_directory, "some_metadata.csv"))
-    y = Metadata(input_directory = output_directory,
-                 file_name = "some_metadata.csv")
+    y = Metadata(os.path.join(output_directory, "some_metadata.csv"))
     assert "sample_ID" in y.dataframe.columns
     assert "file_name" in y.dataframe.columns
     assert len(y.dataframe) == 2 
@@ -221,8 +220,7 @@ def test_save_to_file_panel_reread_with_fp(tmp_path, mock_panel_correct):
     x = Panel(panel = mock_panel_correct)
     output_directory = tmp_path
     x.write(output_directory = os.path.join(output_directory, "some_panel.csv"))
-    y = Panel(input_directory = output_directory,
-              file_name = "some_panel.csv")
+    y = Panel(os.path.join(output_directory, "some_panel.csv"))
     assert "fcs_colname" in y.dataframe.columns
     assert "antigens" in y.dataframe.columns
     assert len(y.dataframe) == 5
@@ -231,8 +229,7 @@ def test_save_to_file_cofactors_reread_with_fp(tmp_path, mock_cofactors_correct)
     x = CofactorTable(cofactors = mock_cofactors_correct)
     output_directory = tmp_path
     x.write(output_directory = os.path.join(output_directory, "some_cofactors.csv"))
-    y = CofactorTable(input_directory = output_directory,
-                      file_name = "some_cofactors.csv")
+    y = CofactorTable(os.path.join(output_directory, "some_cofactors.csv"))
     assert "fcs_colname" in y.dataframe.columns
     assert "cofactors" in y.dataframe.columns
     assert len(y.dataframe) == 5
@@ -268,7 +265,7 @@ def test_metadata_from_fcs_wo_input_dir():
         x = Metadata(from_fcs = True)
 
 def test_metadata_from_fcs(tmp_path):
-    x = Metadata(input_directory = tmp_path,
+    x = Metadata(tmp_path,
                  from_fcs = True)
     assert x.dataframe.shape == (0,2)
     assert x.source == "read from fcs"
@@ -315,27 +312,21 @@ def test_panel_creation_errors():
     with pytest.raises(SupplementCreationError):
         _ = Panel()
     with pytest.raises(SupplementFileNotFoundError):
-        _ = Panel(file_name = "panel.txt")
-    with pytest.raises(SupplementFileNotFoundError):
-        _ = Panel(file_name = "panel.txt", input_directory = os.getcwd())
+        _ = Panel(file = "panel.txt")
 
 
 def test_metadata_creation_errors():
     with pytest.raises(SupplementCreationError):
         _ = Metadata()
     with pytest.raises(SupplementFileNotFoundError):
-        _ = Metadata(file_name = "metadata.txt")
-    with pytest.raises(SupplementFileNotFoundError):
-        _ = Metadata(file_name = "metadata.txt", input_directory = os.getcwd())
+        _ = Metadata(file = "metadata.txt")
 
 
 def test_cofactors_creation_errors():
     with pytest.raises(SupplementCreationError):
         _ = CofactorTable()
     with pytest.raises(SupplementFileNotFoundError):
-        _ = CofactorTable(file_name = "cofactors.txt")
-    with pytest.raises(SupplementFileNotFoundError):
-        _ = CofactorTable(file_name = "cofactors.txt", input_directory = os.getcwd())
+        _ = CofactorTable("cofactors.txt")
 
 def test_metadata_factor_extraction(mock_metadata_with_factors):
     x = Metadata(metadata = mock_metadata_with_factors)
