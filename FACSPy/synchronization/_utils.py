@@ -37,10 +37,11 @@ def _get_samplewise_dimred_columns(df: pd.DataFrame) -> list[str]:
 def _recalculate_samplewise_dimreds(adata,
                                     frame_id: str,
                                     calculated_dimreds: Optional[list[str]]) -> None:
-    from ..tools._dr_samplewise import (pca_samplewise,
-                                        mds_samplewise,
-                                        tsne_samplewise,
-                                        umap_samplewise)
+    from ..tools._pca import pca_samplewise
+    from ..tools._mds import mds_samplewise
+    from ..tools._umap import umap_samplewise
+    from ..tools._tsne import tsne_samplewise 
+
     data_metric, data_origin, _ = _get_frame_metrics(frame_id)
     settings_finder_dict = {
         "adata": adata,
