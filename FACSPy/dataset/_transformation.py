@@ -15,7 +15,7 @@ from ._utils import (find_corresponding_control_samples,
                     asinh)
 from ._supplements import CofactorTable
 
-from .._utils import fetch_fluo_channels
+from .._utils import _fetch_fluo_channels
 from ..exceptions._exceptions import InvalidTransformationError
 from ..exceptions._supplements import SupplementFormatError
 
@@ -128,7 +128,7 @@ class CofactorCalculator:
         cofactors = {}
         for sample in stained_samples:
             cofactors[sample] = {}
-            fluo_channels = fetch_fluo_channels(adata)
+            fluo_channels = _fetch_fluo_channels(adata)
             sample_subset = create_sample_subset_with_controls(adata,
                                                                sample,
                                                                corresponding_control_samples,
