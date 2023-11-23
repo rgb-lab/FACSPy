@@ -13,23 +13,18 @@ from ..exceptions._supplements import (SupplementInputTypeError,
 class BaseSupplement:
     
     def __init__(self,
-                 input_directory: str = '',
-                 file_name: str = '',
+                 file: str = '',
                  data: Optional[pd.DataFrame] = None,
                  from_fcs: bool = False) -> None:
         
-        self.source = self.fetch_data_source(input_directory,
-                                             file_name,
+        self.source = self.fetch_data_source(file,
                                              data,
                                              from_fcs)
 
-        self.dataframe = self.fetch_data_from_source(input_directory,
-                                                     file_name,
+        self.dataframe = self.fetch_data_from_source(file,
                                                      data,
                                                      from_fcs)
         
-        self.input_directory = input_directory
-
     def write(self,
               output_directory: Union[str, os.PathLike] = ''):
         self.dataframe.to_csv(output_directory, index = False)    
@@ -50,35 +45,32 @@ class BaseSupplement:
         return self.dataframe
 
     def open_from_file(self,
-                       input_directory: Optional[str],
-                       file_name: str) -> pd.DataFrame:
+                       file: str) -> pd.DataFrame:
         try:
-            delimiter = self.fetch_delimiter(input_directory, file_name)
-            return pd.read_csv(os.path.join(input_directory, file_name), sep = delimiter)
+            delimiter = self.fetch_delimiter(file)
+            return pd.read_csv(file, sep = delimiter)
         except FileNotFoundError as e:
-            raise SupplementFileNotFoundError(file_name) from e
+            raise SupplementFileNotFoundError(os.path.basename(file)) from e
     
     def fetch_delimiter(self,
-                        input_directory,
-                        file_name) -> str:
-        reader: TextFileReader = pd.read_csv(os.path.join(input_directory, file_name),
+                        file) -> str:
+        reader: TextFileReader = pd.read_csv(file,
                                  sep = None,
                                  iterator = True,
                                  engine = "python")
         return reader._engine.data.dialect.delimiter    
     
     def fetch_data_source(self,
-                          input_directory: Optional[str],
-                          file_name: Optional[str],
+                          file: Optional[str],
                           data: Optional[pd.DataFrame],
                           from_fcs: bool) -> str:
 
-        if data is not None:
-            return "provided dataframe"
-        elif file_name:
-            return "provided file"
-        elif from_fcs:
+        if from_fcs:
             return "read from fcs"
+        elif data is not None:
+            return "provided dataframe"
+        elif file:
+            return "provided file"
         else:
             raise SupplementCreationError(self.__class__.__name__)
     
@@ -97,15 +89,15 @@ class BaseSupplement:
         return dataframe
 
     def fetch_data_from_source(self,
-                               input_directory: Optional[str],
-                               file_name: Optional[str],
+                               file: Optional[str],
                                data: Optional[pd.DataFrame],
                                from_fcs: bool) -> pd.DataFrame:
+        print(self.source)
         if self.source == "provided dataframe":
             return data
             
         elif self.source == "provided file":
-            return self.open_from_file(input_directory, file_name)
+            return self.open_from_file(file)
         
         elif from_fcs: 
             if self.__class__.__name__ == "Panel":
@@ -145,13 +137,11 @@ class Panel(BaseSupplement):
     """
 
     def __init__(self,
-                 input_directory: str = '',
-                 file_name: str = '',
+                 file: str = '',
                  panel: Optional[pd.DataFrame] = None,
                  from_fcs: bool = False) -> None:
         
-        super().__init__(input_directory = input_directory,
-                         file_name = file_name,
+        super().__init__(file = file,
                          data = panel,
                          from_fcs = from_fcs)
         
@@ -183,51 +173,36 @@ class Metadata(BaseSupplement):
     set the flag from_fcs to True. 
     """ 
     def __init__(self,
-                 input_directory: str = '',
-                 file_name: str = '',
+                 file: str = '',
                  metadata: Optional[pd.DataFrame] = None,
                  from_fcs: bool = False) -> None:
+
+        if from_fcs and not file:
+            raise SupplementNoInputDirectoryError
         
-        super().__init__(input_directory = input_directory,
-                         file_name = file_name,
+        super().__init__(file = file,
                          data = metadata,
                          from_fcs = from_fcs)
-
         self.dataframe: pd.DataFrame = self.validate_user_supplied_table(self.dataframe,
                                                                          ["sample_ID", "file_name"])
-
-        if from_fcs:
-            if input_directory:
-                self.append_metadata_from_folder(input_directory)
-
-            else:
-                raise SupplementNoInputDirectoryError
-        
-        self.factors = self.extract_metadata_factors()
-        self.manage_dtypes()
-        self.make_dataframe_categorical()
+        self.factors = self._extract_metadata_factors()
+        self._manage_dtypes()
+        self._make_dataframe_categorical()
 
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(" +
             f"{len(self.dataframe)} entries with factors " +
-            f"{self.extract_metadata_factors()})"
+            f"{self._extract_metadata_factors()})"
         )
     
-    def manage_dtypes(self):
+    def _manage_dtypes(self):
         """collection of statements that manage dtypes. sample_IDs are strings"""
         self.dataframe["sample_ID"] = self.dataframe["sample_ID"].astype("str")
     
-    def make_dataframe_categorical(self):
+    def _make_dataframe_categorical(self):
         self.dataframe = self.dataframe.astype("category")
     
-    def append_metadata_from_folder(self,
-                                    input_directory) -> None:
-        files: list[str] = os.listdir(input_directory)
-        fcs_files = [file for file in files if file.endswith(".fcs")]
-        self.dataframe["file_name"] = fcs_files
-        self.dataframe["sample_ID"] = range(1,len(fcs_files)+1)
-
     def annotate(self,
                  file_names: Union[str, list[str]],
                  column: str,
@@ -271,7 +246,7 @@ class Metadata(BaseSupplement):
             values = [values]
         self.dataframe = self.dataframe.loc[self.dataframe[column].isin(values)]
 
-    def extract_metadata_factors(self):
+    def _extract_metadata_factors(self):
         return [
             col
             for col in self.dataframe.columns
@@ -279,7 +254,7 @@ class Metadata(BaseSupplement):
         ]
 
     def get_factors(self):
-        return self.extract_metadata_factors()
+        return self._extract_metadata_factors()
     
     def _sanitize_categoricals(self):
         for column in self.dataframe:
@@ -291,13 +266,11 @@ class Metadata(BaseSupplement):
 class CofactorTable(BaseSupplement):
 
     def __init__(self,
-                 input_directory: str = '',
-                 file_name: str = '',
+                 file: str = '',
                  cofactors: Optional[pd.DataFrame] = None,
                  from_fcs: bool = False) -> None:
         
-        super().__init__(input_directory = input_directory,
-                         file_name = file_name,
+        super().__init__(file = file,
                          data = cofactors,
                          from_fcs = from_fcs)
         
