@@ -24,6 +24,8 @@ def phenograph(adata: AnnData,
     if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
 
+    if not "clustering_algo" in kwargs:
+        kwargs["clustering_algo"] = "leiden"
     _save_cluster_settings(adata = adata,
                            gate = gate,
                            layer = layer,
@@ -44,7 +46,6 @@ def phenograph(adata: AnnData,
                                            scaling = scaling)
 
     communities, graph, Q = _phenograph.cluster(preprocessed_adata.X,
-                                                clustering_algo = kwargs.get("clustering_algo", "leiden"),
                                                 **kwargs)
 
     adata = _merge_cluster_info_into_adata(adata,
