@@ -13,9 +13,8 @@ import seaborn as sns
 from anndata import AnnData
 
 from scipy.cluster.hierarchy import cut_tree
-from scipy.spatial import distance
+from scipy.spatial import distance, distance_matrix
 from scipy.cluster import hierarchy
-from scipy.spatial import distance_matrix
 from sklearn.preprocessing import (MinMaxScaler,
                                    RobustScaler,
                                    StandardScaler)
