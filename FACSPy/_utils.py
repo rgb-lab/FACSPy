@@ -414,7 +414,7 @@ def _fetch_fluo_channels(adata: AnnData) -> list[str]:
     return adata.var.loc[adata.var["type"] == "fluo"].index.tolist()
 
 def subset_fluo_channels(adata: AnnData,
-                         as_view: bool = True,
+                         as_view: bool = False,
                          copy: bool = False) -> AnnData:
     adata = adata.copy() if copy else adata
     if as_view:
@@ -663,14 +663,17 @@ def rename_channel(adata: AnnData,
 
 def remove_channel(adata: AnnData,
                    channel: Union[str, list[str]],
+                   as_view: bool = False,
                    copy: bool = False) -> Optional[AnnData]:
     if not isinstance(channel, list):
         channel = [channel]
     adata = adata.copy() if copy else adata
-    adata._inplace_subset_var(
-        [var for var in adata.var_names if var not in channel]
-    )
-
+    if as_view:
+        return adata[:, ~adata.var_names.isin(channel)]
+    else:
+        adata._inplace_subset_var(
+            [var for var in adata.var_names if var not in channel]
+        )
     return adata if copy else None
 
 def convert_var_to_panel(adata: AnnData,
