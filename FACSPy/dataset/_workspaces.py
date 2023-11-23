@@ -29,14 +29,13 @@ class FlowJoWorkspace:
     #TODO: refactor self._convert_wsp_gate
     #TODO: refactor self.parse_wsp_transforms
     def __init__(self,
-                 input_directory: str,
-                 file_name: str,
+                 file: str,
                  ignore_transforms: bool = False) -> None:
         
         #self.resource_path = resource_filename("FACSPy", "_resources")
-        self.original_filename = file_name
+        self.original_filename = os.path.basename(file)
         self.ignore_transforms = ignore_transforms
-        self.wsp_dict = self.parse_workspace(input_directory, file_name)
+        self.wsp_dict = self.parse_workspace(file)
 
     def __repr__(self):
         
@@ -60,12 +59,11 @@ class FlowJoWorkspace:
         return
 
     def parse_workspace(self,
-                        input_directory: str,
-                        file_name: str) -> dict[dict]:
+                        file: str) -> dict[dict]:
         (wsp_root,
          gating_namespace,
          data_type_namespace,
-         transform_namespace) = self._extract_namespaces(input_directory, file_name)
+         transform_namespace) = self._extract_namespaces(file)
 
         ns_map = wsp_root.nsmap
         
@@ -672,9 +670,8 @@ class FlowJoWorkspace:
         return wsp_root.find("SampleList", ns_map)
 
     def _extract_namespaces(self,
-                            input_directory,
-                            file_name: str) -> tuple[etree._Element, str, str, str]:
-        raw_wsp = etree.parse(os.path.join(input_directory, file_name))
+                            file: str) -> tuple[etree._Element, str, str, str]:
+        raw_wsp = etree.parse(file)
         wsp_root = raw_wsp.getroot()
         gating_ns = None
         data_type_ns = None
@@ -706,13 +703,12 @@ class DivaWorkspace:
     TODO: refactor parse diva gate coordinates
     """
     def __init__(self,
-                 input_directory: str,
-                 file_name: str,):
+                 file: str,):
 
-        if not self._correct_suffix(file_name):
+        if not self._correct_suffix(file):
             raise ValueError("Only XML Diva Workspaces are supported")
 
-        self.wsp_dict = self.create_workspace_dictionary(input_directory, file_name)
+        self.wsp_dict = self.create_workspace_dictionary(file)
 
     def __repr__(self):
         
@@ -744,10 +740,9 @@ class DivaWorkspace:
         return list(itertools.chain(*[specimen.findall("tube") for specimen in specimens]))
     
     def create_workspace_dictionary(self,
-                                    input_directory: str,
-                                    file_name: str) -> dict:
+                                    file: str) -> dict:
         
-        raw_wsp = self.parse_raw_data(input_directory, file_name)
+        raw_wsp = self.parse_raw_data(file)
         tubes = self.parse_tubes(raw_wsp)
 
         #self.version = dict(root.items())["version"]
@@ -773,9 +768,8 @@ class DivaWorkspace:
         return wsp_dict
 
     def parse_raw_data(self,
-                       input_directory,
-                       file_name: str) -> etree._Element:
-        return etree.parse(os.path.join(input_directory, file_name))
+                       file: str) -> etree._Element:
+        return etree.parse(file)
 
     def _parse_diva_transformation(self,
                                    instrument_settings) -> dict:
