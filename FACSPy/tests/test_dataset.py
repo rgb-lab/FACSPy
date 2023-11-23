@@ -12,7 +12,7 @@ from FACSPy.dataset._dataset import DatasetAssembler
 from FACSPy.exceptions._exceptions import InputDirectoryNotFoundError
 from FACSPy.exceptions._supplements import SupplementDataTypeError
 
-from FACSPy.dataset._supplements import Metadata, Panel, CofactorTable
+from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
 
 WSP_FILE_PATH = "FACSPy/_resources/"
@@ -20,12 +20,9 @@ WSP_FILE_NAME = "test_wsp.wsp"
 
 def create_supplement_objects():
     INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-    panel = Panel(input_directory = INPUT_DIRECTORY,
-                  file_name = "panel.txt")
-    metadata = Metadata(input_directory = INPUT_DIRECTORY,
-                        file_name = "metadata_test_suite.csv")
-    workspace = FlowJoWorkspace(input_directory = INPUT_DIRECTORY,
-                                file_name = "test_suite.wsp")
+    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
+    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
+    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
     return INPUT_DIRECTORY, panel, metadata, workspace
 
 @pytest.fixture
@@ -64,8 +61,7 @@ def mock_metadata_correct():
 
 @pytest.fixture
 def dummy_workspace():
-    return FlowJoWorkspace(input_directory = WSP_FILE_PATH,
-                           file_name = WSP_FILE_NAME)
+    return FlowJoWorkspace(os.path.join(WSP_FILE_PATH, WSP_FILE_NAME))
 
 @pytest.fixture
 def mock_dataset():

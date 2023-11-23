@@ -1,4 +1,6 @@
 import pytest
+import os
+
 from anndata import AnnData
 import pandas as pd
 
@@ -12,12 +14,9 @@ WSP_FILE_NAME = "test_wsp.wsp"
 
 def create_supplement_objects():
     INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-    panel = Panel(input_directory = INPUT_DIRECTORY,
-                  file_name = "panel.txt")
-    metadata = Metadata(input_directory = INPUT_DIRECTORY,
-                        file_name = "metadata_test_suite.csv")
-    workspace = FlowJoWorkspace(input_directory = INPUT_DIRECTORY,
-                                file_name = "test_suite.wsp")
+    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
+    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
+    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
     return INPUT_DIRECTORY, panel, metadata, workspace
 
 @pytest.fixture
@@ -27,8 +26,7 @@ def mock_dataset() -> AnnData:
                               panel = panel,
                               metadata = metadata,
                               workspace = workspace)
-    cofactors = CofactorTable(input_directory = input_directory,
-                              file_name = "cofactors_test_suite.txt")
+    cofactors = CofactorTable(os.path.join(input_directory, "cofactors_test_suite.txt"))
     adata.uns["cofactors"] = cofactors
     adata.layers["transformed"] = adata.layers["compensated"].copy()
     return adata
