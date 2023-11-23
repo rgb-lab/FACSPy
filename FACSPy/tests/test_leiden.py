@@ -118,13 +118,12 @@ def test_leiden_works_as_scanpy_all_scanpy_funcs(mock_dataset: AnnData):
     fp.subset_gate(adata, "live")
     scanpy_adata = adata.copy()
     scanpy_adata.X = scanpy_adata.layers["compensated"]
-    fp.tl.pca(scanpy_adata, random_state = 187)
-    fp.tl.neighbors(scanpy_adata,
+    sc.pp.pca(scanpy_adata, random_state = 187)
+    sc.pp.neighbors(scanpy_adata,
                     use_rep = "X_pca",
                     random_state = 187) 
     sc.tl.leiden(scanpy_adata,
                  resolution = 0.1,
-                 neighbors_key = "live_compensated_neighbors",
                  random_state = 187)
     leiden_clusters = scanpy_adata.obs["leiden"]
     facspy_adata = adata.copy()
