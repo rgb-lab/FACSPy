@@ -21,11 +21,11 @@ from ..transforms._matrix import Matrix
 from ..exceptions._exceptions import InputDirectoryNotFoundError
 from ..exceptions._supplements import SupplementDataTypeError, PanelMatchWarning
 from ..gates.gating_strategy import GatingStrategy, GateTreeError
-from .._utils import (fetch_fluo_channels,
-                     scatter_channels,
-                     time_channels,
-                     cytof_technical_channels,
-                     spectral_flow_technical_channels)
+from .._utils import (_fetch_fluo_channels,
+                      scatter_channels,
+                      time_channels,
+                      cytof_technical_channels,
+                      spectral_flow_technical_channels)
 from ..synchronization._synchronize import _hash_dataset
 
 
@@ -363,7 +363,7 @@ class Transformer:
         cofactors = {}
         for sample in stained_samples:
             cofactors[sample] = {}
-            fluo_channels = fetch_fluo_channels(dataset)
+            fluo_channels = _fetch_fluo_channels(dataset)
             sample_subset = create_sample_subset_with_controls(dataset,
                                                                sample,
                                                                corresponding_control_samples,
