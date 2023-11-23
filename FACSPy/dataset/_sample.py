@@ -180,7 +180,8 @@ class FCSFile:
         """function to parse the original events from the fcs file"""
         return np.array(
             fcs_data.events,
-            dtype=np.float64
+            dtype=np.float64,
+            order = "C"
         ).reshape(-1, fcs_data.channel_count)
 
     def _remove_disallowed_characters_from_string(self,
