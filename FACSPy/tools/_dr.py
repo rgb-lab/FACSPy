@@ -15,13 +15,14 @@ from ._utils import (_preprocess_adata,
                      _choose_use_rep_as_scanpy,
                      _recreate_preprocessed_view)
 
-from .._utils import IMPLEMENTED_SCALERS
+from .._utils import (_default_gate_and_default_layer,
+                      IMPLEMENTED_SCALERS)
 from ..exceptions._exceptions import InvalidScalingError
 
-
+@_default_gate_and_default_layer
 def pca(adata: AnnData,
-        gate: str,
-        layer: Literal["compensated", "transformed"] = "transformed",
+        gate: str = None,
+        layer: str = None,
         use_only_fluo: bool = True,
         exclude: Optional[list[str]] = None,
         scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
@@ -62,9 +63,10 @@ def pca(adata: AnnData,
     del adata.X
     return adata if copy else None
 
+@_default_gate_and_default_layer
 def diffmap(adata: AnnData,
-            gate: str,
-            layer: Literal["compensated", "transformed"] = "transformed",
+            gate: str = None,
+            layer: str = None,
             recalculate_pca: bool = False,
             use_only_fluo: bool = True,
             exclude: Optional[list[str]] = None,
@@ -136,9 +138,10 @@ def diffmap(adata: AnnData,
     del adata.X
     return adata if copy else None
 
+@_default_gate_and_default_layer
 def umap(adata: AnnData,
-         gate: str,
-         layer: Literal["compensated", "transformed"] = "transformed",
+         gate: str = None,
+         layer: str = None,
          recalculate_pca: bool = False,
          use_only_fluo: bool = True,
          exclude: Optional[list[str]] = None,
@@ -219,9 +222,10 @@ def umap(adata: AnnData,
 
     return adata if copy else None
 
+@_default_gate_and_default_layer
 def tsne(adata: AnnData,
-         gate: str,
-         layer: Literal["compensated", "transformed"] = "transformed",
+         gate: str = None,
+         layer: str = None,
          use_only_fluo: bool = True,
          exclude: Optional[list[str]] = None,
          scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
