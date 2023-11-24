@@ -9,6 +9,8 @@ from .exceptions._utils import GateNotProvidedError, ExhaustedHierarchyError
 from itertools import combinations
 
 from typing import Any
+import inspect
+
 
 reduction_names = {
     reduction: [f"{reduction}{i}" for i in range(1,50)] for reduction in ["PCA", "MDS", "UMAP", "TSNE"]
@@ -554,6 +556,10 @@ def is_valid_filename(adata: AnnData,
                       string_to_check) -> bool:
     return string_to_check in adata.obs["file_name"].unique()
 
+def is_fluo_channel(adata: AnnData,
+                    channel: str) -> bool:
+    return adata.var.loc[adata.var["pns"] == channel, "type"].iloc[0] == "fluo"
+
 def create_comparisons(data: pd.DataFrame,
                        groupby: str,
                        n: int = 2) -> list[tuple[str, str]]:
@@ -686,3 +692,56 @@ def convert_var_to_panel(adata: AnnData,
     adata.uns["panel"] = Panel(panel = new_panel)
     
     return adata if copy else None
+
+
+def _default_layer(func):
+
+    argspec = inspect.getfullargspec(func)
+    position_count = len(argspec.args) - len(argspec.defaults)
+
+    def add_default_layer(*args, **kwargs):
+        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
+
+        used_kwargs = kwargs.copy()
+        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
+        
+        # we delete every default that is overwritten by the user
+        defaults = {
+            k: v for (k,v) in defaults.items()
+            if k not in used_kwargs
+        }
+
+        # if its still in defaults, its not set by the user 
+        # and we can set the settings default
+        from . import settings
+        if "layer" in defaults: 
+            defaults["layer"] = settings.default_layer
+        kwargs = {**used_kwargs, **defaults}
+        return func(*args, **kwargs)
+    return add_default_layer
+
+def _default_gate(func):
+    argspec = inspect.getfullargspec(func)
+    position_count = len(argspec.args) - len(argspec.defaults)
+
+    def add_default_gate(*args, **kwargs):
+        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
+
+        used_kwargs = kwargs.copy()
+        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
+        
+        # we delete every default that is overwritten by the user
+        defaults = {
+            k: v for (k,v) in defaults.items()
+            if k not in used_kwargs
+        }
+
+        # if its still in defaults, its not set by the user 
+        # and we can set the settings default
+        from . import settings
+        if "gate" in defaults: 
+            defaults["gate"] = settings.default_gate
+        kwargs = {**used_kwargs, **defaults}
+        return func(*args, **kwargs)
+    return add_default_gate
+
