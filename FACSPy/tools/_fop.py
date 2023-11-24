@@ -5,7 +5,7 @@ import pandas as pd
 from anndata import AnnData
 
 from ._utils import _concat_gate_info_and_obs_and_fluo_data
-from .._utils import _fetch_fluo_channels
+from .._utils import _fetch_fluo_channels, _default_layer
 from ..dataset._utils import (_merge_cofactors_into_dataset_var,
                               _replace_missing_cofactors)
 
@@ -20,10 +20,11 @@ def _calculate_fops_from_frame(input_frame: pd.DataFrame,
     data = data.set_index(["gate"], append = True)
     return data.dropna(axis = 0, how = "all")
 
+@_default_layer
 def fop(adata: AnnData,
         groupby: Union[Literal["sample_ID"], str] = "sample_ID",
         cutoff: Optional[Union[int, float, list[int], list[float]]] = None,
-        layer: list[str] = ["compensated", "transformed"],
+        layer: Union[str, list[str]] = None,
         use_only_fluo: bool = False,
         copy: bool = False) -> Optional[AnnData]:
 
