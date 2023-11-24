@@ -68,16 +68,16 @@ def calculate_pvalue(group1: np.ndarray,
     available_tests = ["Kruskal", "Wilcoxon"]
     raise NotSupportedStatisticalTestError(test, available_tests)
 
-def calculate_fold_changes(adata: AnnData,
-                           groupby: str,
-                           group1: Union[str, list[Union[str, int]]],
-                           group2: Union[str, list[Union[str, int]]],
-                           gate: str,
-                           data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                           data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                           data_origin: Literal["compensated", "transformed"] = "compensated",
-                           test: Literal["Kruskal", "t-test"] = "Kruskal"
-                           ) -> pd.DataFrame:
+def _calculate_fold_changes(adata: AnnData,
+                            groupby: str,
+                            group1: Union[str, list[Union[str, int]]],
+                            group2: Union[str, list[Union[str, int]]],
+                            gate: str,
+                            data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                            data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                            layer: str = None,
+                            test: Literal["Kruskal", "t-test"] = "Kruskal"
+                            ) -> pd.DataFrame:
     
     """asinh fold change calculation"""
     if not isinstance(group1, list):
@@ -88,7 +88,7 @@ def calculate_fold_changes(adata: AnnData,
     
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+                              table_identifier = f"{data_metric}_{data_group}_{layer}")
     
     fluo_columns = [col for col in data.columns if col in adata.var_names]
     cofactors = adata.var.loc[fluo_columns, "cofactors"].astype("float32")
@@ -109,9 +109,7 @@ def calculate_fold_changes(adata: AnnData,
                                   test = test)
         
         
-    return pd.merge(asinh_fc, p_values, left_index = True, right_index = True)
-    
-
-
-
-
+    return pd.merge(asinh_fc,
+                    p_values,
+                    left_index = True,
+                    right_index = True)
