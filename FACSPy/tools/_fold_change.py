@@ -7,7 +7,7 @@ from typing import Union, Literal, Optional
 
 from ..exceptions._exceptions import NotSupportedStatisticalTestError
 
-from ..plotting._utils import get_uns_dataframe
+from ..plotting._utils import _get_uns_dataframe
 
 from scipy.stats import kruskal, wilcoxon
 
@@ -86,9 +86,9 @@ def calculate_fold_changes(adata: AnnData,
     if not isinstance(group2, list):
         group2 = [group2]
     
-    data = get_uns_dataframe(adata = adata,
-                             gate = gate,
-                             table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
     
     fluo_columns = [col for col in data.columns if col in adata.var_names]
     cofactors = adata.var.loc[fluo_columns, "cofactors"].astype("float32")
