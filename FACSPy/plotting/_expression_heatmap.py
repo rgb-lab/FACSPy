@@ -23,6 +23,8 @@ from ._utils import (_scale_data,
                      savefig_or_show)
 from ._clustermap import create_clustermap
 
+from .._utils import _default_gate_and_default_layer
+
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,
                       scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]],
@@ -34,14 +36,15 @@ def prepare_plot_data(adata: AnnData,
         plot_data[fluo_columns] = _scale_data(plot_data[fluo_columns], scaling)
     return plot_data
 
+@_default_gate_and_default_layer
 def expression_heatmap(adata: AnnData,
-                       gate: str,
+                       gate: str = None,
+                       layer: str = None,
                        
-                       annotate: Optional[Union[str, list[str]]],
+                       annotate: Optional[Union[str, list[str]]] = None,
 
                        data_group: Optional[Union[str, list[str]]] = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                       data_origin: Literal["compensated", "transformed"] = "transformed",
                        
                        plot_annotate: Optional[str] = None,
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
@@ -63,7 +66,7 @@ def expression_heatmap(adata: AnnData,
     
     raw_data = _get_uns_dataframe(adata = adata,
                                   gate = gate,
-                                  table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+                                  table_identifier = f"{data_metric}_{data_group}_{layer}")
     ### QUICK FIX FOR MISSING SAMPLES! CHECK CHECK CHECK!
     raw_data = raw_data.dropna(axis = 0, how = "any")
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]

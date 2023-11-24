@@ -14,16 +14,19 @@ from ._baseplot import barplot, stripboxplot, label_plot_basic
 from ._utils import (_get_uns_dataframe,
                     savefig_or_show)
 
+from .._utils import _default_gate_and_default_layer
+
+@_default_gate_and_default_layer
 def fop(adata: AnnData,
-        marker: Union[str, list[str]],
+        gate: str = None,
+        layer: str = None,
+        marker: Union[str, list[str]] = None,
         groupby: Union[str, list[str]] = None,
         colorby: Optional[str] = None,
         order: list[str] = None,
-        gate: str = None,
         overview: bool = False,
         data_group: Optional[Union[str, list[str]]] = "sample_ID",
         data_metric: Literal["mfi", "fop", "gate_frequency"] = "fop",
-        data_origin: Literal["compensated", "transformed"] = "compensated",
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
         return_fig: bool = False,
@@ -32,7 +35,7 @@ def fop(adata: AnnData,
     
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+                              table_identifier = f"{data_metric}_{data_group}_{layer}")
 
     if return_dataframe:
         return data
@@ -51,15 +54,16 @@ def fop(adata: AnnData,
                       save = save,
                       show = show)
 
+@_default_gate_and_default_layer
 def mfi(adata: AnnData,
-        gate: str,
-        marker: Union[str, list[str]],
+        gate: str = None,
+        layer: str = None,
+        marker: Union[str, list[str]] = None,
         colorby: Optional[str] = None,
         order: list[str] = None,
         groupby: Union[str, list[str]] = None,
         data_group: Optional[Union[str, list[str]]] = "sample_ID",
         data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-        data_origin: Literal["compensated", "transformed"] = "compensated",
         overview: bool = False,
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
@@ -69,7 +73,7 @@ def mfi(adata: AnnData,
 
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+                              table_identifier = f"{data_metric}_{data_group}_{layer}")
 
     if return_dataframe:
         return data

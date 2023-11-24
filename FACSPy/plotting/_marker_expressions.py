@@ -1,37 +1,44 @@
+import warnings
 import pandas as pd
 import numpy as np
 from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from matplotlib.axis import Axis
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.patches import Patch
 
-from typing import Literal, Union, Optional
-
-from .._utils import _flatten_nested_list
+from typing import Union, Optional
 
 from ._utils import savefig_or_show
-
 from ._cofactor_plots import calculate_histogram_data
 
-import warnings
+from .._utils import (_flatten_nested_list,
+                      subset_gate,
+                      _default_gate_and_default_layer)
 
+def _map_pal_to_groupby(pal: dict,
+                        data: pd.DataFrame,
+                        groupby: str,
+                        colorby: str) -> dict:
+    """maps the original palette to new groupby variable by looking"""
+    return {group: pal[data.loc[data[groupby] == group, colorby].iloc[0]] for group in data[groupby].unique()}
 
-def convert_to_mapping(dataframe: pd.DataFrame,
-                       key_col: str,
-                       value_col: str) -> dict:
-    return {key_value: dataframe.loc[dataframe[key_col] == key_value, value_col].iloc[0] for key_value in dataframe[key_col].unique()}
+def _convert_to_mapping(dataframe: pd.DataFrame,
+                        key_col: str,
+                        value_col: str) -> dict:
+    return {key_value: dataframe.loc[dataframe[key_col] == key_value, value_col].iloc[0]
+            for key_value in dataframe[key_col].unique()}
 
-def append_metadata_obs(adata: AnnData,
-                        expression_data: pd.DataFrame) -> pd.DataFrame:
+def _append_metadata_obs(adata: AnnData,
+                         expression_data: pd.DataFrame) -> pd.DataFrame:
     expression_data[adata.obs.columns] = adata.obs
     return expression_data
 
-def convert_expression_to_histogram_data(expression_data: pd.DataFrame,
-                                         marker: str,
-                                         groupby: str) -> pd.DataFrame:
+def _convert_expression_to_histogram_data(expression_data: pd.DataFrame,
+                                          marker: str,
+                                          groupby: str) -> pd.DataFrame:
     group_values = list(expression_data[groupby[0]].unique())
     histogram_df = pd.DataFrame(
         data = {groupby[0]: _flatten_nested_list([[group for _ in range (100)] for group in group_values])},
@@ -47,26 +54,28 @@ def convert_expression_to_histogram_data(expression_data: pd.DataFrame,
 
     return histogram_df
 
-def append_colorby_variable(adata: AnnData,
-                            dataframe: pd.DataFrame,
-                            colorby: str,
-                            groupby: str) -> pd.DataFrame:
-    mapping = convert_to_mapping(adata.uns["metadata"].to_df(),
-                                 key_col = groupby[0],
-                                 value_col = colorby[0])
+def _append_colorby_variable(adata: AnnData,
+                             dataframe: pd.DataFrame,
+                             colorby: str,
+                             groupby: str) -> pd.DataFrame:
+    mapping = _convert_to_mapping(adata.uns["metadata"].to_df(),
+                                  key_col = groupby[0],
+                                  value_col = colorby[0])
     dataframe[colorby[0]] = dataframe[groupby[0]].map(mapping)
     return dataframe
 
 #TODO: check if mapping is possible: either the colorby is not in metadata or the grouping by sampleID leads to multiple outputs, not mappable.
+@_default_gate_and_default_layer
 def marker_density(adata: AnnData,
-                   markers: Union[str, list[str]],
-                   colorby: Union[str, list[str]],
+                   gate: str = None,
+                   layer: str = None,
+                   markers: Union[str, list[str]] = None,
+                   colorby: Union[str, list[str]] = None,
                    groupby: Union[str, list[str]] = "sample_ID",
                    ridge: bool = False,
                    cmap: str = "Set1",
                    highlight: Optional[Union[str, list[str]]] = None,
                    linewidth: float = 0.5,
-                   on: Literal["compensated", "transformed", "raw"] = "transformed",
                    xlim: Optional[tuple[float, float]] = None,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
@@ -84,19 +93,22 @@ def marker_density(adata: AnnData,
 
     if not isinstance(highlight, list) and highlight is not None:
         highlight = [highlight]
+    adata = subset_gate(adata,
+                        gate = gate,
+                        as_view = True)
 
-    expression_data = adata.to_df(layer = on)
-    expression_data = append_metadata_obs(adata, expression_data)
+    expression_data = adata.to_df(layer = layer)
+    expression_data = _append_metadata_obs(adata, expression_data)
     ## pot. buggy: groupby only singular at the moment...
     for marker in markers:
-        histogram_df = convert_expression_to_histogram_data(expression_data = expression_data,
-                                                            marker = marker,
-                                                            groupby = groupby)
+        histogram_df = _convert_expression_to_histogram_data(expression_data = expression_data,
+                                                             marker = marker,
+                                                             groupby = groupby)
         
-        histogram_df = append_colorby_variable(adata = adata,
-                                               dataframe = histogram_df,
-                                               colorby = colorby,
-                                               groupby = groupby)
+        histogram_df = _append_colorby_variable(adata = adata,
+                                                dataframe = histogram_df,
+                                                colorby = colorby,
+                                                groupby = groupby)
         
         histogram_df[groupby[0]] = histogram_df[groupby[0]].astype("str")
         
@@ -116,7 +128,7 @@ def marker_density(adata: AnnData,
     
         if ridge:
             if groupby[0] != colorby[0]:
-                pal = map_pal_to_groupby(colorby_pal, histogram_df, groupby[0], colorby[0])
+                pal = _map_pal_to_groupby(colorby_pal, histogram_df, groupby[0], colorby[0])
             else:
                 pal = colorby_pal
             warnings.simplefilter('ignore', category=UserWarning)
@@ -164,7 +176,7 @@ def marker_density(adata: AnnData,
                                       bbox_transform = fig.fig.transFigure)
             
             fig.fig.add_artist(group_legend)
-            fig.set_xlabels(f'{marker}\n{on}\nexpression', fontsize = 10)
+            fig.set_xlabels(f'{marker}\n{layer}\nexpression', fontsize = 10)
             if xlim is not None:
                 fig.set(xlim = xlim)
             
@@ -192,16 +204,10 @@ def marker_density(adata: AnnData,
                     bbox_to_anchor = (1.05,1))
             ax.set_title(f"Marker expression {marker}\nper sample ID")
             ax.set_ylabel("Density (norm)")
-            ax.set_xlabel(f"{on} expression")
+            ax.set_xlabel(f"{layer} expression")
 
             #plt.tight_layout()
         if return_fig:
             return fig
         savefig_or_show(show = show, save = save)
         
-def map_pal_to_groupby(pal: dict,
-                       data: pd.DataFrame,
-                       groupby: str,
-                       colorby: str) -> dict:
-    """maps the original palette to new groupby variable by looking"""
-    return {group: pal[data.loc[data[groupby] == group, colorby].iloc[0]] for group in data[groupby].unique()}

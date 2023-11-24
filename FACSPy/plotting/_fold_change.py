@@ -4,22 +4,23 @@ import seaborn as sns
 
 from matplotlib.patches import Patch
 
-from ..tools._fold_change import calculate_fold_changes
+from ..tools._fold_change import _calculate_fold_changes
 
 from typing import Literal, Union, Optional
 
-from .._utils import ifelse
+from .._utils import ifelse, _default_gate_and_default_layer
 
 from ._utils import savefig_or_show
 
+@_default_gate_and_default_layer
 def fold_change(adata: AnnData,
-                groupby: str,
-                group1: Union[str, list[Union[str, int]]],
-                group2: Union[str, list[Union[str, int]]],
-                gate: str,
+                gate: str = None,
+                layer: str = None,
+                groupby: str = None,
+                group1: Union[str, list[Union[str, int]]] = None,
+                group2: Union[str, list[Union[str, int]]] = None,
                 data_group: Optional[Union[str, list[str]]] = "sample_ID",
                 data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                data_origin: Literal["compensated", "transformed"] = "compensated",
                 stat: Literal["p", "p_adj"] = "p",
                 cmap: str = "Reds_r",
                 test: Literal["Kruskal", "Wilcoxon"] = "Kruskal",
@@ -30,15 +31,15 @@ def fold_change(adata: AnnData,
                 show: bool = None
                 ):
        
-       fold_changes = calculate_fold_changes(adata = adata,
-                                             groupby = groupby,
-                                             group1 = group1,
-                                             group2 = group2,
-                                             gate = gate,
-                                             data_group = data_group,
-                                             data_metric = data_metric,
-                                             data_origin = data_origin,
-                                             test = test)
+       fold_changes = _calculate_fold_changes(adata = adata,
+                                              groupby = groupby,
+                                              group1 = group1,
+                                              group2 = group2,
+                                              gate = gate,
+                                              data_group = data_group,
+                                              data_metric = data_metric,
+                                              layer = layer,
+                                              test = test)
        fold_changes = fold_changes.sort_values("asinh_fc", ascending = False)
        fold_changes = fold_changes.reset_index()
 

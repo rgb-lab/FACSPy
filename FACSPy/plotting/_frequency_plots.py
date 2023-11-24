@@ -10,12 +10,10 @@ from typing import Optional
 
 from ._utils import savefig_or_show
 
-
-
-def prep_dataframe_cluster_freq(adata: AnnData,
-                                groupby: str,
-                                cluster_key: str,
-                                normalize: bool) -> pd.DataFrame:
+def _prep_dataframe_cluster_freq(adata: AnnData,
+                                 groupby: str,
+                                 cluster_key: str,
+                                 normalize: bool) -> pd.DataFrame:
     dataframe = adata.obs[[groupby, cluster_key]]
     dataframe = pd.DataFrame(dataframe.groupby(cluster_key).value_counts([groupby]),
                              columns = ["count"]).reset_index()
@@ -29,8 +27,8 @@ def prep_dataframe_cluster_freq(adata: AnnData,
                  columns = groupby,
                  values = "count")
 
-def order_dataframe(dataframe: pd.DataFrame,
-                    order: Union[str, list[str]]) -> pd.DataFrame:
+def _order_dataframe(dataframe: pd.DataFrame,
+                     order: Union[str, list[str]]) -> pd.DataFrame:
     return dataframe[order]
 
 def cluster_frequency(adata: AnnData,
@@ -43,10 +41,10 @@ def cluster_frequency(adata: AnnData,
                       save: bool = None,
                       show: bool = None) -> Optional[Figure]:
     
-    dataframe = prep_dataframe_cluster_freq(adata, groupby, cluster_key, normalize)
+    dataframe = _prep_dataframe_cluster_freq(adata, groupby, cluster_key, normalize)
     
     if order is not None:
-        dataframe = order_dataframe(dataframe, order)
+        dataframe = _order_dataframe(dataframe, order)
 
     if return_dataframe:
         return dataframe

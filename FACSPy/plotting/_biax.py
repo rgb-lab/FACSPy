@@ -13,9 +13,11 @@ from typing import Union, Optional, Literal
 from ._utils import savefig_or_show
 from .._utils import (subset_gate,
                       is_valid_filename,
-                      is_valid_sample_ID)
+                      is_valid_sample_ID,
+                      _default_layer)
 
 #TODO: add legend
+@_default_layer
 def biax(adata: AnnData,
          gate: str,
          x_channel: str,

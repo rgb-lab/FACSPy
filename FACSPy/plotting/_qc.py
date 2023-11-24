@@ -26,11 +26,12 @@ from .._utils import (GATE_SEPARATOR,
                       find_parent_population,
                       find_grandparent_population,
                       find_current_population,
-                      convert_gate_to_obs)
+                      convert_gate_to_obs,
+                      _default_gate)
 
-def find_y_label(adata: AnnData,
-                 freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent"]]],
-                 gate: Union[str, list[str]]):
+def _find_y_label(adata: AnnData,
+                  freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent"]]],
+                  gate: Union[str, list[str]]):
     
     if freq_of == "parent":
         return find_parent_population(find_gate_path_of_gate(adata, gate))
@@ -38,11 +39,11 @@ def find_y_label(adata: AnnData,
         return find_grandparent_population(find_gate_path_of_gate(adata, gate))
     return "All Cells" if freq_of in ["root", "all"] else freq_of
 
-def prepare_dataframe_gate_frequency(adata: AnnData,
-                                     gate: Union[str, list[str]],
-                                     freq_of: Optional[Union[str, list[str]]],
-                                     groupby: Optional[Union[str, list[str]]],
-                                     colorby: Optional[str]) -> pd.DataFrame:
+def _prepare_dataframe_gate_frequency(adata: AnnData,
+                                      gate: Union[str, list[str]],
+                                      freq_of: Optional[Union[str, list[str]]],
+                                      groupby: Optional[Union[str, list[str]]],
+                                      colorby: Optional[str]) -> pd.DataFrame:
     
     df = adata.uns["gate_frequencies"].reset_index()
     
@@ -63,11 +64,11 @@ def prepare_dataframe_gate_frequency(adata: AnnData,
 
     df = df.loc[(df["gate"] == gate) & (df["freq_of"] == freq_of)]
     
-    obs = prepare_dataframe_cell_counts(adata, groupby, colorby = colorby)
+    obs = _prepare_dataframe_cell_counts(adata, groupby, colorby = colorby)
     obs = obs.drop("counts", axis = 1)
     return obs.merge(df, on = "sample_ID")
 
-
+@_default_gate
 def gate_frequency(adata: AnnData,
                    gate: Union[str, list[str]],
                    colorby: Optional[str],
@@ -85,11 +86,11 @@ def gate_frequency(adata: AnnData,
     if not isinstance(colorby, list):
         colorby = [colorby]
 
-    df = prepare_dataframe_gate_frequency(adata,
-                                          gate,
-                                          freq_of,
-                                          groupby,
-                                          colorby)
+    df = _prepare_dataframe_gate_frequency(adata,
+                                           gate,
+                                           freq_of,
+                                           groupby,
+                                           colorby)
 
     if return_dataframe:
         return df
@@ -127,7 +128,7 @@ def gate_frequency(adata: AnnData,
 
     ax = label_plot_basic(ax = ax,
                           title = f"gate frequency per {groupby[0]}\ngate: {find_current_population(gate)}",
-                          y_label = f"freq. of\n{find_y_label(adata, freq_of, gate)}",
+                          y_label = f"freq. of\n{_find_y_label(adata, freq_of, gate)}",
                           x_label = "")
     
     ax = adjust_legend(ax)
@@ -139,9 +140,9 @@ def gate_frequency(adata: AnnData,
     plt.tight_layout()
     savefig_or_show(show = show, save = save)
 
-def prepare_dataframe_cell_counts(adata: AnnData,
-                                  groupby: Optional[str],
-                                  colorby: Optional[str]):
+def _prepare_dataframe_cell_counts(adata: AnnData,
+                                   groupby: Optional[str],
+                                   colorby: Optional[str]):
     import copy
     groupings = ["sample_ID"] + copy.copy(groupby) if "sample_ID" not in groupby else copy.copy(groupby)
     if colorby != [None]:
@@ -153,6 +154,7 @@ def prepare_dataframe_cell_counts(adata: AnnData,
     return adata.obs[groupings].value_counts().to_frame(name = "counts").reset_index()
 
 
+@_default_gate
 def cell_counts(adata: AnnData,
                 groupby: Optional[Union[str, list[str]]],
                 gate: str,
@@ -177,7 +179,7 @@ def cell_counts(adata: AnnData,
     if not isinstance(colorby, list):
         colorby = [colorby]
     
-    df = prepare_dataframe_cell_counts(adata, groupby, colorby)
+    df = _prepare_dataframe_cell_counts(adata, groupby, colorby)
     
     if return_dataframe:
         return df 

@@ -20,32 +20,9 @@ from ._utils import (_scale_data,
 from ._clustermap import create_clustermap
 from ._frequency_plots import prep_dataframe_cluster_freq
 
+from .._utils import _default_gate_and_default_layer
+
 def cluster_mfi(): return None
-
-# def cluster_mfi(adata: AnnData,
-#                 marker: Union[str, list[str]],
-#                 data_group: Union[str, list[str]] = None,
-#                 data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi_c",
-#                 colorby: Optional[str] = None,
-#                 order: list[str] = None,
-#                 gate: str = None,
-#                 overview: bool = False,
-#                 return_dataframe: bool = False) -> Optional[Figure]:
-
-#     try:
-#         data = adata.uns[data_metric]
-#         data = select_gate_from_multiindex_dataframe(data.T, find_gate_path_of_gate(adata, gate))
-
-#     except KeyError as e:
-#         raise AnalysisNotPerformedError(data_metric) from e
-
-#     data.index = data.index.set_names(["cluster", "gate"])
-#     raw_data = data.reset_index()
-
-#     sns.barplot(data = raw_data,
-#                 x = "cluster",
-#                 y = marker)
-#     plt.show()
 
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,
@@ -58,12 +35,13 @@ def prepare_plot_data(adata: AnnData,
         plot_data[fluo_columns] = _scale_data(plot_data[fluo_columns], scaling)
     return plot_data
 
+@_default_gate_and_default_layer
 def cluster_heatmap(adata: AnnData,
-                    gate: str,
+                    gate: str = None,
+                    layer: str = None,
                     
-                    data_group: Optional[Union[str, list[str]]] = "leiden",
+                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
                     data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    data_origin: Literal["compensated", "transformed"] = "transformed",
                     
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
@@ -83,7 +61,7 @@ def cluster_heatmap(adata: AnnData,
     
     raw_data = _get_uns_dataframe(adata = adata,
                                   gate = gate,
-                                  table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+                                  table_identifier = f"{data_metric}_{data_group}_{layer}")
     
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     plot_data = prepare_plot_data(adata = adata,

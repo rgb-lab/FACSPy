@@ -16,7 +16,10 @@ from typing import Optional, Union, Literal
 
 from ..dataset._utils import (find_corresponding_control_samples,
                               get_histogram_curve)
-from .._utils import subset_gate
+from .._utils import (subset_gate,
+                      is_valid_sample_ID,
+                      is_valid_filename,
+                      _default_gate)
 
 
 def prepare_data_subsets(adata: AnnData,
@@ -155,10 +158,10 @@ def transformation_histogram_plot(type: Literal["compensated", "transformed"],
     ax.set_title(f"Transformed Values\nHistogram - {plot_params['x']}")
     return ax
 
+@_default_gate
 def transformation_plot(adata: AnnData,
-                        sample_ID: Optional[str] = None,
-                        file_name: Optional[str] = None,
-                        pregated_population: Optional[str] = None,
+                        gate: Optional[str] = None,
+                        sample_identifier: str = None,
                         marker: Optional[Union[str, list[str]]] = None,
                         scatter: str = "SSC-A",
                         sample_size: Optional[int] = 5_000,
@@ -168,24 +171,17 @@ def transformation_plot(adata: AnnData,
                         show: bool = None
                         ) -> Union[Figure, Axes, tuple[pd.DataFrame]]:
 
-    #if not isinstance(marker, list):
-    #    marker = [marker]
-    
-    if sample_ID and file_name:
-        raise TypeError("Please provide one of sample_ID or file_name but not both.")
-    
-    if sample_ID is None and file_name is None:
-        raise ValueError("Please provide either sample_ID or file_name")
-    
-    if pregated_population:
-        ### TODO TODO TODO: CHECK IF POPULATION EXISTS!!
+    if not is_valid_sample_ID(adata, sample_identifier) and not is_valid_filename(adata, sample_identifier):
+        raise ValueError(f"{sample_identifier} not found")
+  
+    if gate:
         adata = subset_gate(adata,
-                            gate = pregated_population,
+                            gate = gate,
                             as_view = True)
        
     stained_sample, control_samples = prepare_data_subsets(adata,
-                                                           by = "sample_ID" if sample_ID else "file_name",
-                                                           sample_identifier = sample_ID or file_name,
+                                                           by = "sample_ID" if is_valid_sample_ID(adata, sample_identifier) else "file_name",
+                                                           sample_identifier = sample_identifier,
                                                            marker = marker,
                                                            scatter = scatter,
                                                            sample_size = sample_size)
@@ -269,8 +265,6 @@ def transformation_plot(adata: AnnData,
     plt.tight_layout()
     
     savefig_or_show(show = show, save = save)
-    
-
 
 def cofactor_distribution(adata: AnnData,
                           groupby: Optional[str] = None,
@@ -337,6 +331,3 @@ def cofactor_distribution(adata: AnnData,
     plt.tight_layout()
     
     savefig_or_show(show = show, save = save)
-    
-
-

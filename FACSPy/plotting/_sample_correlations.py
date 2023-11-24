@@ -22,12 +22,14 @@ from ._utils import (_scale_data,
 
 from ._clustermap import create_clustermap
 
-def prepare_plot_data(adata: AnnData,
-                      raw_data: pd.DataFrame,
-                      scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]],
-                      corr_method: Literal["pearson", "kendall", "spearman"],
-                      copy: bool = False
-                      ) -> pd.DataFrame:
+from .._utils import _default_gate_and_default_layer
+
+def _prepare_plot_data(adata: AnnData,
+                       raw_data: pd.DataFrame,
+                       scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]],
+                       corr_method: Literal["pearson", "kendall", "spearman"],
+                       copy: bool = False
+                       ) -> pd.DataFrame:
     plot_data = raw_data.copy() if copy else raw_data
     fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
     if scaling is not None:
@@ -42,14 +44,15 @@ def prepare_plot_data(adata: AnnData,
     plot_data = _append_metadata(adata, plot_data)
     return plot_data
 
+@_default_gate_and_default_layer
 def sample_correlation(adata: AnnData,
-                       gate: str,
+                       gate: str = None,
+                       layer: str = None,
 
-                       annotate: Optional[Union[str, list[str]]],
+                       annotate: Optional[Union[str, list[str]]] = None,
 
                        data_group: Optional[Union[str, list[str]]] = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                       data_origin: Literal["compensated", "transformed"] = "transformed",
 
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
@@ -68,14 +71,14 @@ def sample_correlation(adata: AnnData,
     
     raw_data = _get_uns_dataframe(adata = adata,
                                   gate = gate,
-                                  table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+                                  table_identifier = f"{data_metric}_{data_group}_{layer}")
     
     
-    plot_data = prepare_plot_data(adata = adata,
-                                  raw_data = raw_data,
-                                  copy = False,
-                                  scaling = scaling,
-                                  corr_method = corr_method)
+    plot_data = _prepare_plot_data(adata = adata,
+                                   raw_data = raw_data,
+                                   copy = False,
+                                   scaling = scaling,
+                                   corr_method = corr_method)
     if return_dataframe:
         return plot_data
 

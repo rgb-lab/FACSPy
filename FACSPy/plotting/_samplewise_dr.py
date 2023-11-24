@@ -10,16 +10,16 @@ from matplotlib.figure import Figure
 from typing import Literal, Union, Optional
 
 from ._utils import _get_uns_dataframe, turn_off_missing_plots, savefig_or_show
-from .._utils import reduction_names
+from .._utils import _default_gate_and_default_layer, reduction_names
 
-def samplewise_dr_plot(adata: AnnData,
-                       dataframe: pd.DataFrame,
-                       groupby: Optional[Union[str, list[str]]],
-                       reduction: Literal["PCA", "MDS", "TSNE", "UMAP"],
-                       overview: bool = False,
-                       return_fig: bool = False,
-                       save: bool = None,
-                       show: bool = None):
+def _samplewise_dr_plot(adata: AnnData,
+                        dataframe: pd.DataFrame,
+                        groupby: Optional[Union[str, list[str]]],
+                        reduction: Literal["PCA", "MDS", "TSNE", "UMAP"],
+                        overview: bool = False,
+                        return_fig: bool = False,
+                        save: bool = None,
+                        show: bool = None):
     
     if not isinstance(groupby, list):
         groupby = [groupby]
@@ -46,7 +46,7 @@ def samplewise_dr_plot(adata: AnnData,
             )
         ]
 
-    plotting_dimensions = get_plotting_dimensions(reduction)
+    plotting_dimensions = _get_plotting_dimensions(reduction)
 
     ncols = 4 if overview else 1
     nrows = int(np.ceil(len(groupby) / 4)) if overview else len(groupby)
@@ -62,10 +62,10 @@ def samplewise_dr_plot(adata: AnnData,
             "y": plotting_dimensions[1],
             "data": dataframe,
             "hue": grouping
-                   if dataframe[grouping].dtype.__class__.__name__ == "CategoricalDtype"
+                   if isinstance(dataframe[grouping].dtype, pd.CategoricalDtype)
                    else None,
             "c": dataframe[grouping]
-                 if dataframe[grouping].dtype.__class__.__name__ != "CategoricalDtype" 
+                 if not isinstance(dataframe[grouping].dtype, pd.CategoricalDtype)
                  else None
         }
 
@@ -106,7 +106,7 @@ def samplewise_dr_plot(adata: AnnData,
     savefig_or_show(show = show, save = save)
             
 
-def get_plotting_dimensions(reduction: str):
+def _get_plotting_dimensions(reduction: str):
     return reduction_names[reduction][:2]
 
 def create_scatterplot(ax: Axis,
@@ -115,12 +115,13 @@ def create_scatterplot(ax: Axis,
                            edgecolor = "black",
                            ax = ax)
 
+@_default_gate_and_default_layer
 def pca_samplewise(adata: AnnData,
                    groupby: str,
-                   gate: str,
+                   gate: str = None,
+                   layer: str = None,
                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   data_origin: Literal["compensated", "transformed"] = "compensated",
                    overview: bool = False,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
@@ -133,26 +134,27 @@ def pca_samplewise(adata: AnnData,
     
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+                              table_identifier = f"{data_metric}_{data_group}_{layer}")
 
     if return_dataframe:
         return data
     
-    samplewise_dr_plot(adata = adata,
-                       dataframe = data,
-                       reduction = "PCA",
-                       groupby = groupby,
-                       overview = overview,
-                       return_fig = return_fig,
-                       save = save,
-                       show = show)
-    
+    _samplewise_dr_plot(adata = adata,
+                        dataframe = data,
+                        reduction = "PCA",
+                        groupby = groupby,
+                        overview = overview,
+                        return_fig = return_fig,
+                        save = save,
+                        show = show)
+
+@_default_gate_and_default_layer 
 def mds_samplewise(adata: AnnData,
                    groupby: str,
-                   gate: str, 
+                   gate: str = None, 
+                   layer: str = None,
                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   data_origin: Literal["compensated", "transformed"] = "compensated",
                    overview: bool = False,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
@@ -165,16 +167,82 @@ def mds_samplewise(adata: AnnData,
     
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{data_origin}")
+                              table_identifier = f"{data_metric}_{data_group}_{layer}")
 
     if return_dataframe:
         return data
     
-    samplewise_dr_plot(adata = adata,
-                       dataframe = data,
-                       reduction = "MDS",
-                       groupby = groupby,
-                       overview = overview,
-                       return_fig = return_fig,
-                       save = save,
-                       show = show)
+    _samplewise_dr_plot(adata = adata,
+                        dataframe = data,
+                        reduction = "MDS",
+                        groupby = groupby,
+                        overview = overview,
+                        return_fig = return_fig,
+                        save = save,
+                        show = show)
+
+@_default_gate_and_default_layer 
+def umap_samplewise(adata: AnnData,
+                    groupby: str,
+                    gate: str = None, 
+                    layer: str = None,
+                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    overview: bool = False,
+                    return_dataframe: bool = False,
+                    return_fig: bool = False,
+                    save: bool = None,
+                    show: bool = None
+                    ) -> Optional[Figure]:
+    
+    if gate is None:
+        raise TypeError("A Gate has to be provided")
+    
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{data_group}_{layer}")
+
+    if return_dataframe:
+        return data
+    
+    _samplewise_dr_plot(adata = adata,
+                        dataframe = data,
+                        reduction = "UMAP",
+                        groupby = groupby,
+                        overview = overview,
+                        return_fig = return_fig,
+                        save = save,
+                        show = show)
+
+@_default_gate_and_default_layer 
+def tsne_samplewise(adata: AnnData,
+                    groupby: str,
+                    gate: str = None, 
+                    layer: str = None,
+                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    overview: bool = False,
+                    return_dataframe: bool = False,
+                    return_fig: bool = False,
+                    save: bool = None,
+                    show: bool = None
+                    ) -> Optional[Figure]:
+    
+    if gate is None:
+        raise TypeError("A Gate has to be provided")
+    
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{data_group}_{layer}")
+
+    if return_dataframe:
+        return data
+    
+    _samplewise_dr_plot(adata = adata,
+                        dataframe = data,
+                        reduction = "TSNE",
+                        groupby = groupby,
+                        overview = overview,
+                        return_fig = return_fig,
+                        save = save,
+                        show = show)
