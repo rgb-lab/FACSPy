@@ -7,11 +7,13 @@ from scipy.sparse._base import issparse
 
 from ._utils import _merge_pca_info_into_adata
 from ._dr_samplewise import _perform_samplewise_dr
+from .._utils import _default_layer
 
+@_default_layer
 def pca_samplewise(adata: AnnData,
                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                   layer: Literal["compensated", "transformed"] = "compensated",
+                   layer: str = None,
                    use_only_fluo: bool = True,
                    exclude: Optional[Union[str, list, str]] = None,
                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
