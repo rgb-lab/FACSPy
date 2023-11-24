@@ -29,15 +29,15 @@ from ..tools._parc import parc
 from ..tools._flowsom import flowsom
 
 from .._utils import (contains_only_fluo,
-                     subset_gate,
-                     get_idx_loc,
-                     find_gate_indices,
-                     create_gate_lut,
-                     find_parents_recursively,
-                     find_current_population,
-                     find_gate_path_of_gate,
-                     is_valid_filename,
-                     is_valid_sample_ID)
+                      subset_gate,
+                      get_idx_loc,
+                      find_gate_indices,
+                      create_gate_lut,
+                      _find_parents_recursively,
+                      find_current_population,
+                      find_gate_path_of_gate,
+                      is_valid_filename,
+                      is_valid_sample_ID)
 
 from ..exceptions._exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
 
@@ -553,7 +553,7 @@ class supervisedGating(BaseGating):
         reverse_lut = {}
         for gate in training_gate_paths:
             gate_name = find_current_population(gate)
-            parents = [parent for parent in find_parents_recursively(gate) if parent != "root"]
+            parents = [parent for parent in _find_parents_recursively(gate) if parent != "root"]
             reverse_lut[gate] = {
                 "dimensions": training_gate_paths[gate],
                 "samples": [
