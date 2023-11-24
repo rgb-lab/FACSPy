@@ -1,27 +1,80 @@
 from anndata import AnnData
 from typing import Optional, Union
-from packaging import version
-from typing import Optional, Union
 import warnings
-
+from typing import Literal
 from anndata import AnnData
 
-from scanpy.tools._utils import _choose_representation
+from ._dr_samplewise import _perform_samplewise_dr
+from ._utils import (_choose_representation,
+                     _merge_dimred_coordinates_into_adata,
+                     _add_uns_data)
 from scanpy._settings import settings
+from .._utils import _default_layer
+
+@_default_layer
+def tsne_samplewise(adata: AnnData,
+                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    layer: str = None,
+                    use_only_fluo: bool = True,
+                    exclude: Optional[Union[str, list, str]] = None,
+                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
+                    n_components: int = 3,
+                    copy = False,
+                    *args,
+                    **kwargs) -> Optional[AnnData]:
+
+    adata = adata.copy() if copy else adata
+
+    adata = _perform_samplewise_dr(adata = adata,
+                                   reduction = "TSNE",
+                                   data_metric = data_metric,
+                                   data_group = data_group,
+                                   layer = layer,
+                                   use_only_fluo = use_only_fluo,
+                                   exclude = exclude,
+                                   scaling = scaling,
+                                   n_components = n_components,
+                                   *args,
+                                   **kwargs)
+
+    return adata if copy else None
+
+def _tsne(adata: AnnData,
+          preprocessed_adata: AnnData,
+          uns_key: str,
+          dimred_key: str,
+          **kwargs) -> AnnData:
+
+    coords, tsne_params = _compute_tsne(preprocessed_adata,
+                                        uns_key = uns_key,
+                                        **kwargs)
+
+    adata = _merge_dimred_coordinates_into_adata(adata = adata,
+                                                 gate_subset = preprocessed_adata,
+                                                 coordinates = coords,
+                                                 dimred = "tsne",
+                                                 dimred_key = dimred_key)
+    
+    adata = _add_uns_data(adata = adata,
+                          data = tsne_params,
+                          key_added = dimred_key)
+    
+    return adata
 
 def _compute_tsne(adata: AnnData,
+                  uns_key: str = None,
+                  n_components: int = 3,
                   n_pcs: Optional[int] = None,
                   use_rep: Optional[str] = None,
                   perplexity: Union[float, int] = 30,
                   early_exaggeration: Union[float, int] = 12,
                   learning_rate: Union[float, int] = 1000,
-                  random_state: int = 0,
+                  random_state: int = 187,
                   use_fast_tsne: bool = False,
                   n_jobs: Optional[int] = None,
-                  copy: bool = False,
                   *,
                   metric: str = "euclidean") -> Optional[AnnData]:
-
     """\
     t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 
@@ -76,12 +129,15 @@ def _compute_tsne(adata: AnnData,
     **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
     """
-    import sklearn
 
-    X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+    X = _choose_representation(adata,
+                               uns_key = uns_key,
+                               use_rep = use_rep,
+                               n_pcs = n_pcs)
     # params for sklearn
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     params_sklearn = dict(
+        n_components=n_components,
         perplexity=perplexity,
         random_state=random_state,
         verbose=settings.verbosity > 3,
@@ -92,16 +148,18 @@ def _compute_tsne(adata: AnnData,
     )
     # square_distances will default to true in the future, we'll get ahead of the
     # warning for now
-    if metric != "euclidean":
-        sklearn_version = version.parse(sklearn.__version__)
-        if sklearn_version >= version.parse("0.24.0"):
-            params_sklearn["square_distances"] = True
-        else:
-            warnings.warn(
-                "Results for non-euclidean metrics changed in sklearn 0.24.0, while "
-                f"you are using {sklearn.__version__}.",
-                UserWarning,
-            )
+
+    # This results in a unexpected keyword argument for TSNE...
+#    if metric != "euclidean":
+#        sklearn_version = version.parse(sklearn.__version__)
+#        if sklearn_version >= version.parse("0.24.0"):
+#            params_sklearn["square_distances"] = True
+#        else:
+#            warnings.warn(
+#                "Results for non-euclidean metrics changed in sklearn 0.24.0, while "
+#                f"you are using {sklearn.__version__}.",
+#                UserWarning,
+#            )
 
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:
@@ -144,7 +202,6 @@ def _compute_tsne(adata: AnnData,
         tsne = TSNE(**params_sklearn)
         X_tsne = tsne.fit_transform(X)
 
-    # update AnnData instance
     params = {
         "params": {
             k: v
@@ -155,6 +212,7 @@ def _compute_tsne(adata: AnnData,
                 "n_jobs": n_jobs,
                 "metric": metric,
                 "use_rep": use_rep,
+                "n_components": n_components
             }.items()
             if v is not None
         }
