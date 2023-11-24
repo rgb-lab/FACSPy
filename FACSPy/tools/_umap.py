@@ -10,25 +10,82 @@ from packaging import version
 from anndata import AnnData
 from sklearn.utils import check_random_state, check_array
 
-from scanpy.tools._utils import get_init_pos_from_paga, _choose_representation
+from scanpy.tools._utils import get_init_pos_from_paga
 from scanpy._settings import settings
 from scanpy._compat import Literal
 from scanpy._utils import AnyRandom, NeighborsView
 
-
+from ._dr_samplewise import _perform_samplewise_dr
+from ._utils import (_merge_dimred_coordinates_into_adata,
+                     _add_uns_data,
+                     _choose_representation)
+from .._utils import _default_layer
 _InitPos = Literal['paga', 'spectral', 'random']
 
+@_default_layer
+def umap_samplewise(adata: AnnData,
+                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    layer: str = None,
+                    use_only_fluo: bool = True,
+                    exclude: Optional[Union[str, list, str]] = None,
+                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
+                    n_components: int = 3,
+                    copy = False,
+                    *args,
+                    **kwargs) -> Optional[AnnData]:
+
+    adata = adata.copy() if copy else adata
+
+    adata = _perform_samplewise_dr(adata = adata,
+                                   reduction = "UMAP",
+                                   data_metric = data_metric,
+                                   data_group = data_group,
+                                   layer = layer,
+                                   use_only_fluo = use_only_fluo,
+                                   exclude = exclude,
+                                   scaling = scaling,
+                                   n_components = n_components,
+                                   *args,
+                                   **kwargs)
+
+    return adata if copy else None
+
+
+def _umap(adata: AnnData,
+          preprocessed_adata: AnnData,
+          neighbors_key: str,
+          dimred_key: str,
+          uns_key: str,
+          **kwargs) -> AnnData:
+    coords, umap_params = _compute_umap(preprocessed_adata,
+                                        uns_key = uns_key,
+                                        neighbors_key = neighbors_key,
+                                        **kwargs)
+    
+    adata = _merge_dimred_coordinates_into_adata(adata = adata,
+                                                 gate_subset = preprocessed_adata,
+                                                 coordinates = coords,
+                                                 dimred = "umap",
+                                                 dimred_key = dimred_key)
+    
+    adata = _add_uns_data(adata = adata,
+                          data = umap_params,
+                          key_added = dimred_key)
+    
+    return adata
 
 def _compute_umap(adata: AnnData,
+                  uns_key: str,
                   min_dist: float = 0.5,
                   spread: float = 1.0,
-                  n_components: int = 2,
+                  n_components: int = 3,
                   maxiter: Optional[int] = None,
                   alpha: float = 1.0,
                   gamma: float = 1.0,
                   negative_sample_rate: int = 5,
                   init_pos: Union[_InitPos, np.ndarray, None] = 'spectral',
-                  random_state: AnyRandom = 0,
+                  random_state: AnyRandom = 187,
                   a: Optional[float] = None,
                   b: Optional[float] = None,
                   method: Literal['umap', 'rapids'] = 'umap',
@@ -172,9 +229,9 @@ def _compute_umap(adata: AnnData,
     neigh_params = neighbors['params']
     X = _choose_representation(
         adata,
-        neigh_params.get('use_rep', None),
-        neigh_params.get('n_pcs', None),
-        silent=True,
+        uns_key = uns_key,
+        use_rep = neigh_params.get('use_rep', None),
+        n_pcs = neigh_params.get('n_pcs', None),
     )
     if method == 'umap':
         # the data matrix X is really only used for determining the number of connected components
