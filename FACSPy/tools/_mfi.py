@@ -5,9 +5,7 @@ import pandas as pd
 
 from ._utils import _concat_gate_info_and_obs_and_fluo_data
 from .._utils import (_fetch_fluo_channels,
-                      _default_layer,
-                      _default_gate
-                      )
+                      _default_layer)
 
 def _mean(df: pd.DataFrame) -> pd.DataFrame:
     return df.mean()
