@@ -12,6 +12,15 @@ class InvalidTransformationError(Exception):
         )
         super().__init__(self.message)
 
+class MetaclusterOverwriteWarning(Warning):
+    def __init__(self,
+                 message) -> None:
+        self.message = message
+    
+    def __str__(self):
+        return repr(self.message)
+
+
 class InsufficientSampleNumberWarning(Warning):
     def __init__(self,
                  message) -> None:
