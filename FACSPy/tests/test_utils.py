@@ -20,7 +20,8 @@ from FACSPy._utils import (GATE_SEPARATOR,
                            subset_fluo_channels,
                            subset_gate,
                            _default_layer,
-                           _default_gate)
+                           _default_gate,
+                           _default_gate_and_default_layer)
 
 from FACSPy.exceptions._utils import (GateNotProvidedError,
                                       ExhaustedHierarchyError)
@@ -453,6 +454,70 @@ def test_default_gate_decorator(mock_anndata):
     gate, some, other, keyword_arg = my_func(adata = mock_anndata,
                                              some = "some_other",
                                              other = "actually_same")
+    assert gate is None
+    assert some == "some_other"
+    assert other == "actually_same"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layerdecorator(mock_anndata):
+
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: str = None,
+                          gate: str = None,
+                          some: str = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        return layer, gate, some, other, keyword_arg
+
+    def my_func(adata: AnnData,
+                layer: str = None,
+                gate: str = None,
+                some: str = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        return layer, gate, some, other, keyword_arg
+    
+    layer, gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
+                                                              layer = "my_layer",
+                                                              gate = "my_gate")
+    assert layer == "my_layer"
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    fp.settings.default_gate = "t_cells"
+    fp.settings.default_layer = "transformed"
+    layer, gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata)
+    assert layer == "transformed"
+    assert gate == "t_cells"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
+                                                              some = "some_other",
+                                                              other = "actually_same")
+    assert layer == "transformed"
+    assert gate == "t_cells"
+    assert some == "some_other"
+    assert other == "actually_same"
+    assert keyword_arg == "keyword_arg"
+     
+    layer, gate, some, other, keyword_arg = my_func(adata = mock_anndata,
+                                                    layer = "my_layer",
+                                                    gate = "my_gate")
+    assert layer == "my_layer"
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, gate, some, other, keyword_arg = my_func(adata = mock_anndata,
+                                                    some = "some_other",
+                                                    other = "actually_same")
+    assert layer is None
     assert gate is None
     assert some == "some_other"
     assert other == "actually_same"
