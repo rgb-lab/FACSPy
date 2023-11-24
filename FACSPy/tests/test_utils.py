@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from anndata import AnnData
 import anndata as ad
-
+import FACSPy as fp
 from FACSPy._utils import (GATE_SEPARATOR,
                            find_gate_path_of_gate,
                            find_gate_indices,
@@ -18,7 +18,9 @@ from FACSPy._utils import (GATE_SEPARATOR,
                            close_polygon_gate_coordinates,
                            _flatten_nested_list,
                            subset_fluo_channels,
-                           subset_gate)
+                           subset_gate,
+                           _default_layer,
+                           _default_gate)
 
 from FACSPy.exceptions._utils import (GateNotProvidedError,
                                       ExhaustedHierarchyError)
@@ -347,3 +349,111 @@ def test_gate_subset_gate_path_as_gate(mock_anndata_gate_subset):
 def test_gate_subset_wrong_inputs(mock_anndata_gate_subset):
     with pytest.raises(TypeError):
         subset_gate(mock_anndata_gate_subset)
+
+def test_default_layer_decorator(mock_anndata):
+
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: str = None,
+                          some: str = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: str = None,
+                some: str = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
+                                                        layer = "my_layer")
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    fp.settings.default_layer = "transformed"
+    layer, some, other, keyword_arg = my_func_decorated(adata = mock_anndata)
+    assert layer == "transformed"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
+                                                        some = "some_other",
+                                                        other = "actually_same")
+    assert layer == "transformed"
+    assert some == "some_other"
+    assert other == "actually_same"
+    assert keyword_arg == "keyword_arg"
+     
+    layer, some, other, keyword_arg = my_func(adata = mock_anndata,
+                                              layer = "my_layer")
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(adata = mock_anndata,
+                                              some = "some_other",
+                                              other = "actually_same")
+    assert layer is None
+    assert some == "some_other"
+    assert other == "actually_same"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator(mock_anndata):
+
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: str = None,
+                          some: str = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        return gate, some, other, keyword_arg
+
+    def my_func(adata: AnnData,
+                gate: str = None,
+                some: str = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
+                                                        gate = "my_gate")
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    fp.settings.default_gate = "t_cells"
+    gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata)
+    assert gate == "t_cells"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
+                                                       some = "some_other",
+                                                       other = "actually_same")
+    assert gate == "t_cells"
+    assert some == "some_other"
+    assert other == "actually_same"
+    assert keyword_arg == "keyword_arg"
+     
+    gate, some, other, keyword_arg = my_func(adata = mock_anndata,
+                                             gate = "my_gate")
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(adata = mock_anndata,
+                                             some = "some_other",
+                                             other = "actually_same")
+    assert gate is None
+    assert some == "some_other"
+    assert other == "actually_same"
+    assert keyword_arg == "keyword_arg"
