@@ -17,6 +17,8 @@ from ..gates.dimension import Dimension
 from ..transforms._matrix import Matrix
 from ..transforms import _transforms, _wsp_transforms
 
+from ..exceptions._supplements import SupplementFileNotFoundError
+
 wsp_gate_constructor_lut = {
             'RectangleGate': GMLRectangleGate,
             'PolygonGate': GMLPolygonGate,
@@ -35,6 +37,8 @@ class FlowJoWorkspace:
         #self.resource_path = resource_filename("FACSPy", "_resources")
         self.original_filename = os.path.basename(file)
         self.ignore_transforms = ignore_transforms
+        if not os.path.isfile(file):
+            raise SupplementFileNotFoundError(os.path.basename(file))
         self.wsp_dict = self.parse_workspace(file)
 
     def __repr__(self):

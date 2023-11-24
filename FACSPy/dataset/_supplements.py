@@ -92,7 +92,6 @@ class BaseSupplement:
                                file: Optional[str],
                                data: Optional[pd.DataFrame],
                                from_fcs: bool) -> pd.DataFrame:
-        print(self.source)
         if self.source == "provided dataframe":
             return data
             

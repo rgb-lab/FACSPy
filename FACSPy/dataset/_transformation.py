@@ -106,15 +106,31 @@ def transform(adata: AnnData,
     
     return adata if copy else None
 
+def calculate_cofactors(adata,
+                        add_to_adata: bool = True,
+                        return_dataframe: bool = False,
+                        copy: bool = False) -> Optional[AnnData]:
+    adata = adata.copy() if copy else adata
+    cofactor_calc = CofactorCalculator(adata = adata,
+                                       add_to_adata = add_to_adata)
+    if return_dataframe:
+        return cofactor_calc.get_cofactors()
+    
+    return adata if copy else None
+    
+
 class CofactorCalculator:
 
     def __init__(self,
                  adata: AnnData,
+                 add_to_adata: bool = True,
                  use_gate: Optional[str] = None) -> None:
         ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
-        
+        print("... calculating cofactors")
         self.cofactor_table, self.raw_cofactor_table = self.calculate_cofactors(adata)
-
+        if add_to_adata:
+            adata.uns["cofactors"] = self.cofactor_table
+            adata.uns["raw_cofactors"] = self.raw_cofactor_table
     
     def get_cofactors(self):
         return self.cofactor_table, self.raw_cofactor_table
@@ -127,6 +143,7 @@ class CofactorCalculator:
                                                                              by = "file_name")
         cofactors = {}
         for sample in stained_samples:
+            print(f"    ... sample {sample}")
             cofactors[sample] = {}
             fluo_channels = _fetch_fluo_channels(adata)
             sample_subset = create_sample_subset_with_controls(adata,
