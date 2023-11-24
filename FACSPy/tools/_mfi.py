@@ -4,7 +4,10 @@ from anndata import AnnData
 import pandas as pd
 
 from ._utils import _concat_gate_info_and_obs_and_fluo_data
-from .._utils import _fetch_fluo_channels
+from .._utils import (_fetch_fluo_channels,
+                      _default_layer,
+                      _default_gate
+                      )
 
 def _mean(df: pd.DataFrame) -> pd.DataFrame:
     return df.mean()
@@ -27,9 +30,10 @@ def _calculate_metric_from_frame(input_frame: pd.DataFrame,
     data = data.set_index(["gate"], append = True)
     return data.dropna(axis = 0, how = "all")
 
+@_default_layer
 def mfi(adata: AnnData,
         groupby: Union[Literal["sample_ID"], str] = "sample_ID",
-        layer: list[str] = ["compensated", "transformed"],
+        layer: Union[str, list[str]] = None,
         method: Literal["mean", "median"] = "median",
         use_only_fluo: bool = False,
         copy: bool = False) -> Optional[AnnData]:
