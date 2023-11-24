@@ -9,19 +9,17 @@ from umap import UMAP
 
 from typing import Optional, Union, Literal
 
+from ._utils import (_save_samplewise_dr_settings,
+                     _warn_user_about_changed_setting,
+                     _warn_user_about_insufficient_sample_size)
+
 from .._utils import (_fetch_fluo_channels,
                       IMPLEMENTED_SCALERS,
                       reduction_names)
 from ..exceptions._exceptions import (AnalysisNotPerformedError,
                                       InvalidScalingError)
-from ..plotting._utils import (scale_data,
-                               select_gate_from_multiindex_dataframe)
-
-from ._utils import (_save_samplewise_dr_settings,
-                     _warn_user_about_changed_setting,
-                     _warn_user_about_insufficient_sample_size)
-
-
+from ..plotting._utils import (_scale_data,
+                               _select_gate_from_multiindex_dataframe)
 
 def _perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
                 data: np.ndarray,
@@ -141,7 +139,7 @@ def _perform_samplewise_dr(adata: AnnData,
     coord_columns = reduction_names[reduction]
 
     for gate in gates:
-        gate_specific_data = select_gate_from_multiindex_dataframe(data, gate)
+        gate_specific_data = _select_gate_from_multiindex_dataframe(data, gate)
 
         if gate_specific_data.shape[0] <= 1:
             # special case because all the algorithms would fail
@@ -172,7 +170,7 @@ def _perform_samplewise_dr(adata: AnnData,
                                                       n_components)
             n_components = gate_specific_data.shape[0]
 
-        gate_specific_data = scale_data(gate_specific_data, scaling = scaling)
+        gate_specific_data = _scale_data(gate_specific_data, scaling = scaling)
         
         coords = _perform_dr(reduction,
                              gate_specific_data,
