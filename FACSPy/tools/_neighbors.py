@@ -5,10 +5,12 @@ from scipy.sparse import csr_matrix
 from ._utils import (_preprocess_adata,
                      _merge_neighbors_info_into_adata,
                      _choose_use_rep_as_scanpy)
+from .._utils import _default_gate_and_default_layer
 
+@_default_gate_and_default_layer
 def neighbors(adata: AnnData,
-              gate: str,
-              layer: str,
+              gate: str = None,
+              layer: str = None,
               use_only_fluo: bool = True,
               exclude: Optional[list[str]] = None,
               scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
