@@ -745,3 +745,35 @@ def _default_gate(func):
         return func(*args, **kwargs)
     return add_default_gate
 
+def _default_gate_and_default_layer(func):
+    """
+    combines the functionality of _default_gate and _default_layer
+    until we fix this to be a chained decorator we have to live with code duplication...
+    """
+    argspec = inspect.getfullargspec(func)
+    position_count = len(argspec.args) - len(argspec.defaults)
+
+    def add_default_gate(*args, **kwargs):
+        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
+
+        used_kwargs = kwargs.copy()
+        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
+        
+        # we delete every default that is overwritten by the user
+        defaults = {
+            k: v for (k,v) in defaults.items()
+            if k not in used_kwargs
+        }
+
+        # if its still in defaults, its not set by the user 
+        # and we can set the settings default
+        from . import settings
+        if "gate" in defaults: 
+            defaults["gate"] = settings.default_gate
+        if "layer" in defaults: 
+            defaults["layer"] = settings.default_layer
+        kwargs = {**used_kwargs, **defaults}
+        return func(*args, **kwargs)
+    return add_default_gate
+
+
