@@ -60,8 +60,8 @@ class SupplementColumnError(Exception):
 class SupplementFileNotFoundError(Exception):
 
     def __init__(self,
-                 panel_file):
-        self.message = f"{panel_file} could not be found in the specified input directory!"
+                 file):
+        self.message = f"{file} could not be found in the specified input directory!"
         super().__init__(self.message)
 
 
