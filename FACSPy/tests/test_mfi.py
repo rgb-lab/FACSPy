@@ -46,7 +46,8 @@ def test_copying(mock_dataset: AnnData):
 
 def test_mfi_function(mock_dataset: AnnData):
     mfi(mock_dataset,
-        groupby = "sample_ID")
+        groupby = "sample_ID",
+        layer = ["compensated", "transformed"])
     assert "mfi_sample_ID_compensated" in mock_dataset.uns
     assert "mfi_sample_ID_transformed" in mock_dataset.uns
 
