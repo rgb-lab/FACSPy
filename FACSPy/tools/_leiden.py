@@ -30,12 +30,15 @@ from ._utils import (_preprocess_adata,
                      _recreate_preprocessed_view)
 from ._pca import _pca
 from ._neighbors import _neighbors
-from .._utils import IMPLEMENTED_SCALERS
+
+from .._utils import (_default_gate_and_default_layer,
+                      IMPLEMENTED_SCALERS)
 from ..exceptions._exceptions import InvalidScalingError
 
+@_default_gate_and_default_layer
 def leiden(adata: AnnData,
-           gate: str,
-           layer: Literal["compensated", "transformed"] = "transformed",
+           gate: str = None,
+           layer: str = None,
            use_only_fluo: bool = True,
            exclude: Optional[Union[str, list[str]]] = None,
            scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
