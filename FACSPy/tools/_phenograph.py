@@ -6,13 +6,14 @@ from typing import Optional, Literal, Union
 from ._utils import (_preprocess_adata,
                      _merge_cluster_info_into_adata,
                      _save_cluster_settings)
-from .._utils import IMPLEMENTED_SCALERS
+from .._utils import (_default_gate_and_default_layer,
+                      IMPLEMENTED_SCALERS)
 from ..exceptions._exceptions import InvalidScalingError
 
-
+@_default_gate_and_default_layer
 def phenograph(adata: AnnData,
-               gate: str,
-               layer: Literal["compensated", "transformed"] = "transformed",
+               gate: str = None,
+               layer: str = None,
                use_only_fluo: bool = True,
                exclude: Optional[Union[str, list[str]]] = None,
                scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
