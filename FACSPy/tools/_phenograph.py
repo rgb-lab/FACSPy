@@ -17,6 +17,7 @@ def phenograph(adata: AnnData,
                use_only_fluo: bool = True,
                exclude: Optional[Union[str, list[str]]] = None,
                scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
+               key_added: Optional[str] = None,
                copy: bool = False,
                **kwargs) -> Optional[AnnData]:
     
@@ -37,7 +38,7 @@ def phenograph(adata: AnnData,
                            **kwargs)
 
     uns_key = f"{gate}_{layer}"
-    cluster_key = f"{uns_key}_phenograph"
+    cluster_key = key_added or f"{uns_key}_phenograph"
 
     preprocessed_adata = _preprocess_adata(adata,
                                            gate = gate,
