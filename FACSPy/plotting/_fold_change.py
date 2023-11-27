@@ -1,6 +1,10 @@
 from anndata import AnnData
-from matplotlib import pyplot as plt
+import matplotlib
 import seaborn as sns
+import pandas as pd
+from matplotlib.colors import LogNorm, ListedColormap
+from matplotlib import pyplot as plt
+import numpy as np
 
 from matplotlib.patches import Patch
 
@@ -11,6 +15,24 @@ from typing import Literal, Union, Optional
 from .._utils import ifelse, _default_gate_and_default_layer
 
 from ._utils import savefig_or_show
+
+def _create_custom_cbar(cmap: str,
+                        fold_changes: pd.DataFrame,
+                        stat: str):
+       custom_cmap = matplotlib.colormaps[cmap]
+       lognorm = LogNorm(vmin = fold_changes[stat].min(), vmax = 0.1)
+       not_sig_cutoff = int(lognorm(0.05) * 256 - 256) * -1
+       custom_colors = custom_cmap(np.linspace(0,1,256 - not_sig_cutoff))
+       gray = np.array([0.5, 0.5, 0.5, 1])
+       custom_colors = np.vstack([custom_colors, np.tile(gray, (not_sig_cutoff,1))])
+
+       sm = plt.cm.ScalarMappable(cmap = ListedColormap(custom_colors),
+                                  norm = lognorm)
+       zeroed = (np.log10(fold_changes[stat].tolist()) - np.min(np.log10(fold_changes[stat].tolist())))
+       zeroed = zeroed / np.max(zeroed)
+       p_color = sm.cmap(zeroed)
+       return sm, p_color
+
 
 @_default_gate_and_default_layer
 def fold_change(adata: AnnData,
@@ -45,39 +67,31 @@ def fold_change(adata: AnnData,
 
        if return_dataframe:
               return fold_changes
+       colorbar, p_colors = _create_custom_cbar(cmap = cmap,
+                                                fold_changes = fold_changes,
+                                                stat = stat)
 
        fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = figsize)
-       cmap_colors = sns.color_palette(cmap, 4)
-       p_color = [ifelse(x < 0.0001, cmap_colors[0],
-                            ifelse(x < 0.001, cmap_colors[1],
-                                   ifelse(x < 0.01, cmap_colors[2],
-                                          ifelse(x < 0.05, cmap_colors[3], "grey")))) for x in fold_changes[stat].to_list()]
-                                   
-
        sns.barplot(data = fold_changes,
                    x = "asinh_fc",
                    y = "index",
-                   palette = p_color,
+                   palette = p_colors,
                    ax = ax)
        ax.set_title(f"enriched in\n{group1}     {group2}")
-       
        ax.set_yticklabels(ax.get_yticklabels(), fontsize = 10)
        ax.set_ylabel("antigen")
 
-       group_lut = {"p < 0.0001": cmap_colors[0],
-                     "p < 0.001": cmap_colors[1],
-                     "p < 0.01": cmap_colors[2],
-                     "p < 0.05": cmap_colors[3],
-                     "n.s.": "grey"}
-       
-       handles = [Patch(facecolor = group_lut[name]) for name in group_lut]
-       ax.legend(handles,
-                 group_lut,
-                 loc = "center left",
-                 bbox_to_anchor = (1.1,0.5),
-                 title = "p_signif."
-                 )
-       
+       cbar = ax.figure.colorbar(colorbar,
+                                 ax = ax)
+       cbar.ax.set_ylabel(f"{stat} value", rotation = 270, labelpad = 25)
+       cbar.ax.text(0.55,
+                    0.07,
+                    "ns",
+                    ha='center',
+                    va='center',
+                    color = "white",
+                    weight = "bold")
+
        plt.tight_layout()
        if return_fig:
               return fig
