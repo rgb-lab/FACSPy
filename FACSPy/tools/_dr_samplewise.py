@@ -128,7 +128,7 @@ def _perform_samplewise_dr(adata: AnnData,
     if not table_identifier in adata.uns:
         raise AnalysisNotPerformedError(analysis = data_metric)
     
-    if not scaling in IMPLEMENTED_SCALERS:
+    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
 
     data: pd.DataFrame = adata.uns[table_identifier]
