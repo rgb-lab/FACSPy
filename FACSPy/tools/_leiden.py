@@ -42,6 +42,7 @@ def leiden(adata: AnnData,
            use_only_fluo: bool = True,
            exclude: Optional[Union[str, list[str]]] = None,
            scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
+           key_added: Optional[str] = None,
            copy: bool = False,
            **kwargs) -> Optional[AnnData]:
     
@@ -60,7 +61,7 @@ def leiden(adata: AnnData,
                            **kwargs)
 
     uns_key = f"{gate}_{layer}"
-    cluster_key = f"{uns_key}_leiden"
+    cluster_key = key_added or f"{uns_key}_leiden"
     neighbors_key = f"{uns_key}_neighbors"
     connectivities_key = f"{neighbors_key}_connectivities"
 
