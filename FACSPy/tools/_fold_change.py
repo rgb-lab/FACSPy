@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -5,7 +6,7 @@ from anndata import AnnData
 
 from typing import Union, Literal, Optional
 
-from ..exceptions._exceptions import NotSupportedStatisticalTestError
+from ..exceptions._exceptions import NotSupportedStatisticalTestError, NaNRemovalWarning
 
 from ..plotting._utils import _get_uns_dataframe
 
@@ -57,6 +58,16 @@ def calculate_p_values(data: pd.DataFrame,
 def calculate_pvalue(group1: np.ndarray,
                      group2: np.ndarray,
                      test: str) -> float:
+    if np.any(np.isnan(group1)):
+        warnings.warn("NaN detected while calculating fold changes. The NaN will be removed!",
+                      NaNRemovalWarning)
+        group1 = group1[~np.isnan(group1)]
+
+    if np.any(np.isnan(group2)):
+        warnings.warn("NaN detected while calculating fold changes. The NaN will be removed!",
+                      NaNRemovalWarning)
+        group2 = group2[~np.isnan(group2)]
+
     if test == "Kruskal":
         try:
             return kruskal(group1, group2).pvalue
@@ -90,21 +101,21 @@ def _calculate_fold_changes(adata: AnnData,
                               gate = gate,
                               table_identifier = f"{data_metric}_{data_group}_{layer}")
     
-    fluo_columns = [col for col in data.columns if col in adata.var_names]
-    cofactors = adata.var.loc[fluo_columns, "cofactors"].astype("float32")
-    data[fluo_columns] = data[fluo_columns].divide(cofactors)
+    channel_columns = [col for col in data.columns if col in adata.var_names]
+    cofactors = adata.var.loc[channel_columns, "cofactors"].astype("float32")
+    data[channel_columns] = data[channel_columns].divide(cofactors)
 
     asinh_fc = calculate_asinh_fold_change(data,
                                            groupby,
                                            group1,
                                            group2,
-                                           fluo_columns,
+                                           channel_columns,
                                            cofactors)
     p_values = calculate_p_values(data,
                                   groupby,
                                   group1,
                                   group2,
-                                  fluo_columns,
+                                  channel_columns,
                                   n_comparisons = len(data[groupby].unique()),
                                   test = test)
         
