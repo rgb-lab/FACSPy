@@ -70,7 +70,7 @@ def _add_metaclusters(adata: AnnData,
                       label_metaclusters: bool,
                       label_metaclusters_key: str
                       ):
-    metaclusters = _calculate_metaclusters(row_linkage, n_clusters = n_clusters)
+    metaclusters = _calculate_metaclusters(row_linkage, n_clusters = n_clusters, sample_IDs = sample_IDs)
     metacluster_mapping = _map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
     data = _merge_metaclusters_into_dataframe(data, metacluster_mapping)
     
@@ -82,7 +82,8 @@ def _add_metaclusters(adata: AnnData,
     return data
 
 def _calculate_metaclusters(linkage: np.ndarray,
-                            n_clusters: int) -> dict[int: set[int]]:
+                            n_clusters: int,
+                            sample_IDs: list[str]) -> dict[int: set[int]]:
     ### stackoverflow https://stackoverflow.com/questions/65034792/print-all-clusters-and-samples-at-each-step-of-hierarchical-clustering-in-python
     linkage_matrix = linkage
     clusters = cut_tree(linkage_matrix,
@@ -92,12 +93,12 @@ def _calculate_metaclusters(linkage: np.ndarray,
     for row in clusters[::-1]:
         # create empty dictionary
         groups = {}
-        for i, g in enumerate(row):
+        for sid, g in zip(sample_IDs, row):
             if g not in groups:
                 # add new key to dict and assign empty set
                 groups[g] = set([])
             # add to set of certain group
-            groups[g].add(i)
+            groups[g].add(sid)
 
     return groups
 
@@ -105,7 +106,7 @@ def _map_metaclusters_to_sample_ID(metaclusters: dict,
                                    sample_IDs: list) -> pd.DataFrame:
     sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
     for metacluster in metaclusters:
-        sample_IDs.loc[sample_IDs["sample_ID"].isin(metaclusters[metacluster]), "metacluster"] = metacluster
+        sample_IDs.loc[sample_IDs["sample_ID"].isin(metaclusters[metacluster]), "metacluster"] = str(int(metacluster))
     return sample_IDs
 
 def _merge_metaclusters_into_dataframe(data: pd.DataFrame,
@@ -127,9 +128,9 @@ def _label_metaclusters_in_dataset(adata: AnnData,
     if label_metaclusters_key is not None:
         if label_metaclusters_key in metadata.dataframe.columns:
             warnings.warn("Overwriting metaclusters in dataset.",
-                        MetaclusterOverwriteWarning)
+                          MetaclusterOverwriteWarning)
             metadata.dataframe = metadata.dataframe.drop([label_metaclusters_key],
-                                                        axis = 1)
+                                                         axis = 1)
         metadata.dataframe.rename(columns = {"metacluster": label_metaclusters_key},
                                   inplace = True)
     
@@ -189,7 +190,9 @@ def _select_gate_from_multiindex_dataframe(dataframe: pd.DataFrame,
 
 def _scale_data(dataframe: pd.DataFrame,
                 scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]) -> np.ndarray:
-    if scaling == "MinMaxScaler":
+    if scaling is None:
+        return dataframe.values
+    elif scaling == "MinMaxScaler":
         return MinMaxScaler().fit_transform(dataframe)
     elif scaling == "RobustScaler":
         return RobustScaler().fit_transform(dataframe)
