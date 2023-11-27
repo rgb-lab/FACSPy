@@ -18,7 +18,7 @@ from ._utils import (_scale_data,
 
 
 from ._clustermap import create_clustermap
-from ._frequency_plots import prep_dataframe_cluster_freq
+from ._frequency_plots import _prep_dataframe_cluster_freq
 
 from .._utils import _default_gate_and_default_layer
 
@@ -111,7 +111,7 @@ def cluster_heatmap(adata: AnnData,
 
     if annotate is not None:
         if annotate == "frequency":
-            annot_frame = prep_dataframe_cluster_freq(
+            annot_frame = _prep_dataframe_cluster_freq(
                 adata,
                 groupby = annotation_kwargs.get("groupby", "sample_ID"),
                 cluster_key = annotation_kwargs.get("cluster_key", "leiden"),
