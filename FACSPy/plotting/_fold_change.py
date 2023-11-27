@@ -77,9 +77,11 @@ def fold_change(adata: AnnData,
                    y = "index",
                    palette = p_colors,
                    ax = ax)
-       ax.set_title(f"enriched in\n{group1}     {group2}")
+       ax.set_title(f"enriched in\n{groupby}\n{group1}       {group2}")
        ax.set_yticklabels(ax.get_yticklabels(), fontsize = 10)
        ax.set_ylabel("antigen")
+       ax.set_xlim(-np.max(np.abs(ax.get_xlim())),
+                    np.max(np.abs(ax.get_xlim())))
 
        cbar = ax.figure.colorbar(colorbar,
                                  ax = ax)
