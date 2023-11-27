@@ -29,7 +29,9 @@ def _concat_gate_info_and_obs(adata: AnnData) -> pd.DataFrame:
 def _scale_adata(adata: AnnData,
                  layer: Literal["compensated", "transformed"] = "transformed",
                  scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler") -> AnnData:
-    if scaling == "MinMaxScaler":
+    if scaling is None:
+        return adata.layers[layer]
+    elif scaling == "MinMaxScaler":
         from sklearn.preprocessing import MinMaxScaler
         adata.X = MinMaxScaler().fit_transform(adata.layers[layer])
     elif scaling == "RobustScaler":
@@ -505,7 +507,7 @@ def _save_cluster_settings(adata: AnnData,
         "scaling": scaling,
     }
     settings_dict = {**settings_dict, **kwargs}
-    adata.uns["settings"][f"_{clustering}_{gate}_{layer}"] = settings_dict
+    adata.uns["settings"][f"_{clustering}_{gate}i{layer}"] = settings_dict
     
     return
 
