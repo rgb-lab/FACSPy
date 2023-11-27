@@ -16,7 +16,6 @@ from ._clustermap import create_clustermap
 
 from .._utils import _default_gate_and_default_layer
 
-@_default_gate_and_default_layer
 def _prepare_plot_data(adata: AnnData,
                        raw_data: pd.DataFrame,
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]],
@@ -36,6 +35,7 @@ def _prepare_plot_data(adata: AnnData,
 
     return plot_data
 
+@_default_gate_and_default_layer
 def marker_correlation(adata: AnnData,
                        gate: str = None,
                        layer: str = None,
