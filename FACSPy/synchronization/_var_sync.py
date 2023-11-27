@@ -32,6 +32,7 @@ def synchronize_vars(adata: AnnData,
         _synchronize_uns_frame(adata,
                                identifier = frame_id,
                                var_names = current_var_names)
+        print(f"     ... synchronized frame {frame_id}")
     
     _synchronize_panel_object(adata, current_var_names)
     _synchronize_cofactors_object(adata, current_var_names)
