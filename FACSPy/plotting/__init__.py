@@ -5,7 +5,7 @@ from ._marker_expressions import marker_density
 from ._mfi import mfi, fop
 from ._sample_correlations import sample_correlation
 from ._sample_distance import sample_distance
-from ._samplewise_dr import pca_samplewise, mds_samplewise
+from ._samplewise_dr import pca_samplewise, mds_samplewise, tsne_samplewise, umap_samplewise
 from ._cofactor_plots import cofactor_distribution, transformation_plot
 from ._gating_strategy import gating_strategy
 from ._qc import cell_counts, gate_frequency
