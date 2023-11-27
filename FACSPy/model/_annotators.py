@@ -20,16 +20,17 @@ from ._utils import (cap_data,
                     scale_data,
                     )
 
-from .._utils import transform_gates_according_to_gate_transform, transform_vertices_according_to_gate_transform
-from .._utils import find_parent_gate, GATE_SEPARATOR
+from .._utils import (transform_gates_according_to_gate_transform,
+                      transform_vertices_according_to_gate_transform,
+                      find_parent_gate,
+                      GATE_SEPARATOR)
 
 from ..tools._leiden import leiden
 from ..tools._phenograph import phenograph
 from ..tools._parc import parc
 from ..tools._flowsom import flowsom
 
-from .._utils import (contains_only_fluo,
-                      subset_gate,
+from .._utils import (subset_gate,
                       get_idx_loc,
                       find_gate_indices,
                       create_gate_lut,
@@ -39,7 +40,9 @@ from .._utils import (contains_only_fluo,
                       is_valid_filename,
                       is_valid_sample_ID)
 
-from ..exceptions._exceptions import ClassifierNotImplementedError, ParentGateNotFoundError, AnnDataSetupError
+from ..exceptions._exceptions import (ClassifierNotImplementedError,
+                                      ParentGateNotFoundError,
+                                      AnnDataSetupError)
 
 """
 TODO: testing of classifier
@@ -56,10 +59,10 @@ class BaseGating:
     def get_dataset(self):
         return self.adata
 
-    def subset_anndata_by_sample(self,
-                                 samples,
-                                 adata: Optional[AnnData] = None,
-                                 copy: bool = False):
+    def _subset_anndata_by_sample(self,
+                                  samples,
+                                  adata: Optional[AnnData] = None,
+                                  copy: bool = False):
         if not isinstance(samples, list):
             samples = [samples]
         if adata is not None:
@@ -72,10 +75,10 @@ class BaseGating:
         else:
             return self.adata[self.adata.obs["file_name"].isin(samples),:]
 
-    def add_gating_to_input_dataset(self,
-                                    subset: AnnData,
-                                    predictions: np.ndarray,
-                                    gate_indices: list[int]) -> None:
+    def _add_gating_to_input_dataset(self,
+                                     subset: AnnData,
+                                     predictions: np.ndarray,
+                                     gate_indices: list[int]) -> None:
         sample_indices = get_idx_loc(adata = self.adata,
                                      idx_to_loc = subset.obs_names)
         ### otherwise, broadcast error if multiple columns are indexed and sample_indices
@@ -85,8 +88,8 @@ class BaseGating:
                 gate_index,
             ] = predictions[:, i]
 
-    def append_gate_column_to_adata(self,
-                                    gate_path) -> None:
+    def _append_gate_column_to_adata(self,
+                                     gate_path) -> None:
         self.adata.uns["gating_cols"] = self.adata.uns["gating_cols"].append(pd.Index([gate_path]))
         empty_column = np.zeros(
                 shape = (self.adata.obsm["gating"].shape[0],
@@ -171,12 +174,12 @@ class ManualGating(BaseGating):
         self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
         gating_result = self._points_in_gate()
         
-        self.append_gate_column_to_adata(self.gating_path)
+        self._append_gate_column_to_adata(self.gating_path)
         gate_index = find_gate_indices(self.adata, self.gating_path)
         
-        self.add_gating_to_input_dataset(self.subset,
-                                         predictions = gating_result,
-                                         gate_indices = gate_index)
+        self._add_gating_to_input_dataset(self.subset,
+                                          predictions = gating_result,
+                                          gate_indices = gate_index)
         
         self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
         return
@@ -355,7 +358,7 @@ class supervisedGating(BaseGating):
                                                                np.ndarray,
                                                                np.ndarray]:
              
-        adata_subset = self.subset_anndata_by_sample(samples)
+        adata_subset = self._subset_anndata_by_sample(samples)
         assert adata_subset.is_view ##TODO: delete later
         gate_indices = find_gate_indices(self.adata,
                                          gate_columns)
@@ -443,15 +446,15 @@ class supervisedGating(BaseGating):
                                              gate_columns = self.training_groups[gate_group]["gates"])
             for sample in non_gated_samples:
                 print(f"Gating sample {sample}...")
-                sample_view = self.subset_anndata_by_sample(samples = sample, copy = False)
+                sample_view = self._subset_anndata_by_sample(samples = sample, copy = False)
                 X = sample_view.layers[self.on]
                 X = self.preprocess_data(X = X,
                                          group_identifier = gate_group)
                 print("Predicting")
                 predictions: np.ndarray = self.classifiers[gate_group].predict(X)
-                self.add_gating_to_input_dataset(sample_view,
-                                                 predictions,
-                                                 gate_indices)
+                self._add_gating_to_input_dataset(sample_view,
+                                                  predictions,
+                                                  gate_indices)
                 self.add_gating_to_workspace(sample_view,
                                              group_identifier = gate_group,
                                              current_sample = sample)
@@ -645,17 +648,36 @@ class unsupervisedGating(BaseGating):
     def __init__(self,
                  adata: AnnData,
                  gating_strategy: dict,
-                 clustering_algorithm: Literal["leiden", "FlowSOM"],
+                 layer: str = None,
+                 clustering_algorithm: Literal["leiden", "FlowSOM"] = "leiden",
                  cluster_key: str = None) -> None:
         gating_strategy = gating_strategy
-        self.gating_strategy = self.preprocess_gating_strategy(gating_strategy)
+        self.gating_strategy = self._preprocess_gating_strategy(gating_strategy)
         self.clustering_algorithm = clustering_algorithm
         self.adata = adata
         self.cluster_key = cluster_key or "clusters"
-        assert contains_only_fluo(self.adata)
+        self.layer = layer
+
+    def identify_populations(self,
+                             cluster_kwargs: Optional[dict] = None):
+        if cluster_kwargs is None:
+            cluster_kwargs = {}
+        if isinstance(self.adata.obsm["gating"], csr_matrix):
+            self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
+        ### mutable object to keep track of analyzed gates. this is necessary
+        ### because if parents are not present immediately, the population
+        ### is analyzed beforehand but still a key in the dictionary and
+        ### therefore analyzed twice.
+        self.already_analyzed = []
+        for cell_population in self.gating_strategy:
+            self._identify_population(cell_population,
+                                      cluster_kwargs)
+        self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
+
+        return
     
-    def preprocess_gating_strategy(self,
-                                   gating_strategy: dict) -> dict:
+    def _preprocess_gating_strategy(self,
+                                    gating_strategy: dict) -> dict:
         parent_populations = {entry[0] for _, entry in gating_strategy.items()}
         return {
             population: [
@@ -669,12 +691,13 @@ class unsupervisedGating(BaseGating):
             for population in parent_populations
         }
 
-    def population_is_already_a_gate(self,
-                                     parent_population) -> bool:
-        return parent_population in [gate.split("/")[-1] for gate in self.adata.uns["gating_cols"]]
-
-    def process_markers(self,
-                        markers: list[str]) -> dict[str, list[Optional[str]]]:
+    def _population_is_already_a_gate(self,
+                                      parent_population) -> bool:
+        return parent_population in [find_current_population(gate)
+                                     for gate in self.adata.uns["gating_cols"]]
+    
+    def _process_markers(self,
+                         markers: list[str]) -> dict[str, list[Optional[str]]]:
         if not isinstance(markers, list):
             markers = [markers]
         marker_dict = {"up": [],
@@ -688,41 +711,31 @@ class unsupervisedGating(BaseGating):
                 marker_dict["up"].append(marker)
         return marker_dict
 
-    def find_parent_population_in_gating_strategy(self,
-                                                  query_population: str) -> str:
+    def _find_parent_population_in_gating_strategy(self,
+                                                   query_population: str) -> str:
         for entry in self.gating_strategy:
             for population in self.gating_strategy[entry]:
                 if population[0] == query_population:
                     return entry
         raise ParentGateNotFoundError(query_population)
 
-    def identify_population(self,
-                            population_to_cluster: str,
-                            cluster_kwargs: dict) -> None:
-        print("Already analyzed: ", self.already_analyzed)
+    def _identify_population(self,
+                             population_to_cluster: str,
+                             cluster_kwargs: dict) -> None:
         if population_to_cluster in self.already_analyzed:
             return
-        
         print(f"Analyzing population: {population_to_cluster}")
-        if not self.population_is_already_a_gate(population_to_cluster):
-            print("population ", population_to_cluster, " is not yet a gate...")
-            parent_of_population_to_cluster = self.find_parent_population_in_gating_strategy(population_to_cluster) 
+
+        # handles the case when the parent lives within the gating strategy        
+        if not self._population_is_already_a_gate(population_to_cluster):
+            parent_of_population_to_cluster = self._find_parent_population_in_gating_strategy(population_to_cluster)
             if parent_of_population_to_cluster in self.gating_strategy:
-                self.identify_population(parent_of_population_to_cluster,
-                                         cluster_kwargs)
+                self._identify_population(parent_of_population_to_cluster,
+                                          cluster_kwargs)
             else:
                 raise ParentGateNotFoundError(population_to_cluster)
-        
-        if population_to_cluster != "root":
-            dataset = subset_gate(self.adata,
-                                  gate = population_to_cluster,
-                                  as_view = True)
-            assert dataset.is_view
-            print("The gate subset has shape ", dataset.shape)
-        else:
-            dataset = self.adata.copy()
-        
-        if dataset.shape[0] == 0:
+            
+        if self.adata.shape[0] <= 1:
             """
             Handles the case where no parent cells have been found. In order to avoid missing gates,
             empty gates are appended.
@@ -731,89 +744,68 @@ class unsupervisedGating(BaseGating):
             for population_list in self.gating_strategy[population_to_cluster]:
                 population_name: str = population_list[0]
                 print(f"... gating population {population_name}")
-
-                parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
-                                    if gate_path.endswith(population_to_cluster)][0]
+                parent_gate_path = find_gate_path_of_gate(file_subset, population_to_cluster)
                 population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
-                if not self.population_is_already_a_gate(population_name):
-                    self.append_gate_column_to_adata(population_gate_path)
-        else:
-            for sample in dataset.obs["file_name"].unique():
-                print(f"Analyzing sample {sample}")
 
-                subset = self.subset_anndata_by_sample(adata = dataset,
-                                                    samples = sample,
-                                                    copy = False)
-                #TODO: handle the case where only a couple of cells are present...
-                print("... preprocessing")
-                subset = self.preprocess_dataset(subset = subset)
-                print("... clustering")
-                if self.cluster_key not in subset.obs:
-                    subset = self.cluster_dataset(subset,
-                                                cluster_kwargs)
-                
+                if not self._population_is_already_a_gate(population_name):
+                    self._append_gate_column_to_adata(population_gate_path)
+
+        else:
+            for sample in self.adata.obs["file_name"].unique():
+                print(f"... sample {sample}")
+                file_subset = self._subset_anndata_by_sample(adata = self.adata,
+                                                             samples = sample,
+                                                             copy = True)
+                file_subset = self._cluster_dataset(adata = file_subset,
+                                                    gate = population_to_cluster,
+                                                    layer = self.layer,
+                                                    cluster_kwargs = cluster_kwargs)
+
                 for population_list in self.gating_strategy[population_to_cluster]:
                     population_name: str = population_list[0]
-                    print(f"... gating population {population_name}")
+                    print(f"     ... gating population {population_name}")
                     
                     ## each entry is a list with the structure [population_name, [marker1, marker2, marker3]]
-                    parent_gate_path = [gate_path for gate_path in self.adata.uns["gating_cols"]
-                                        if gate_path.endswith(population_to_cluster)][0]
-                    population_gate_path = "/".join([parent_gate_path, population_name])
+                    parent_gate_path = find_gate_path_of_gate(file_subset, population_to_cluster)
+                    population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
 
-                    if not self.population_is_already_a_gate(population_name):
-                        self.append_gate_column_to_adata(population_gate_path)
+                    if not self._population_is_already_a_gate(population_name):
+                        self._append_gate_column_to_adata(population_gate_path)
                     
                     gate_index: list[int] = find_gate_indices(self.adata,
-                                                            population_gate_path)
+                                                              population_gate_path)
 
                     markers: list[str] = population_list[1]
-                    markers_of_interest = self.process_markers(markers)
-                    cluster_vector = self.identify_clusters_of_interest(subset,
+                    markers_of_interest = self._process_markers(markers)
+                    cluster_vector = self._identify_clusters_of_interest(file_subset,
                                                                         markers_of_interest)
-                    cell_types = self.map_cell_types_to_cluster(subset,
-                                                                cluster_vector,
-                                                                population_name)
-                    predictions = self.convert_cell_types_to_bool(cell_types)
-                    self.add_gating_to_input_dataset(subset,
-                                                     predictions,
-                                                     gate_index)
+                    cell_types = self._map_cell_types_to_cluster(file_subset,
+                                                                 cluster_vector,
+                                                                 population_name)
+                    predictions = self._convert_cell_types_to_bool(cell_types)
+                    self._add_gating_to_input_dataset(file_subset,
+                                                      predictions,
+                                                      gate_index)
         self.already_analyzed.append(population_to_cluster)
         return 
-   
-    def identify_populations(self,
-                             cluster_kwargs: Optional[dict] = None):
-        if cluster_kwargs is None:
-            cluster_kwargs = {}
-        self.adata.X = self.adata.layers["transformed"]
-        self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
-        ### mutable object to keep track of analyzed gates. this is necessary
-        ### because if parents are not present immediately, the population
-        ### is analyzed beforehand but still a key in the dictionary and
-        ### therefore analyzed twice.
-        self.already_analyzed = []
-        for cell_population in self.gating_strategy:
-            self.identify_population(cell_population,
-                                     cluster_kwargs)
-        self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
-
-    def convert_cell_types_to_bool(self,
-                                   cell_types: list[str]) -> np.ndarray:
+  
+    def _convert_cell_types_to_bool(self,
+                                    cell_types: list[str]) -> np.ndarray:
         return np.array(
             list(map(lambda x: x != "other", cell_types)),
             dtype=bool
         ).reshape((len(cell_types), 1))
         
-    def map_cell_types_to_cluster(self,
-                                  subset: AnnData,
-                                  cluster_vector: pd.Index,
-                                  population: str) -> list[str]:
+    def _map_cell_types_to_cluster(self,
+                                   subset: AnnData,
+                                   cluster_vector: pd.Index,
+                                   population: str) -> list[str]:
         # TODO: map function...
-        return [population if cluster in cluster_vector else "other" for cluster in subset.obs[self.cluster_key].to_list()]
-
+        return [population if cluster in cluster_vector else "other"
+                for cluster in subset.obs[self.cluster_key].to_list()]
         
-    def convert_markers_to_query_string(self,
-                                        markers_of_interest: dict[str: list[Optional[str]]]) -> str:
+    def _convert_markers_to_query_string(self,
+                                         markers_of_interest: dict[str: list[Optional[str]]]) -> str:
         cutoff = str(np.arcsinh(1))
         up_markers = markers_of_interest["up"]
         down_markers = markers_of_interest["down"]
@@ -823,8 +815,8 @@ class unsupervisedGating(BaseGating):
         )
         return " & ".join(query_strings)
     
-    def clean_marker_names(self,
-                           markers: list[str]) -> list[str]:
+    def _clean_marker_names(self,
+                            markers: list[str]) -> list[str]:
         """This function checks for disallowed characters that would otherwise mess up the pd.query function"""
         disallowed_characters = ["/", "[", "{", "(", ")", "}", "]"]
         replacement_dict = {char: "" for char in disallowed_characters}       
@@ -842,42 +834,52 @@ class unsupervisedGating(BaseGating):
                         markers[direction][i] = marker.translate(transtab)
         return markers
             
-    def identify_clusters_of_interest(self,
-                                      dataset: AnnData,
-                                      markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
-        df = dataset.to_df(layer = "transformed")
-        df.columns = self.clean_marker_names(df.columns)
-        markers_of_interest = self.clean_marker_names(markers_of_interest)
-        df[self.cluster_key] = dataset.obs[self.cluster_key].to_list()
+    def _identify_clusters_of_interest(self,
+                                       adata: AnnData,
+                                       markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
+        df = adata.to_df(layer = "transformed")
+        df.columns = self._clean_marker_names(df.columns)
+        markers_of_interest = self._clean_marker_names(markers_of_interest)
+        df[self.cluster_key] = adata.obs[self.cluster_key].to_list()
         medians = df.groupby(self.cluster_key).median()
-        query = self.convert_markers_to_query_string(markers_of_interest)
+        query = self._convert_markers_to_query_string(markers_of_interest)
         cells_of_interest: pd.DataFrame = medians.query(query) 
         return cells_of_interest.index
 
-    def cluster_dataset(self,
-                        dataset: AnnData,
-                        cluster_kwargs: dict) -> AnnData:
+    def _cluster_dataset(self,
+                         adata: AnnData,
+                         gate: str,
+                         layer: str,
+                         cluster_kwargs: dict) -> AnnData:
+
+        #set reasonable defaults for now:
+        if "scaling" not in cluster_kwargs:
+            cluster_kwargs["scaling"] = None
+        if "key_added" not in cluster_kwargs:
+            cluster_kwargs["key_added"] = "clusters"
 
         if self.clustering_algorithm == "leiden":
-            leiden(dataset,
-                   cluster_kwargs = cluster_kwargs)
+            leiden(adata,
+                   gate = gate,
+                   layer = layer,
+                   **cluster_kwargs)
         elif self.clustering_algorithm == "parc":
-            parc(dataset,
-                 cluster_kwargs = cluster_kwargs)
+            parc(adata,
+                 gate = gate,
+                 layer = layer,
+                 **cluster_kwargs)
         elif self.clustering_algorithm == "flowsom":
-            flowsom(dataset,
-                    cluster_kwargs = cluster_kwargs)
+            flowsom(adata,
+                    gate = gate,
+                    layer = layer,
+                    **cluster_kwargs)
         else:
-            phenograph(dataset,
-                       cluster_kwargs = cluster_kwargs)
-        return dataset
+            phenograph(adata,
+                       gate = gate,
+                       layer = layer,
+                       **cluster_kwargs)
+        return adata
 
-    def preprocess_dataset(self,
-                           subset: AnnData) -> AnnData:
-        sc.pp.pca(subset)
-        sc.pp.neighbors(subset)
-        return subset
-    
     @classmethod
     def setup_anndata(cls):
         pass
