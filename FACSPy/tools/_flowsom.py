@@ -19,6 +19,7 @@ def flowsom(adata: AnnData,
             use_only_fluo: bool = True,
             exclude: Optional[Union[str, list[str]]] = None,
             scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
+            key_added: Optional[str] = None,
             copy: bool = False,
             **kwargs) -> Optional[AnnData]:
     
@@ -28,7 +29,7 @@ def flowsom(adata: AnnData,
         raise InvalidScalingError(scaler = scaling)
 
     uns_key = f"{gate}_{layer}"
-    cluster_key = f"{uns_key}_flowsom"
+    cluster_key = key_added or f"{uns_key}_flowsom"
 
     if not kwargs:
         from multiprocessing import cpu_count
