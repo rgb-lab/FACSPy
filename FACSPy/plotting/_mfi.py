@@ -159,9 +159,11 @@ def _mfi_fop_baseplot(adata: AnnData,
                           title = f"{marker[0]}\ngrouped by {groupby[0]}",
                           y_label = f"{marker[0]}",
                           x_label = "")
-    
-    ax = adjust_legend(ax,
-                       title = colorby[0] or None)
+    if colorby != [None]:
+        ax = adjust_legend(ax,
+                        title = colorby[0] or None)
+    else:
+        ax.legend().remove()
     
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
         
