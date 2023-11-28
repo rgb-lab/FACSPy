@@ -10,9 +10,9 @@ To install, first clone this repository to your local drive via your terminal:
 >>> git clone https://github.com/TarikExner/FACSPy.git
 ```
 
-It is recommended to choose anaconda as your package manager. Install Anaconda and open the Anaconda terminal.
+It is recommended to choose conda as your package manager. Conda can be obtained, e.g., by installing the Miniconda distribution, for detailed instructions, please refer to the respective documentation.
 
-Create a new environment by executing
+With conda installed, open your terminal and create a new environment by executing the following commands.
 ```shell
 >>> conda create -n facspy python=3.10
 >>> conda activate facspy
@@ -41,7 +41,7 @@ To test if everything went successfull open a python console and import FACSPy:
 >>> import FACSPy as fp
 ```
 
-## Get Started
+## Getting Started
 
 Code examples are found under "vignettes" and currently include:
 - spectral flow cytometry dataset
@@ -87,7 +87,7 @@ The asinh transform requires cofactors, which are calculated automatically:
 fp.dt.calculate_cofactors(dataset)
 ```
 
-Plotting is realized through dedicated plotting functionality:
+Plotting is realized through a dedicated plotting module:
 
 ```python
 fp.pl.transformation_plot(
@@ -444,7 +444,7 @@ fp.pl.fold_change(
 
 FACSPy will continue to be developed!
 
-If you have any feature request, please submit them via GitHub.
+If you have any feature requests, please open an issue on GitHub. To ensure efficient treament of feature requests, please make sure to check if an issue regarding you request hasn't already been created.
 
 For the near future, the following features are meant to be implemented:
 - data integration
@@ -457,5 +457,3 @@ For the near future, the following features are meant to be implemented:
 Your contributions are welcome!
 
 Please submit an issue or pull request via Github! Pull requests with updated documentation and accompanying unit tests are preferred but not obligate!
-
-
