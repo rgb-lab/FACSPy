@@ -2,7 +2,8 @@
 Automated flow-, spectral-flow- and mass-cytometry platform 
 
 ## Installation
-Currently, FACSPy is in beta phase.
+Currently, FACSPy is in beta phase. A pypi distribution will be available once the beta phase is completed.
+
 To install, first clone this repository to your local drive via your terminal:
 
 ```shell
@@ -72,7 +73,8 @@ dataset = fp.dt.create_dataset(
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/FACSPY_graphical_abstract.png" alt="FACSPy Schema">
 
 ### Dataset Transformation
-The dataset is then transformed using asinh-transformation, logicle, hyperlog or normal log transformation.
+
+The asinh transform requires cofactors, which are calculated automatically:
 
 ```python
 fp.dt.calculate_cofactors(dataset)
@@ -87,8 +89,9 @@ fp.pl.transformation_plot(
     marker = "CD38"
 )
 ```
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/transformation_plot.png" alt="FACSPy Schema">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/transformation_plot.png" alt="transformation plot">
 
+The dataset is then transformed using asinh-transformation, logicle, hyperlog or normal log transformation.
 
 ```python
 fp.dt.transform(
@@ -125,7 +128,7 @@ Code examples are found under "vignettes" and currently include:
 
 FACSPy will continue to be developed!
 
-If you have any feature request, submit them via GitHub.
+If you have any feature request, please submit them via GitHub.
 
 For the near future, the following features are meant to be implemented:
 - data integration
