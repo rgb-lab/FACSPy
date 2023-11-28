@@ -152,6 +152,7 @@ Here, we gate NK cells by looking at the CD16+ and CD56+ clusters manually:
 <p float="left" align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden_umap.png" width = 200 alt="gate frequency plot"/>
 </p>
+
 ```python
 fp.convert_cluster_to_gate(
     dataset,
@@ -165,9 +166,11 @@ fp.convert_gate_to_obs(
     "NK_cells"
 )
 ```
+
 <p align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/NK_cell_umap.png" width = 300 alt="gate frequency plot">
 </p>
+
 ### Flow Cytometry Metrics
 
 
