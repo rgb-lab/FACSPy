@@ -507,7 +507,7 @@ def _save_cluster_settings(adata: AnnData,
         "scaling": scaling,
     }
     settings_dict = {**settings_dict, **kwargs}
-    adata.uns["settings"][f"_{clustering}_{gate}i{layer}"] = settings_dict
+    adata.uns["settings"][f"_{clustering}_{gate}_{layer}"] = settings_dict
     
     return
 
