@@ -70,7 +70,7 @@ dataset = fp.dt.create_dataset(
     workspace = workspace
 )
 ```
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/FACSPY_graphical_abstract.png" width = 400 alt="FACSPy Schema">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/FACSPY_graphical_abstract.png" width = 600 alt="FACSPy Schema">
 
 ### Dataset Transformation
 
@@ -103,27 +103,6 @@ fp.dt.transform(
 )
 ```
 
-
-### Gating
-
-### Gate Frequency Analysis
-
-```python
-fp.pl.gate_frequency(
-    dataset,
-    gate = "CD45+",
-    groupby = "diag_main",
-    colorby = "organ",
-    freq_of = "parent",
-    figsize = (4,4),
-    save = "../FACSPy/img/gate_frequency.png"
-)
-```
-
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 300 alt="gate frequency plot">
-
-### Flow Cytometry Metrics
-
 ### Cell Count Analysis
 
 ```python
@@ -137,6 +116,31 @@ fp.pl.cell_counts(
 ```
 
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" width = 300 alt="gate frequency plot">
+
+
+### Gate Frequency Analysis
+
+```python
+fp.tl.gate_frequencies(dataset)
+
+fp.pl.gate_frequency(
+    dataset,
+    gate = "CD45+",
+    groupby = "diag_main",
+    colorby = "organ",
+    freq_of = "parent",
+    figsize = (4,4),
+    save = "../FACSPy/img/gate_frequency.png"
+)
+```
+
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 300 alt="gate frequency plot">
+
+
+
+### Gating
+
+### Flow Cytometry Metrics
 
 
 ### Dimensionality Reduction
