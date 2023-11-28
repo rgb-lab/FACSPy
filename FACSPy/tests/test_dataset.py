@@ -69,8 +69,18 @@ def mock_dataset():
     return fp.create_dataset(input_directory = input_directory,
                              panel = panel,
                              metadata = metadata,
-                             workspace = workspace)
-    
+                             workspace = workspace,
+                             keep_raw = True)
+
+@pytest.fixture
+def mock_dataset_no_raw():
+    input_directory, panel, metadata, workspace = create_supplement_objects()
+    return fp.create_dataset(input_directory = input_directory,
+                             panel = panel,
+                             metadata = metadata,
+                             workspace = workspace,
+                             keep_raw = False)
+     
 
 def test_create_dataset_invalid_input_directory(mock_metadata_correct,
                                                 mock_panel_correct,
@@ -138,6 +148,14 @@ def test_dataset_layers(mock_dataset: AnnData):
     assert "raw" in mock_dataset.layers
     assert "compensated" in mock_dataset.layers
     assert isinstance(mock_dataset.obsm["gating"], csr_matrix)
+
+def test_dataset_layers_no_raw(mock_dataset_no_raw: AnnData):
+    """tests to confirm the presence and identities of the anndata"""
+    assert mock_dataset_no_raw.X is None
+    assert mock_dataset_no_raw.layers
+    assert "raw" not in mock_dataset_no_raw.layers
+    assert "compensated" in mock_dataset_no_raw.layers
+    assert isinstance(mock_dataset_no_raw.obsm["gating"], csr_matrix)
 
 def test_dataset_obs(mock_dataset: AnnData):
     assert isinstance(mock_dataset.obs, pd.DataFrame)
