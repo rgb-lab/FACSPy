@@ -129,11 +129,12 @@ def test_map_metaclusters_to_sample_ID():
     def control_map_func(metaclusters, sample_IDs):
         sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
         for i, sample_ID in enumerate(sample_IDs["sample_ID"].to_list()):
-            sample_IDs.loc[sample_IDs["sample_ID"] == sample_ID, "metacluster"] = int([metacluster
+            sample_IDs.loc[sample_IDs["sample_ID"] == sample_ID, "metacluster"] = str(int([metacluster
                                                                                        for metacluster in metaclusters
-                                                                                       if i in metaclusters[metacluster]][0])
+                                                                                       if i in metaclusters[metacluster]][0]))
         return sample_IDs
     control_mapping: pd.DataFrame = control_map_func(metaclusters, sample_IDs)
+    print(control_mapping, facspy_mapping)
     assert facspy_mapping.equals(control_mapping)
 
 def test_get_uns_dataframe_I(mock_dataset: AnnData):
