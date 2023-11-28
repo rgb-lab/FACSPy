@@ -103,13 +103,41 @@ fp.dt.transform(
 )
 ```
 
+
 ### Gating
 
 ### Gate Frequency Analysis
 
+```python
+fp.pl.gate_frequency(
+    dataset,
+    gate = "CD45+",
+    groupby = "diag_main",
+    colorby = "organ",
+    freq_of = "parent",
+    figsize = (4,4),
+    save = "../FACSPy/img/gate_frequency.png"
+)
+```
+
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" alt="gate frequency plot">
+
 ### Flow Cytometry Metrics
 
 ### Cell Count Analysis
+
+```python
+fp.pl.cell_counts(
+    dataset,
+    gate = "live",
+    groupby = "diag_main",
+    colorby = "organ",
+    figsize = (4,4)
+)
+```
+
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" alt="gate frequency plot">
+
 
 ### Dimensionality Reduction
 
