@@ -41,6 +41,11 @@ To test if everything went successfull open a python console and import FACSPy:
 >>> import FACSPy as fp
 ```
 
+## Get Started
+
+Code examples are found under "vignettes" and currently include:
+    - spectral flow cytometry dataset
+
 ## Features
 
 Currently, the following features are implemented:
@@ -205,23 +210,220 @@ fp.convert_gate_to_obs(dataset, "CD8_T_cells")
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cd8_t_cells_umap_relook.png" width = 600 alt="gate frequency plot">
 </p>
 
-
-
 ### Flow Cytometry Metrics
+
+Common Flow Cytometry metrics like MFI and FOP (frequency of parent) can be plotted:
+
+```python
+fp.pl.mfi(
+    dataset,
+    groupby = "organ",
+    marker = "PD-1_(CD279)",
+    colorby = "diag_main",
+    figsize = (4,4)
+)
+
+fp.pl.fop(
+    dataset,
+    groupby = "organ",
+    marker = "PD-1_(CD279)",
+    colorby = "diag_main",
+    figsize = (4,4)
+)
+```
+
+<p float="left" align="center" width = 400>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/mfi_plot.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/fop_plot.png" width = 200 alt="gate frequency plot"/>
+</p>
+
 
 
 ### Dimensionality Reduction
 
+FACSPy offers samplewise dimensionality reductions as well as single cell dimensionality reductions!
+
+```python
+fp.tl.mfi(dataset)
+
+fp.pl.pca_samplewise(
+    dataset,
+    groupby = "organ"
+)
+
+fp.pl.mds_samplewise(
+    dataset,
+    groupby = "organ"
+)
+
+fp.pl.umap_samplewise(
+    dataset,
+    groupby = "organ"
+)
+
+fp.pl.tsne_samplewise(
+    dataset,
+    groupby = "organ"
+)
+
+```
+
+<p float="left" align="center" width = 800>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/pca_samplewise.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/mds_samplewise.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/tsne_samplewise.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/umap_samplewise.png" width = 200 alt="gate frequency plot"/>
+</p>
+
+
+```python
+fp.tl.umap(dataset)
+fp.tl.tsne(dataset)
+fp.tl.diffmap(dataset)
+fp.tl.pca(dataset)
+
+fp.pl.pca(
+    dataset,
+    color = "organ"
+)
+
+fp.pl.umap(
+    dataset,
+    color = "organ"
+)
+
+fp.pl.tsne(
+    dataset,
+    color = "organ"
+)
+
+fp.pl.diffmap(
+    dataset,
+    color = "organ"
+)
+
+```
+
+<p float="left" align="center" width = 800>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/pca.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/diffmap.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/umap.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/tsne.png" width = 200 alt="gate frequency plot"/>
+</p>
+
+
 ### Clustering
+
+Currently, PARC, PhenoGraph, Leiden and FlowSOM are implemented:
+
+```python
+fp.tl.parc(dataset)
+fp.tl.phenograph(dataset)
+fp.tl.leiden(dataset)
+fp.tl.flowsom(dataset)
+
+fp.pl.umap(
+    dataset,
+    color = "CD45+_transformed_leiden"
+)
+
+fp.pl.umap(
+    dataset,
+    color = "CD45+_transformed_parc"
+)
+
+fp.pl.umap(
+    dataset,
+    color = "CD45+_transformed_flowsom"
+)
+
+fp.pl.umap(
+    dataset,
+    color = "CD45+_transformed_phenograph"
+)
+
+```
+
+<p float="left" align="center" width = 800>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/parc.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/flowsom.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/phenograph.png" width = 200 alt="gate frequency plot"/>
+</p>
+
 
 ### Heatmap visualization
 
+FACSPy implemented heatmap visualizations for expression data as well as correlation plots for marker and samples
+
+```python
+
+fp.pl.expression_heatmap(
+    dataset,
+    annotate = ["organ", "diag_main", "diag_fine"],
+    plot_annotate = "HLA_DR",
+    figsize = (5,8)
+)
+
+```
+
+<p align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/expression_heatmap.png" width = 200 alt="gate frequency plot"/>
+</p>
+
+```python
+
+fp.pl.marker_correlation(
+    dataset,
+    y_label_fontsize = 8
+    figsize = (6,6)
+)
+
+```
+
+<p align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/marker_correlation.png" width = 200 alt="gate frequency plot"/>
+</p>
+
+```python
+fp.pl.sample_correlation(
+    dataset,
+    annotate = ["organ", "diag_main", "diag_fine"],
+    metaclusters = 2,
+    corr_method = "spearman",
+    label_metaclusters_in_dataset = True,
+    label_metaclusters_key = "sample_corr_metaclusters"
+)
+
+```
+
+<p align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/sample_correlation.png" width = 200 alt="gate frequency plot"/>
+</p>
+
+```python
+fp.pl.sample_distance(
+    dataset,
+    annotate = ["organ", "diag_main", "diag_fine"],
+    metaclusters = 2,
+    corr_method = "spearman",
+    label_metaclusters_in_dataset = True,
+    label_metaclusters_key = "sample_dist_metaclusters"
+)
+
+```
+
+<p align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/sample_distance.png" width = 200 alt="gate frequency plot"/>
+</p>
+
+
+
+
+
+
 ### Differential Expression Testing
 
-## Demo Code
-
-Code examples are found under "vignettes" and currently include:
-    - spectral flow cytometry dataset
 
 ## Future Feature Implementation
 
