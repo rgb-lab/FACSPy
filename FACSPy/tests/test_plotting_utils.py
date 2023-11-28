@@ -124,7 +124,7 @@ def test_map_metaclusters_to_sample_ID():
                                         _map_metaclusters_to_sample_ID)
     linkage = _calculate_linkage(df)
     sample_IDs = list(range(10))
-    metaclusters = _calculate_metaclusters(linkage, n_clusters = 3)
+    metaclusters = _calculate_metaclusters(linkage, n_clusters = 3, sample_IDs = sample_IDs)
     facspy_mapping: pd.DataFrame = _map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
     def control_map_func(metaclusters, sample_IDs):
         sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
