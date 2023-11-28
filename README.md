@@ -44,7 +44,7 @@ To test if everything went successfull open a python console and import FACSPy:
 ## Get Started
 
 Code examples are found under "vignettes" and currently include:
-    - spectral flow cytometry dataset
+- spectral flow cytometry dataset
 
 ## Features
 
@@ -436,7 +436,7 @@ fp.pl.fold_change(
 ```
 
 <p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/img_diffexp.png" width = 500 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/diffexp.png" width = 500 alt="gate frequency plot"/>
 </p>
 
 
