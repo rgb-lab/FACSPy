@@ -50,12 +50,24 @@ Accompanying Metadata (tabular metadata, the panel information, asinh-transforma
 
 ```python
 import FACSPy as fp
+
 metadata = fp.dt.Metadata("../metadata.csv")
 panel = fp.dt.Panel("../panel.csv")
 workspace = fp.dt.FlowJoWorkspace("../workspace.wsp")
 ```
 
 ### Dataset Creation
+
+The dataset is created using one single function
+
+```python
+dataset = fp.dt.create_dataset(
+    metadata = metadata,
+    panel = panel,
+    workspace = workspace
+)
+```
+<img src="https://github.com/TarikExner/FACSPy/blob/master/img/FACSPY_graphical_abstract.png" alt="FACSPy Schema">
 
 ### Dataset Transformation
 
