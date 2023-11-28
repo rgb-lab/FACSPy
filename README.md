@@ -70,7 +70,7 @@ dataset = fp.dt.create_dataset(
     workspace = workspace
 )
 ```
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/FACSPY_graphical_abstract.png" alt="FACSPy Schema">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/FACSPY_graphical_abstract.png" width = 400 alt="FACSPy Schema">
 
 ### Dataset Transformation
 
@@ -120,7 +120,7 @@ fp.pl.gate_frequency(
 )
 ```
 
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 250 alt="gate frequency plot">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 300 alt="gate frequency plot">
 
 ### Flow Cytometry Metrics
 
@@ -136,7 +136,7 @@ fp.pl.cell_counts(
 )
 ```
 
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" alt="gate frequency plot">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" width = 300 alt="gate frequency plot">
 
 
 ### Dimensionality Reduction
