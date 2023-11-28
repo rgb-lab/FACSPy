@@ -34,4 +34,51 @@ Open a notebook by running
 >>> jupyter-notebook
 ```
 
+To test if everything went successfull open a python console and import FACSPy:
+```shell
+>>> python
+>>> import FACSPy as fp
+```
+
 ## Features
+
+Currently, the following features are implemented:
+
+### Metadata Annotation
+
+### Dataset Creation
+
+### Gating
+
+### Gate Frequency Analysis
+
+### Flow Cytometry Metrics
+
+### Cell Count Analysis
+
+### Dimensionality Reduction
+
+### Clustering
+
+### Differential Expression Testing
+
+
+## Future Feature Implementation
+
+FACSPy will continue to be developed!
+
+If you have any feature request, submit dem via GitHub.
+
+For the near future, the following features are meant to be implemented:
+    - data integration
+    - minimal spanning trees
+    - t.b.a.
+
+
+# Contributing
+
+Your contributions are welcome!
+
+Please submit an issue or pull request via Github! Pull requests with updated documentation and accompanying unit tests are preferred but not obligate!
+
+
