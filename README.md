@@ -70,7 +70,9 @@ dataset = fp.dt.create_dataset(
     workspace = workspace
 )
 ```
+<p align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/FACSPY_graphical_abstract.png" width = 600 alt="FACSPy Schema">
+</p>
 
 ### Dataset Transformation
 
@@ -89,7 +91,9 @@ fp.pl.transformation_plot(
     marker = "CD38"
 )
 ```
+<p align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/transformation_plot.png" alt="transformation plot">
+</p>
 
 The dataset is then transformed using asinh-transformation, logicle, hyperlog or normal log transformation.
 
@@ -114,9 +118,9 @@ fp.pl.cell_counts(
     figsize = (4,4)
 )
 ```
-
+<p align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" width = 300 alt="gate frequency plot">
-
+</p>
 
 ### Gate Frequency Analysis
 
@@ -132,19 +136,22 @@ fp.pl.gate_frequency(
     figsize = (4,4)
 )
 ```
-
+<p align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 300 alt="gate frequency plot">
+</p>
 
 ### Gating
 
 Gating can be accomplished using a conventional FlowJo-Workspace, unsupervised Gating via Clustering (manually or automated) or supervised Gating using pre-gated example files.
 
+Here, we gate NK cells by looking at the CD16+ and CD56+ clusters manually:
 <p float="left" align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD16_umap.png" width = 200 alt="gate frequency plot"/>
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD56_umap.png" width = 200 alt="gate frequency plot"/>
 </p>
-<img align="center" src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden_umap.png" width = 200 alt="gate frequency plot"/>
-
+<p float="left" align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden_umap.png" width = 200 alt="gate frequency plot"/>
+</p>
 ```python
 fp.convert_cluster_to_gate(
     dataset,
@@ -158,8 +165,9 @@ fp.convert_gate_to_obs(
     "NK_cells"
 )
 ```
+<p align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/NK_cell_umap.png" width = 300 alt="gate frequency plot">
-
+</p>
 ### Flow Cytometry Metrics
 
 
