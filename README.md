@@ -146,11 +146,11 @@ Gating can be accomplished using a conventional FlowJo-Workspace, unsupervised G
 
 Here, we gate NK cells by looking at the CD16+ and CD56+ clusters manually:
 <p float="left" align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD16_umap.png" width = 200 alt="gate frequency plot"/>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD56_umap.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD16_umap.png" width = 300 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD56_umap.png" width = 300 alt="gate frequency plot"/>
 </p>
 <p float="left" align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden_umap.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden_umap.png" width = 400 alt="gate frequency plot"/>
 </p>
 
 ```python
@@ -161,6 +161,7 @@ fp.convert_cluster_to_gate(
     population_name = "NK_cells",
     parent_name = "CD45+"
 )
+
 fp.convert_gate_to_obs(
     dataset,
     "NK_cells"
@@ -170,6 +171,41 @@ fp.convert_gate_to_obs(
 <p align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/NK_cell_umap.png" width = 300 alt="gate frequency plot">
 </p>
+
+We can also used the unsupervisedGating class:
+
+```python
+gating_strategy = {
+    "T_cells": ["CD45+", ["CD3+", "CD45+"]],
+    "CD4_T_cells": ["T_cells", ["CD3+", "CD4+", "CD8-", "CD45+"]],
+    "CD8_T_cells": ["T_cells", ["CD3+", "CD4-", "CD8+", "CD45+"]]
+}
+
+clf = fp.ml.unsupervisedGating(
+    dataset,
+    gating_strategy = gating_strategy,
+    clustering_algorithm = "leiden", 
+    layer = "transformed",
+    cluster_key = None
+)
+
+clf.identify_populations()
+
+fp.convert_gate_to_obs(dataset, "T_cells")
+fp.convert_gate_to_obs(dataset, "CD4_T_cells")
+fp.convert_gate_to_obs(dataset, "CD8_T_cells")
+```
+<p align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/t_cells_umap_relook.png" width = 300 alt="gate frequency plot">
+</p>
+<p align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cd4_t_cells_umap_relook.png" width = 300 alt="gate frequency plot">
+</p>
+<p align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cd8_t_cells_umap_relook.png" width = 300 alt="gate frequency plot">
+</p>
+
+
 
 ### Flow Cytometry Metrics
 
