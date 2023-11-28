@@ -324,37 +324,41 @@ fp.tl.flowsom(dataset)
 
 fp.pl.umap(
     dataset,
-    color = "CD45+_transformed_leiden"
+    color = "CD45+_transformed_leiden",
+    legend_loc = "on data"
 )
 
 fp.pl.umap(
     dataset,
     color = "CD45+_transformed_parc"
+    legend_loc = "on data"
 )
 
 fp.pl.umap(
     dataset,
     color = "CD45+_transformed_flowsom"
+    legend_loc = "on data"
 )
 
 fp.pl.umap(
     dataset,
     color = "CD45+_transformed_phenograph"
+    legend_loc = "on data"
 )
 
 ```
 
 <p float="left" align="center" width = 800>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden.png" width = 200 alt="gate frequency plot"/>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/parc.png" width = 200 alt="gate frequency plot"/>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/flowsom.png" width = 200 alt="gate frequency plot"/>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/phenograph.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden.png" width = 150 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/parc.png" width = 150 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/flowsom.png" width = 150 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/phenograph.png" width = 150 alt="gate frequency plot"/>
 </p>
 
 
 ### Heatmap visualization
 
-FACSPy implemented heatmap visualizations for expression data as well as correlation plots for marker and samples
+FACSPy implements heatmap visualizations for expression data as well as correlation plots for marker and samples
 
 ```python
 
@@ -368,7 +372,7 @@ fp.pl.expression_heatmap(
 ```
 
 <p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/expression_heatmap.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/expression_heatmap.png" width = 500 alt="gate frequency plot"/>
 </p>
 
 ```python
@@ -382,7 +386,7 @@ fp.pl.marker_correlation(
 ```
 
 <p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/marker_correlation.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/marker_correlation.png" width = 500 alt="gate frequency plot"/>
 </p>
 
 ```python
@@ -398,7 +402,7 @@ fp.pl.sample_correlation(
 ```
 
 <p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/sample_correlation.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/sample_correlation.png" width = 500 alt="gate frequency plot"/>
 </p>
 
 ```python
@@ -414,15 +418,26 @@ fp.pl.sample_distance(
 ```
 
 <p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/sample_distance.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/sample_distance.png" width = 500 alt="gate frequency plot"/>
 </p>
 
-
-
-
-
-
 ### Differential Expression Testing
+
+Differential expression testing is visualized as a fold change plot:
+
+```python
+fp.pl.fold_change(
+    dataset,
+    layer = "compensated",
+    groupby  = "organ",
+    group1 = "PB",
+    group2 = "organ2",
+)
+```
+
+<p align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/img_diffexp.png" width = 500 alt="gate frequency plot"/>
+</p>
 
 
 ## Future Feature Implementation
