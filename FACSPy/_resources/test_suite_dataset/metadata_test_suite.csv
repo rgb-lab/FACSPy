@@ -1,0 +1,7 @@
+sample_ID;file_name;condition1;condition2;condition3;staining
+1;file1_stained.fcs;x;x;x;stained
+2;file1_unstained.fcs;x;x;x;unstained
+3;file2_stained.fcs;y;x;x;stained
+4;file2_unstained.fcs;y;x;x;unstained
+5;file3_stained.fcs;z;y;x;stained
+6;file3_unstained.fcs;z;y;x;unstained
