@@ -129,16 +129,35 @@ fp.pl.gate_frequency(
     groupby = "diag_main",
     colorby = "organ",
     freq_of = "parent",
-    figsize = (4,4),
-    save = "../FACSPy/img/gate_frequency.png"
+    figsize = (4,4)
 )
 ```
 
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 300 alt="gate frequency plot">
 
-
-
 ### Gating
+
+Gating can be accomplished using a conventional FlowJo-Workspace, unsupervised Gating via Clustering (manually or automated) or supervised Gating using pre-gated example files.
+
+<p float="left">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD16_umap.png" width = 300 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD56_umap.png" width = 300 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden_umap.png" width = 300 alt="gate frequency plot"/>
+</p>
+```python
+fp.convert_cluster_to_gate(
+    dataset,
+    obs_column = "CD45+_transformed_leiden",
+    positive_cluster = ["10", "17", "2"],
+    population_name = "NK_cells",
+    parent_name = "CD45+"
+)
+fp.convert_gate_to_obs(
+    dataset,
+    "NK_cells"
+)
+```
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/NK_cell_umap.png" width = 300 alt="gate frequency plot">
 
 ### Flow Cytometry Metrics
 
