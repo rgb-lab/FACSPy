@@ -1,5 +1,5 @@
 from anndata import AnnData
-from typing import Optional
+from typing import Optional, Literal
 
 import warnings
 from typing import Optional, Union
@@ -12,7 +12,6 @@ from sklearn.utils import check_random_state, check_array
 
 from scanpy.tools._utils import get_init_pos_from_paga
 from scanpy._settings import settings
-from scanpy._compat import Literal
 from scanpy._utils import AnyRandom, NeighborsView
 
 from ._dr_samplewise import _perform_samplewise_dr
