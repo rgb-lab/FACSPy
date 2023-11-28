@@ -196,13 +196,13 @@ fp.convert_gate_to_obs(dataset, "CD4_T_cells")
 fp.convert_gate_to_obs(dataset, "CD8_T_cells")
 ```
 <p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/t_cells_umap_relook.png" width = 300 alt="gate frequency plot">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/t_cells_umap_relook.png" width = 600 alt="gate frequency plot">
 </p>
 <p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cd4_t_cells_umap_relook.png" width = 300 alt="gate frequency plot">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cd4_t_cells_umap_relook.png" width = 600 alt="gate frequency plot">
 </p>
 <p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cd8_t_cells_umap_relook.png" width = 300 alt="gate frequency plot">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cd8_t_cells_umap_relook.png" width = 600 alt="gate frequency plot">
 </p>
 
 
