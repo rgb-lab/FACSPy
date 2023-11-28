@@ -134,7 +134,6 @@ def test_map_metaclusters_to_sample_ID():
                                                                                        if i in metaclusters[metacluster]][0]))
         return sample_IDs
     control_mapping: pd.DataFrame = control_map_func(metaclusters, sample_IDs)
-    print(control_mapping, facspy_mapping)
     assert facspy_mapping.equals(control_mapping)
 
 def test_get_uns_dataframe_I(mock_dataset: AnnData):
