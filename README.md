@@ -139,11 +139,11 @@ fp.pl.gate_frequency(
 
 Gating can be accomplished using a conventional FlowJo-Workspace, unsupervised Gating via Clustering (manually or automated) or supervised Gating using pre-gated example files.
 
-<p float="left" width = 600>
+<p float="left" align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD16_umap.png" width = 200 alt="gate frequency plot"/>
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/CD56_umap.png" width = 200 alt="gate frequency plot"/>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden_umap.png" width = 200 alt="gate frequency plot"/>
 </p>
+<img align="center" src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/leiden_umap.png" width = 200 alt="gate frequency plot"/>
 
 ```python
 fp.convert_cluster_to_gate(
