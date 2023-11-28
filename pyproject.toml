@@ -49,9 +49,10 @@ dependencies = [
     "parc",
     "minisom",
     "phenograph",
-    "flowsom-clustering"
+    "flowsom-clustering",
+    "seaborn>0.12"
 ]
 
 #[project.urls]
-#"Homepage" = "https://www.google.de/"
+#"Homepage" = "http://www.google.de/"
 #"Bug Tracker" = "https://github.com/"
