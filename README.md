@@ -120,7 +120,7 @@ fp.pl.gate_frequency(
 )
 ```
 
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 50 alt="gate frequency plot">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 250 alt="gate frequency plot">
 
 ### Flow Cytometry Metrics
 
