@@ -40,11 +40,13 @@ def synchronize_samples(adata: AnnData,
         _synchronize_uns_frame(adata = adata,
                                identifier = frame_id,
                                sample_IDs = current_obs_sample_IDs)
+        print(f"     ... synchronized frame {frame_id}")
 
     _synchronize_metadata_object(adata,
                                  current_obs_sample_IDs)
     
     _sanitize_categoricals(adata)
+    print("     ... updated metadata")
 
 def _sanitize_categoricals(adata: AnnData):
     obs_frame = adata.obs.copy()
