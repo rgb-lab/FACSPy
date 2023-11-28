@@ -122,9 +122,6 @@ class BaseSupplement:
         if isinstance(self, CofactorTable):
             self.dataframe = self.dataframe.loc[self.dataframe["fcs_colname"].isin(channels)]
 
-    
-
-
 class Panel(BaseSupplement):
     
     """
@@ -148,7 +145,6 @@ class Panel(BaseSupplement):
                                                            ["fcs_colname", "antigens"])
         self.dataframe = self.strip_prefixes(self.dataframe)
     
-
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(" +
