@@ -46,7 +46,14 @@ Currently, the following features are implemented:
 
 ### Metadata Annotation
 
-Accompanying Metadata (tabular metadata, the panel information, asinh-transformation cofactors and a FlowJo/Diva-Workspace) are internally represented to
+Accompanying Metadata (tabular metadata, the panel information, asinh-transformation cofactors and a FlowJo- or Diva-Workspace) are internally represented to gather pre-existing information!
+
+```python
+import FACSPy as fp
+metadata = fp.dt.Metadata("../metadata.csv")
+panel = fp.dt.Panel("../panel.csv")
+workspace = fp.dt.FlowJoWorkspace("../workspace.wsp")
+```
 
 ### Dataset Creation
 
