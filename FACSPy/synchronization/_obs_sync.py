@@ -74,7 +74,11 @@ def _synchronize_uns_frame(adata: AnnData,
                            identifier: str,
                            sample_IDs: list[str]) -> None:
     uns_frame: pd.DataFrame = adata.uns[identifier]
-    adata.uns[identifier] = uns_frame.loc[uns_frame.index.get_level_values("sample_ID").isin(sample_IDs),:]
+    if "sample_ID" in uns_frame.index.names:
+        adata.uns[identifier] = uns_frame.loc[uns_frame.index.get_level_values("sample_ID").isin(sample_IDs),:]
+    else:
+        ## potentially add warning?
+        adata.uns[identifier] = uns_frame
     return
 
 def _synchronize_metadata_object(adata: AnnData,
