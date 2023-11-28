@@ -61,15 +61,44 @@ workspace = fp.dt.FlowJoWorkspace("../workspace.wsp")
 The dataset is created using one single function
 
 ```python
+import FACSPy as fp
+
 dataset = fp.dt.create_dataset(
     metadata = metadata,
     panel = panel,
     workspace = workspace
 )
 ```
-<img src="https://github.com/TarikExner/FACSPy/tree/main/FACSPy/img/FACSPY_graphical_abstract.png" alt="FACSPy Schema">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/FACSPY_graphical_abstract.png" alt="FACSPy Schema">
 
 ### Dataset Transformation
+The dataset is then transformed using asinh-transformation, logicle, hyperlog or normal log transformation.
+
+```python
+fp.dt.calculate_cofactors(dataset)
+```
+
+Plotting is realized through dedicated plotting functionality:
+
+```python
+fp.pl.transformation_plot(
+    dataset,
+    sample_identifier = "2",
+    marker = "CD38"
+)
+```
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/transformation_plot.png" alt="FACSPy Schema">
+
+
+```python
+fp.dt.transform(
+    dataset,
+    transform = "asinh",
+    cofactor_table = dataset.uns["cofactors"],
+    key_added = "transformed",
+    layer = "compensated"
+)
+```
 
 ### Gating
 
