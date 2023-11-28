@@ -46,7 +46,11 @@ Currently, the following features are implemented:
 
 ### Metadata Annotation
 
+Accompanying Metadata (tabular metadata, the panel information, asinh-transformation cofactors and a FlowJo/Diva-Workspace) are internally represented to
+
 ### Dataset Creation
+
+### Dataset Transformation
 
 ### Gating
 
@@ -60,22 +64,28 @@ Currently, the following features are implemented:
 
 ### Clustering
 
+### Heatmap visualization
+
 ### Differential Expression Testing
 
+## Demo Code
+
+Code examples are found under "vignettes" and currently include:
+    - spectral flow cytometry dataset
 
 ## Future Feature Implementation
 
 FACSPy will continue to be developed!
 
-If you have any feature request, submit dem via GitHub.
+If you have any feature request, submit them via GitHub.
 
 For the near future, the following features are meant to be implemented:
-    - data integration
-    - minimal spanning trees
-    - t.b.a.
+- data integration
+- minimal spanning trees
+- t.b.a.
 
 
-# Contributing
+## Contributing
 
 Your contributions are welcome!
 
