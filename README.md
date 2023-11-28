@@ -67,7 +67,7 @@ dataset = fp.dt.create_dataset(
     workspace = workspace
 )
 ```
-<img src="https://github.com/TarikExner/FACSPy/tree/main/FACSPy/img/FACSPY_graphical_abstract.png" alt="FACSPy Schema">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/FACSPY_graphical_abstract.png" alt="FACSPy Schema">
 
 ### Dataset Transformation
 
