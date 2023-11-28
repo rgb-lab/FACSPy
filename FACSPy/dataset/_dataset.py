@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import scipy.signal as scs
 
+import gc
+
 from ._supplements import Panel, Metadata, CofactorTable
 from ._workspaces import FlowJoWorkspace, DivaWorkspace
 from ._sample import FCSFile
@@ -33,7 +35,8 @@ def create_dataset(input_directory: str,
                    metadata: Metadata,
                    panel: Panel,
                    workspace: Union[FlowJoWorkspace, DivaWorkspace],
-                   subsample_fcs_to: [Optional[int]] = None) -> AnnData:
+                   subsample_fcs_to: [Optional[int]] = None,
+                   keep_raw: bool = False) -> AnnData:
     if not os.path.exists(input_directory):
         raise InputDirectoryNotFoundError()
     if not isinstance(metadata, Metadata):
@@ -52,7 +55,8 @@ def create_dataset(input_directory: str,
                             metadata = metadata,
                             panel = panel,
                             workspace = workspace,
-                            subsample_fcs_to = subsample_fcs_to).get_dataset()
+                            subsample_fcs_to = subsample_fcs_to,
+                            keep_raw = keep_raw).get_dataset()
 
 class DatasetAssembler:
 
@@ -66,7 +70,8 @@ class DatasetAssembler:
                  metadata: Metadata,
                  panel: Panel,
                  workspace: Union[FlowJoWorkspace, DivaWorkspace],
-                 subsample_fcs_to: Optional[int] = None) -> AnnData:
+                 subsample_fcs_to: Optional[int] = None,
+                 keep_raw: bool = False) -> AnnData:
 
         file_list: list[FCSFile] = self.fetch_fcs_files(input_directory,
                                                         metadata,
@@ -87,6 +92,9 @@ class DatasetAssembler:
         
         dataset = self.concatenate_dataset(dataset_list)
 
+        if not keep_raw:
+            del dataset.layers["raw"]
+
         dataset = self.append_supplements(dataset,
                                           metadata,
                                           panel,
@@ -96,6 +104,8 @@ class DatasetAssembler:
                                          gates)
 
         _hash_dataset(self.dataset)
+
+        gc.collect()
 
     def fill_empty_gates(self,
                          file_list: list[FCSFile],
