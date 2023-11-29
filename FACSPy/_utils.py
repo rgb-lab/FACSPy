@@ -235,59 +235,61 @@ def _find_parents_recursively(gate: str, parent_list = None) -> list[str]:
     if parent != "root":
         return _find_parents_recursively(parent, parent_list)
     return parent_list
-    
-def subset_stained_samples(adata: AnnData,
-                           copy: bool = False) -> Optional[AnnData]:
-    """Subsets all stained samples from a anndata dataset
-    
-    Parameters
-    ----------
-    adata:
-        the provided dataset
-    copy: bool
-        whether to copy and return the adata object or subset inplace
 
-    Examples
-    --------
+# deprecated...
+#def subset_stained_samples(adata: AnnData,
+#                           copy: bool = False) -> Optional[AnnData]:
+#    """Subsets all stained samples from a anndata dataset
+#    
+#    Parameters
+#    ----------
+#    adata:
+#        the provided dataset
+#    copy: bool
+#        whether to copy and return the adata object or subset inplace
+#
+#    Examples
+#    --------
+#
+#    >>> adata = ad.AnnData(obs = pd.DataFrame({"staining": ["stained", "stained", "unstained"]}))
+#    >>> stained_adata = subset_stained_samples(adata, copy = True)
+#    >>> len(stained_adata)
+#    2
+#    >>> stained_adata.obs["staining"].to_list()
+#    ["stained", "stained"]
+#
+#    """
+#    adata = adata.copy() if copy else adata
+#    adata._inplace_subset_obs(adata.obs[adata.obs["staining"] == "stained"].index)
+#    return adata if copy else None
 
-    >>> adata = ad.AnnData(obs = pd.DataFrame({"staining": ["stained", "stained", "unstained"]}))
-    >>> stained_adata = subset_stained_samples(adata, copy = True)
-    >>> len(stained_adata)
-    2
-    >>> stained_adata.obs["staining"].to_list()
-    ["stained", "stained"]
-
-    """
-    adata = adata.copy() if copy else adata
-    adata._inplace_subset_obs(adata.obs[adata.obs["staining"] == "stained"].index)
-    return adata if copy else None
-
-def subset_unstained_samples(adata: AnnData,
-                             copy: bool = False) -> Optional[AnnData]:
-
-    """Subsets all unstained samples from a anndata dataset
-    
-    Parameters
-    ----------
-    adata:
-        the provided dataset
-    copy: bool
-        whether to copy and return the adata object or subset inplace
-
-    Examples
-    --------
-
-    >>> adata = ad.AnnData(obs = pd.DataFrame({"staining": ["stained", "stained", "unstained"]}))
-    >>> unstained_adata = subset_unstained_samples(adata, copy = True)
-    >>> len(unstained_adata)
-    1
-    >>> stained_adata.obs["staining"].to_list()
-    ["unstained"]
-
-    """    
-    adata = adata.copy() if copy else adata
-    adata._inplace_subset_obs(adata.obs[adata.obs["staining"] != "stained"].index)
-    return adata if copy else None
+# deprecated...
+#def subset_unstained_samples(adata: AnnData,
+#                             copy: bool = False) -> Optional[AnnData]:
+#
+#    """Subsets all unstained samples from a anndata dataset
+#    
+#    Parameters
+#    ----------
+#    adata:
+#        the provided dataset
+#    copy: bool
+#        whether to copy and return the adata object or subset inplace
+#
+#    Examples
+#    --------
+#
+#    >>> adata = ad.AnnData(obs = pd.DataFrame({"staining": ["stained", "stained", "unstained"]}))
+#    >>> unstained_adata = subset_unstained_samples(adata, copy = True)
+#    >>> len(unstained_adata)
+#    1
+#    >>> stained_adata.obs["staining"].to_list()
+#    ["unstained"]
+#
+#    """    
+#    adata = adata.copy() if copy else adata
+#    adata._inplace_subset_obs(adata.obs[adata.obs["staining"] != "stained"].index)
+#    return adata if copy else None
 
 def transform_gates_according_to_gate_transform(vertices: np.ndarray,
                                                 transforms: dict,
@@ -305,8 +307,6 @@ def transform_gates_according_to_gate_transform(vertices: np.ndarray,
 def transform_vertices_according_to_gate_transform(vertices: np.ndarray,
                                                    transforms: dict,
                                                    gate_channels: list[str]) -> np.ndarray:
-    
-    
     for i, gate_channel in enumerate(gate_channels):
         channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
         if len(channel_transforms) > 1:
@@ -333,7 +333,6 @@ def inverse_transform_vertices_according_to_gate_transform(vertices: np.ndarray,
                                                    transforms: dict,
                                                    gate_channels: list[str]) -> np.ndarray:
     
-    
     for i, gate_channel in enumerate(gate_channels):
         channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
         if len(channel_transforms) > 1:
@@ -358,7 +357,6 @@ def close_polygon_gate_coordinates(vertices: np.ndarray) -> np.ndarray:
     >>> close_polygon_gate_coordinates(coordinates)
     np.array([[1,2], [3,4], [1,2]])
     """
-
     return np.vstack([vertices, vertices[0]])
 
 
@@ -503,17 +501,17 @@ def equalize_groups(data: AnnData,
         X = data
         return X[obs_indices], obs_indices
     
-def annotate_metadata_samplewise(adata: AnnData,
-                                 sample_ID: Union[str, int],
-                                 annotation: Union[str, int],
-                                 factor_name: str,
-                                 copy: bool = False) -> Optional[AnnData]:
-    
-    adata = adata.copy() if copy else adata
-    adata.obs.loc[adata.obs["sample_ID"] == sample_ID, factor_name] = annotation
-    adata.obs[factor_name] = adata.obs[factor_name].astype("category")
-
-    return adata if copy else None
+#def annotate_metadata_samplewise(adata: AnnData,
+#                                 sample_ID: Union[str, int],
+#                                 annotation: Union[str, int],
+#                                 factor_name: str,
+#                                 copy: bool = False) -> Optional[AnnData]:
+#    
+#    adata = adata.copy() if copy else adata
+#    adata.obs.loc[adata.obs["sample_ID"] == sample_ID, factor_name] = annotation
+#    adata.obs[factor_name] = adata.obs[factor_name].astype("category")
+#
+#    return adata if copy else None
 
 def contains_only_fluo(adata: AnnData) -> bool:
     return all(adata.var["type"] == "fluo")
@@ -540,13 +538,13 @@ def remove_unnamed_channels(adata: AnnData,
 def _flatten_nested_list(l):
     return [item for sublist in l for item in sublist]
 
-def get_filename_from_sample_ID(adata: AnnData,
-                                sample_ID: str) -> str:
-    return adata.uns["metadata"].dataframe.loc[adata.uns["metadata"].dataframe["sample_ID"] == sample_ID, "file_name"].iloc[0]
-
-def get_sample_ID_from_filename(adata: AnnData,
-                                file_name: str) -> str:
-    return adata.uns["metadata"].dataframe.loc[adata.uns["metadata"].dataframe["file_name"] == file_name, "sample_ID"].iloc[0]
+#def get_filename_from_sample_ID(adata: AnnData,
+#                                sample_ID: str) -> str:
+#    return adata.uns["metadata"].dataframe.loc[adata.uns["metadata"].dataframe["sample_ID"] == sample_ID, "file_name"].iloc[0]
+#
+#def get_sample_ID_from_filename(adata: AnnData,
+#                                file_name: str) -> str:
+#    return adata.uns["metadata"].dataframe.loc[adata.uns["metadata"].dataframe["file_name"] == file_name, "sample_ID"].iloc[0]
 
 def is_valid_sample_ID(adata: AnnData,
                        string_to_check) -> bool:
@@ -565,8 +563,8 @@ def create_comparisons(data: pd.DataFrame,
                        n: int = 2) -> list[tuple[str, str]]:
     return list(combinations(data[groupby].unique(), n))
 
-def ifelse(condition, true_val, false_val) -> Any:
-    return true_val if condition else false_val
+#def ifelse(condition, true_val, false_val) -> Any:
+#    return true_val if condition else false_val
 
 def convert_cluster_to_gate(adata: AnnData,
                             obs_column: str,
@@ -593,26 +591,23 @@ def convert_cluster_to_gate(adata: AnnData,
 
     return adata if copy else None
 
-def convert_obs_to_gate(adata: AnnData,
-                        obs_column: str,
-                        gate_name: Optional[str] = None,
-                        negative_identifier: Optional[str] = "other"
-                        ) -> Optional[AnnData]:
-    gate_list = adata.obs[obs_column]
-    unique_entries = gate_list.unique()
-    if len(unique_entries) > 2:
-        raise TypeError("To apply for gates, only two values are allowed")
-    if negative_identifier not in unique_entries:
-        raise TypeError("Please provide a negative identifier for the gate")
-    if gate_name is None:
-        raise TypeError("Please provide a gate path")
-    positive_identifier = [entry for entry in unique_entries if entry != negative_identifier][0]
-    mapped_gate = gate_list.map({negative_identifier: False,
-                                 positive_identifier: True})
+#def convert_obs_to_gate(adata: AnnData,
+#                        obs_column: str,
+#                        gate_name: Optional[str] = None,
+#                        negative_identifier: Optional[str] = "other"
+#                        ) -> Optional[AnnData]:
+#    gate_list = adata.obs[obs_column]
+#    unique_entries = gate_list.unique()
+#    if len(unique_entries) > 2:
+#        raise TypeError("To apply for gates, only two values are allowed")
+#    if negative_identifier not in unique_entries:
+#        raise TypeError("Please provide a negative identifier for the gate")
+#    if gate_name is None:
+#        raise TypeError("Please provide a gate path")
+#    positive_identifier = [entry for entry in unique_entries if entry != negative_identifier][0]
+#    mapped_gate = gate_list.map({negative_identifier: False,
+#                                 positive_identifier: True})
     
-    from scipy.sparse import csr_matrix
-
-
 def convert_gate_to_obs(adata: AnnData,
                         gate: str,
                         key_added: Optional[str] = None,
