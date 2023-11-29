@@ -44,7 +44,11 @@ To test if everything went successfull open a python console and import FACSPy:
 ## Getting Started
 
 Code examples are found under "vignettes" and currently include:
-- spectral flow cytometry dataset
+- FACSPy dataset explanation
+- Metadata objects
+- Panel objects
+- Cofactor-Table objects
+- analysis of a spectral flow cytometry dataset
 
 ## Features
 
