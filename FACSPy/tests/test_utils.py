@@ -12,7 +12,6 @@ from FACSPy._utils import (GATE_SEPARATOR,
                            find_current_population,
                            find_parent_gate,
                            _find_parents_recursively,
-                           ifelse,
                            find_grandparent_gate,
                            find_grandparent_population,
                            close_polygon_gate_coordinates,
@@ -224,20 +223,10 @@ def test_close_polygon_gate_coordinates():
     assert np.array_equal(close_polygon_gate_coordinates(coordinate_array),
                           np.array([[1,2],[3,4],[1,2]]))
 
-def test_ifelse():
-    assert ifelse(True, "right", "wrong") == "right"
-    assert ifelse(False, "right", "wrong") == "wrong"
-    # sourcery skip: use-isna
-    assert ifelse(np.nan == np.nan, "right", "wrong") == "wrong"
-
 def test_flatten_nested_list():
     test_list = [["some", "strings", 2], ["some", "other", "ints"]]
     assert _flatten_nested_list(test_list) == ["some", "strings", 2, "some", "other", "ints"]
 
-
-
-def test_subset_stained_samples(): pass
-def test_subset_unstained_samples(): pass
 def test_fetch_fluo_channels(): pass
 def test_subset_channels(): pass
 def test_subset_gate(): pass
