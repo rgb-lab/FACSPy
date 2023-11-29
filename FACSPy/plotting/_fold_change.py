@@ -12,7 +12,7 @@ from ..tools._fold_change import _calculate_fold_changes
 
 from typing import Literal, Union, Optional
 
-from .._utils import ifelse, _default_gate_and_default_layer
+from .._utils import _default_gate_and_default_layer
 
 from ._utils import savefig_or_show
 
