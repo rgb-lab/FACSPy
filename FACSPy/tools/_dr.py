@@ -28,6 +28,79 @@ def pca(adata: AnnData,
         scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
         copy: bool = False,
         **kwargs) -> Optional[AnnData]:
+    """
+    Principal component analysis
+
+    Computes PCA coordinates, loadings and variance decomposition
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where Rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    use_only_fluo
+        Boolean parameter that controls whether only channels corresponding
+        to fluorescence values are analyzed or if scatter (flow) and technical
+        channels (CyTOF) are used for analysis. Defaults to True
+    exclude
+        gives the user the opportunity to exclude channels from the
+        analysis. Lists or strings are allowed.
+    scaling
+        parameter that allows for scaling of the data matrix before
+        PCA computation. Allowed values are "MinMaxScaler",
+        "StandardScaler" or "RobustScaler".
+    copy
+        Return a copy of adata instead of modifying inplace
+    kwargs
+        keyword arguments that are passed directly to the _compute_pca
+        function. Valid kwargs contain:
+        n_comps
+            Number of principal components to be computed. Defaults to
+            the channel count minus one
+        zero_center
+            If `True`, compute standard PCA from covariance matrix
+            If `False`, omit zero-centering variables
+            Defaults to True
+        svd_solver
+            defaults to `arpack`
+        random_state
+            sets the seed for randomness functions
+        chunked
+            If `True`, perform an incrementa PCA on segments of
+            `chunk_size`. The incremental PCA automatically zero-centers
+            and ignores settings of `random_state` and `svd_solver`.
+            If `False`, perform a full PCA.
+        chunk_size
+            Number of observations to include in each chunk. Required if
+            `chunked = True` was passed.
+    
+    Returns
+    -------
+    adata : anndata.AnnData
+        Returned if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.obsm['X_pca_{gate}_{layer}]`
+            PCA representation of the data
+        `.varm['PCs_{gate}_{layer}]`
+            Principal components containing the loadings
+        `.uns['pca_{gate}_{layer}]['variance']`
+            Explained variance, equivalent to the eigenvalues of the
+            covariance matrix
+        `.uns['pca_{gate}_{layer}]['variance_ratio']`
+            Ratio of explained variance.
+        `.uns['settings']['_pca_{gate}_{layer}]`
+            Settings that were used for PCA calculation
+    """
 
     adata = adata.copy() if copy else adata
 
@@ -72,8 +145,85 @@ def diffmap(adata: AnnData,
             exclude: Optional[list[str]] = None,
             scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
             copy: bool = False,
-            *args,
             **kwargs) -> Optional[AnnData]:
+    """
+    Diffusion Map Embedding calculation
+
+    If PCA and neighbors have not been calculated for this gate and layer,
+    the function will compute it automatically.
+
+    From the scanpy docs:
+    Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell
+    data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested
+    by [Haghverdi16]_ in the implementation of [Wolf18]_.
+
+    The width ("sigma") of the connectivity kernel is implicitly determined by
+    the number of neighbors used to compute the single-cell graph in
+    :func:`~scanpy.pp.neighbors`. To reproduce the original implementation
+    using a Gaussian kernel, use `method=='gauss'` in
+    :func:`~scanpy.pp.neighbors`. To use an exponential kernel, use the default
+    `method=='umap'`. Differences between these options shouldn't usually be
+    dramatic.
+
+    Due to the Note in the scanpy documentation, that the 0th column is the steady
+    state solution and not informative in diffusion maps, we discard the 0th
+    position.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where Rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    use_only_fluo
+        Boolean parameter that controls whether only channels corresponding
+        to fluorescence values are analyzed or if scatter (flow) and technical
+        channels (CyTOF) are used for analysis. Defaults to True
+    exclude
+        gives the user the opportunity to exclude channels from the
+        analysis. Lists or strings are allowed.
+    scaling
+        parameter that allows for scaling of the data matrix before
+        PCA computation. Allowed values are "MinMaxScaler",
+        "StandardScaler" or "RobustScaler".
+    copy
+        Return a copy of adata instead of modifying inplace
+    kwargs
+        keyword arguments that are passed directly to the _compute_diffmap
+        function. Valid kwargs contain:
+        n_comps
+            Number of principal components to be computed. Defaults to
+            the channel count minus one
+        neighbors_key
+            If not specified, diffmap looks into .obsp['neighbors_{gate}_{layer}_connectivities]
+        random_state
+            seed for control of randomness functions
+        copy
+            Return a copy of adata instead of modifying inplace
+    
+    Returns
+    -------
+    adata : anndata.AnnData
+        Returned if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.obsm['X_diffmap_{gate}_{layer}]`
+            DiffusionMap embedding of the data
+        `.uns['diffmap_evals'_{gate}_{layer}]
+            Array of size (number of eigen vectors).
+            Eigenvalues of transition matrix
+        `.uns['settings']['_pca_{gate}_{layer}]`
+            Settings that were used for PCA calculation
+    """
+
 
     adata = adata.copy() if copy else adata
 
@@ -89,7 +239,6 @@ def diffmap(adata: AnnData,
                       exclude = exclude,
                       scaling = scaling,
                       reduction = "pca",
-                      *args,
                       **kwargs)
     
     uns_key = f"{gate}_{layer}"
