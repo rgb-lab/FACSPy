@@ -33,6 +33,10 @@ def save_dataset(adata: AnnData,
                  file_name: str,
                  overwrite: bool = False) -> None:
     """Current workaround for the fact that we store custom objects in adata.uns"""
+
+    if os.path.isfile(os.path.join(output_dir, f"{file_name}.h5ad")) and not overwrite:
+        raise FileExistsError("The file already exists. Please set 'overwrite' to True")
+    
     uns = adata.uns.copy()
 
     del adata.uns
@@ -40,8 +44,6 @@ def save_dataset(adata: AnnData,
     adata = _make_obs_valid(adata)
     adata = _make_var_valid(adata) 
 
-    if os.path.isfile(os.path.join(output_dir, f"{file_name}.h5ad")) and not overwrite:
-        raise FileExistsError("The file already exists. Please set 'overwrite' to True")
     try:
         adata.write(os.path.join(output_dir, f"{file_name}.h5ad"))
         with open(os.path.join(output_dir, f"{file_name}.uns"), "wb") as uns_metadata:
