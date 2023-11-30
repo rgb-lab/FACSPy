@@ -16,12 +16,16 @@ from ._utils import savefig_or_show
 
 def _create_custom_cbar(cmap: str,
                         fold_changes: pd.DataFrame,
-                        stat: str):
+                        stat: str,
+                        min_pval: Optional[float]):
        custom_cmap = matplotlib.colormaps[cmap]
-       if fold_changes[stat].min() <= 0.1:
-              vmin = 1e-5
+       if min_pval:
+              vmin = min_pval
        else:
-              vmin = fold_changes[stat].min()
+              if fold_changes[stat].min() <= 0.1:
+                     vmin = min_pval or 1e-5
+              else:
+                     vmin = fold_changes[stat].min()
        lognorm = LogNorm(vmin = vmin,
                          vmax = 0.1)
        not_sig_cutoff = int(lognorm(0.05) * 256 - 256) * -1
@@ -49,7 +53,11 @@ def fold_change(adata: AnnData,
                 stat: Literal["p", "p_adj"] = "p",
                 cmap: str = "Reds_r",
                 test: Literal["Kruskal", "Wilcoxon"] = "Kruskal",
+                min_pval: float = None,
                 figsize: tuple[float, float] = (4,10),
+                comparison_label: Optional[str] = None,
+                group1_label: Optional[str] = None,
+                group2_label: Optional[str] = None,
                 return_dataframe: bool = False,
                 return_fig: bool = False,
                 save: bool = None,
@@ -72,7 +80,8 @@ def fold_change(adata: AnnData,
               return fold_changes
        colorbar, p_colors = _create_custom_cbar(cmap = cmap,
                                                 fold_changes = fold_changes,
-                                                stat = stat)
+                                                stat = stat,
+                                                min_pval = min_pval)
 
        fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = figsize)
        sns.barplot(data = fold_changes,
@@ -80,7 +89,7 @@ def fold_change(adata: AnnData,
                    y = "index",
                    palette = p_colors,
                    ax = ax)
-       ax.set_title(f"enriched in\n{groupby}\n{group1}       {group2}")
+       ax.set_title(f"enriched in\n{comparison_label or groupby}\n{group1_label or group1}       {group2_label or group2}")
        ax.set_yticklabels(ax.get_yticklabels(), fontsize = 10)
        ax.set_ylabel("antigen")
        ax.set_xlim(-np.max(np.abs(ax.get_xlim())),
