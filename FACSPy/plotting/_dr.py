@@ -2,6 +2,7 @@ from anndata import AnnData
 import scanpy as sc
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 import pandas as pd
 
 from typing import Optional, Literal
@@ -25,6 +26,8 @@ def _create_dimred_dataframe(adata: AnnData,
     
     return pd.concat([obs_frame, fluo_values], axis = 1)
 
+def _has_colorbar(axs: Axes):
+    return axs._children[0].colorbar
 
 def _create_dimred_plot(adata: AnnData,
                         basis: str,
@@ -37,13 +40,17 @@ def _create_dimred_plot(adata: AnnData,
     color = kwargs.get("color", None)
     
     fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = figsize)
-    sc.pl.embedding(adata = adata,
-                    basis = basis,
-                    layer = layer,
-                    ax = ax,
-                    show = False,
-                    *args,
-                    **kwargs)
+    axs: Axes = sc.pl.embedding(adata = adata,
+                                basis = basis,
+                                layer = layer,
+                                ax = ax,
+                                show = False,
+                                *args,
+                                **kwargs)
+    if _has_colorbar(axs):
+        axs._children[0].colorbar.ax.set_ylabel(f"{layer} expression",
+                                                rotation = 270,
+                                                labelpad = 20)
     ax.set_xlabel(f"{dimred}1")
     ax.set_ylabel(f"{dimred}2")
     ax.set_title(color)
