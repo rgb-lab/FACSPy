@@ -818,7 +818,7 @@ class unsupervisedGating(BaseGating):
     def _clean_marker_names(self,
                             markers: list[str]) -> list[str]:
         """This function checks for disallowed characters that would otherwise mess up the pd.query function"""
-        disallowed_characters = ["/", "[", "{", "(", ")", "}", "]"]
+        disallowed_characters = ["/", "[", "{", "(", ")", "}", "]", "."]
         replacement_dict = {char: "" for char in disallowed_characters}       
         if isinstance(markers, pd.Index):
             markers = list(markers)
