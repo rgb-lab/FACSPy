@@ -6,8 +6,6 @@ from matplotlib.colors import LogNorm, ListedColormap
 from matplotlib import pyplot as plt
 import numpy as np
 
-from matplotlib.patches import Patch
-
 from ..tools._fold_change import _calculate_fold_changes
 
 from typing import Literal, Union, Optional
@@ -20,7 +18,12 @@ def _create_custom_cbar(cmap: str,
                         fold_changes: pd.DataFrame,
                         stat: str):
        custom_cmap = matplotlib.colormaps[cmap]
-       lognorm = LogNorm(vmin = fold_changes[stat].min(), vmax = 0.1)
+       if fold_changes[stat].min() <= 0.1:
+              vmin = 1e-5
+       else:
+              vmin = fold_changes[stat].min()
+       lognorm = LogNorm(vmin = vmin,
+                         vmax = 0.1)
        not_sig_cutoff = int(lognorm(0.05) * 256 - 256) * -1
        custom_colors = custom_cmap(np.linspace(0,1,256 - not_sig_cutoff))
        gray = np.array([0.5, 0.5, 0.5, 1])
