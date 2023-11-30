@@ -1,12 +1,13 @@
+import warnings
+
 import pandas as pd
 import numpy as np
 from anndata import AnnData
-from ._supplements import Metadata, CofactorTable
+import os
 from typing import Union, Literal
 from KDEpy import FFTKDE
 
-import warnings
-
+from ._supplements import Metadata, CofactorTable, Panel
 
 def _replace_missing_cofactors(dataframe: pd.DataFrame) -> pd.DataFrame:
     """ 
@@ -111,3 +112,49 @@ def find_corresponding_control_samples(adata: AnnData,
                                                                            by = by)
         corresponding_controls[sample] = matching_control_samples or control_samples
     return stained_samples, corresponding_controls
+
+def _gather_fcs_files(input_directory: str):
+    return [file for file in os.listdir(input_directory)
+            if file.endswith(".fcs")]
+
+
+def create_empty_metadata(input_directory: str,
+                          as_frame: bool = False,
+                          save: bool = True):
+    if not os.path.exists(input_directory):
+        raise ValueError("Input directory not found")
+    fcs_files = _gather_fcs_files(input_directory)
+    df = pd.DataFrame(data = {
+        "sample_ID": list(range(1,len(fcs_files)+1)),
+        "file_name": fcs_files,
+    })
+    if save:
+        print(f"... saving dataframe to {input_directory}.")
+        df.to_csv(os.path.join(input_directory, "metadata.csv"), index = False)
+    if as_frame:
+        return df
+    return Metadata(metadata = df)
+
+def create_panel_from_fcs(input_directory: str,
+                          as_frame: bool = False,
+                          save: bool = True):
+    if not os.path.exists(input_directory):
+        raise ValueError("Input Directory not found")
+    fcs_files = _gather_fcs_files(input_directory)
+    from ._sample import FCSFile
+    print(f"... extracting panel information from the first FCS file {fcs_files[0]}")
+    file = FCSFile(input_directory = input_directory,
+                   file_name = fcs_files[0])
+    channels = file.channels
+    df = pd.DataFrame(data = {
+        "fcs_colname": channels.index.tolist(),
+        "antigens": channels["pns"].tolist()
+    })
+    if save:
+        print(f"... saving panel to {input_directory}")
+        df.to_csv(os.path.join(input_directory, "panel.csv"),
+                  index = False)
+    if as_frame:
+        return channels
+    return Panel(panel = df)
+
