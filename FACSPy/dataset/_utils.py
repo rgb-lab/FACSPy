@@ -120,7 +120,8 @@ def _gather_fcs_files(input_directory: str):
 
 def create_empty_metadata(input_directory: str,
                           as_frame: bool = False,
-                          save: bool = True):
+                          save: bool = True,
+                          overwrite: bool = False):
     if not os.path.exists(input_directory):
         raise ValueError("Input directory not found")
     fcs_files = _gather_fcs_files(input_directory)
@@ -130,6 +131,8 @@ def create_empty_metadata(input_directory: str,
     })
     if save:
         print(f"... saving dataframe to {input_directory}.")
+        if os.path.isfile(os.path.join(input_directory, "metadata.csv")) and not overwrite:
+            raise FileExistsError("File already exists. Please set `overwrite` to True or `save` to False")
         df.to_csv(os.path.join(input_directory, "metadata.csv"), index = False)
     if as_frame:
         return df
@@ -137,7 +140,8 @@ def create_empty_metadata(input_directory: str,
 
 def create_panel_from_fcs(input_directory: str,
                           as_frame: bool = False,
-                          save: bool = True):
+                          save: bool = True,
+                          overwrite: bool = False):
     if not os.path.exists(input_directory):
         raise ValueError("Input Directory not found")
     fcs_files = _gather_fcs_files(input_directory)
@@ -152,6 +156,8 @@ def create_panel_from_fcs(input_directory: str,
     })
     if save:
         print(f"... saving panel to {input_directory}")
+        if os.path.isfile(os.path.join(input_directory, "panel.csv")) and not overwrite:
+            raise FileExistsError("File already exists. Please set `overwrite` to True or `save` to False")
         df.to_csv(os.path.join(input_directory, "panel.csv"),
                   index = False)
     if as_frame:
