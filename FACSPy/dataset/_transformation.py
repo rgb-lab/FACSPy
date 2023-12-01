@@ -7,12 +7,12 @@ from flowutils import transforms
 from typing import Literal, Optional
 
 from ._utils import (find_corresponding_control_samples,
-                    get_histogram_curve,
-                    transform_data_array,
-                    create_sample_subset_with_controls,
-                    _merge_cofactors_into_dataset_var,
-                    _replace_missing_cofactors,
-                    asinh)
+                     get_histogram_curve,
+                     transform_data_array,
+                     create_sample_subset_with_controls,
+                     _merge_cofactors_into_dataset_var,
+                     _replace_missing_cofactors,
+                     asinh)
 from ._supplements import CofactorTable
 
 from .._utils import _fetch_fluo_channels
@@ -60,8 +60,6 @@ def _transform_array(data: np.ndarray,
         assert transform == "asinh"
         return asinh(data,
                      cofactors)
-    
-
 
 def transform(adata: AnnData,
               transform: Literal["asinh", "logicle", "hyperlog", "log"],
