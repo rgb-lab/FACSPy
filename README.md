@@ -48,6 +48,7 @@ Code examples are found under "vignettes" and currently include:
 - Metadata objects
 - Panel objects
 - Cofactor-Table objects
+
 - analysis of a spectral flow cytometry dataset
 
 ## Features
@@ -115,6 +116,46 @@ fp.dt.transform(
     layer = "compensated"
 )
 ```
+
+### Biaxial plotting
+
+```python
+fp.pl.biax(
+    dataset,
+    gate = "CD45+",
+    x_channel = "CD3",
+    y_channel = "SSC-A",
+    color = "density"
+)
+
+fp.pl.biax(
+    dataset,
+    gate = "CD45+",
+    x_channel = "CD3",
+    y_channel = "SSC-A",
+    color = "CD4",
+    vmin = 1,
+    vmax = 4e4
+)
+
+fp.pl.biax(
+    dataset,
+    gate = "CD45+",
+    x_channel = "CD3",
+    y_channel = "SSC-A",
+    color = "CD8",
+    vmin = 1,
+    vmax = 4e4
+
+)
+```
+
+<p float="left" align="center">
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/biax_density.png" width = 300 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/biax_CD4.png" width = 300 alt="gate frequency plot"/>
+<<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/biax_CD8.png" width = 300 alt="gate frequency plot"/>
+</p>
+
 
 ### Cell Count Analysis
 
