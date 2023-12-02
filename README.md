@@ -50,6 +50,7 @@ Code examples are found under "vignettes" and currently include:
 - Cofactor-Table objects
 
 - analysis of a spectral flow cytometry dataset
+- analysis of a flow cytometry dataset consisting of mouse lineages
 
 ## Features
 
@@ -153,7 +154,7 @@ fp.pl.biax(
 <p float="left" align="center" width=600>
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/biax_density.png" width = 200 alt="gate frequency plot"/>
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/biax_CD4.png" width = 200 alt="gate frequency plot"/>
-<<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/biax_CD8.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/biax_CD8.png" width = 200 alt="gate frequency plot"/>
 </p>
 
 
