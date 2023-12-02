@@ -351,3 +351,10 @@ def savefig_or_show(show: Optional[bool] = None,
     
     if save:
         plt.close()
+
+def _get_cofactor_from_var(adata: AnnData,
+                           channel: str) -> float:
+    return float(adata.var.loc[adata.var["pns"] == channel, "cofactors"].iloc[0])
+
+def _color_var_is_categorical(vals: pd.Series) -> bool:
+    return isinstance(vals.dtype, pd.CategoricalDtype)
