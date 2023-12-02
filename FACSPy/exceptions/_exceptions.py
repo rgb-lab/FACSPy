@@ -1,6 +1,14 @@
 from typing import Any
 import warnings
 
+class CofactorNotFoundWarning(Warning):
+    def __init__(self,
+                 message) -> None:
+        self.message = message
+    
+    def __str__(self):
+        return repr(self.message)
+
 class NaNRemovalWarning(Warning):
     def __init__(self,
                  message) -> None:
