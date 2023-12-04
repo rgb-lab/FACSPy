@@ -93,6 +93,7 @@ def gate_frequency(adata: AnnData,
                    figsize: tuple[float, float] = (4,3),
                    return_dataframe: bool = False,
                    return_fig: bool = False,
+                   ax: Axes = None,
                    save: bool = None,
                    show: bool = None):
     
@@ -111,10 +112,6 @@ def gate_frequency(adata: AnnData,
     if return_dataframe:
         return df
 
-    ncols = 1
-    nrows = 1
-    figsize = figsize
-
     plot_params = {
         "x": groupby[0],
         "y": "freq",
@@ -122,7 +119,10 @@ def gate_frequency(adata: AnnData,
         "data": df
     }
 
-    fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
+    if ax is None:
+        fig = plt.figure(figsize = figsize)
+        ax = fig.add_subplot(111)
+
     if groupby == ["sample_ID"]:
         ax = barplot(ax,
                      plot_params = plot_params)
@@ -168,6 +168,7 @@ def cell_counts(adata: AnnData,
                 figsize: tuple[float, float] = (4,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
+                ax: Axes = None,
                 save: bool = None,
                 show: bool = None) -> Optional[Union[Figure, Axes]]:
 
@@ -192,10 +193,6 @@ def cell_counts(adata: AnnData,
     if return_dataframe:
         return df 
     
-    ncols = 1
-    nrows = 1
-    figsize = figsize
-
     plot_params = {
         "data": df,
         "x": groupby[0],
@@ -204,7 +201,10 @@ def cell_counts(adata: AnnData,
 
     }
 
-    fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
+    if ax is None:
+        fig = plt.figure(figsize = figsize)
+        ax = fig.add_subplot(111)
+    
     if groupby == ["sample_ID"]:
         ax = barplot(ax,
                      plot_params = plot_params)
