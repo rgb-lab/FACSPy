@@ -89,6 +89,7 @@ def gate_frequency(adata: AnnData,
                    gate: Union[str, list[str]] = None,
                    groupby: Optional[str] = None,
                    colorby: Optional[str] = None,
+                   cmap: str = None,
                    freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent", "all"]]] = None,
                    figsize: tuple[float, float] = (4,3),
                    return_dataframe: bool = False,
@@ -116,6 +117,7 @@ def gate_frequency(adata: AnnData,
         "x": groupby[0],
         "y": "freq",
         "hue": colorby[0],
+        "palette": cmap or "Set1",
         "data": df
     }
 
@@ -170,6 +172,7 @@ def cell_counts(adata: AnnData,
                 gate: str = None,
                 groupby: Optional[Union[str, list[str]]] = None,
                 colorby: Optional[str] = None,
+                cmap: str = None,
                 figsize: tuple[float, float] = (4,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
@@ -203,7 +206,7 @@ def cell_counts(adata: AnnData,
         "x": groupby[0],
         "y": "counts",
         "hue": colorby[0],
-
+        "palette": cmap or "Set1"
     }
 
     if ax is None:
