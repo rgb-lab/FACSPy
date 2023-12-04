@@ -156,8 +156,13 @@ def gate_frequency(adata: AnnData,
 
     if return_fig:
         return fig    
+
     plt.tight_layout()
+
     savefig_or_show(show = show, save = save)
+
+    if show is False:
+        return ax
 
 
 @_default_gate
@@ -244,4 +249,7 @@ def cell_counts(adata: AnnData,
     
     plt.tight_layout()
     savefig_or_show(save = save, show = show)
+
+    if show is False:
+        return ax
         
