@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
 import seaborn as sns
 
 from matplotlib.figure import Figure
@@ -81,6 +82,7 @@ def biax(adata: AnnData,
          title: Optional[str] = None,
          show: Optional[bool] = None,
          save: Optional[Union[str, bool]] = None,
+         ax: Axes = None,
          return_dataframe: bool = False,
          return_fig: bool = False) -> Optional[Figure]:
     
@@ -140,7 +142,10 @@ def biax(adata: AnnData,
     title
         sets the figure title. Optional
     show
-        whether to show the figure
+        whether to show the fifig = if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+    
     save
         expects a file path and a file name. saves the figure to the indicated path
     return_dataframe
@@ -148,6 +153,13 @@ def biax(adata: AnnData,
         are not set.
     return_fig
         if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """
     
@@ -217,7 +229,10 @@ def biax(adata: AnnData,
 
     continous_cmap = _get_cmap_biax(cmap, color)
 
-    fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = figsize)
+    if ax is None:
+        fig = plt.figure(figsize = figsize)
+        ax = fig.add_subplot(111)
+
     plot_params = {
         "data": dataframe,
         "x": x_channel,
@@ -277,6 +292,6 @@ def biax(adata: AnnData,
     plt.tight_layout()
 
     if return_fig:
-        return fig
+        return ax
 
     savefig_or_show(show = show, save = save)
