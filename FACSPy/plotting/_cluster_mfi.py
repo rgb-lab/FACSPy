@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 
 from typing import Literal, Optional, Union
 
@@ -15,8 +16,6 @@ from ._utils import (_scale_data,
                      _remove_dendrogram,
                      add_annotation_plot,
                      savefig_or_show)
-
-
 from ._clustermap import create_clustermap
 from ._frequency_plots import _prep_dataframe_cluster_freq
 
@@ -91,23 +90,18 @@ def cluster_heatmap(adata: AnnData,
     
     indices = [t.get_text() for t in np.array(clustermap.ax_heatmap.get_xticklabels())]
     
-    ax = clustermap.ax_heatmap
+    heatmap = clustermap.ax_heatmap
     _scale_cbar_to_heatmap(clustermap = clustermap,
-                           heatmap_position = ax.get_position(),
+                           heatmap_position = heatmap.get_position(),
                            cbar_padding = 1.05,
                            loc = "right")
-    # remove_ticklabels(ax = ax,
-    #                   which = "x")
-    # remove_ticks(ax = ax,
-    #              which = "x")
-
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
-    ax.yaxis.set_ticks_position("left")
-    ax.set_yticklabels(ax.get_yticklabels(),
-                       fontsize = y_label_fontsize)
-    ax.set_ylabel("")
+    heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation = 45, ha = "center")
+    heatmap.yaxis.set_ticks_position("left")
+    heatmap.set_yticklabels(heatmap.get_yticklabels(),
+                            fontsize = y_label_fontsize)
+    heatmap.set_ylabel("")
     _remove_dendrogram(clustermap, which = "y")
-    clustermap.ax_heatmap.set_xlabel("cluster")
+    heatmap.set_xlabel("cluster")
 
     if annotate is not None:
         if annotate == "frequency":
