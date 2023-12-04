@@ -83,8 +83,6 @@ def _samplewise_dr_plot(adata: AnnData,
 
     ax.set_title(f"{reduction} samplewise reduction\ncolored by {color}")
 
-    plt.tight_layout()
-
     if return_fig:
         return fig
 
@@ -194,20 +192,20 @@ def pca_samplewise(adata: AnnData,
     if return_dataframe:
         return data
     
-    _samplewise_dr_plot(adata = adata,
-                        layer = layer,
-                        dataframe = data,
-                        reduction = "PCA",
-                        color = color,
-                        cmap = cmap,
-                        vmin = vmin,
-                        vmax = vmax,
-                        color_scale = color_scale,
-                        figsize = figsize,
-                        ax = ax,
-                        return_fig = return_fig,
-                        save = save,
-                        show = show)
+    return _samplewise_dr_plot(adata = adata,
+                               layer = layer,
+                               dataframe = data,
+                               reduction = "PCA",
+                               color = color,
+                               cmap = cmap,
+                               vmin = vmin,
+                               vmax = vmax,
+                               color_scale = color_scale,
+                               figsize = figsize,
+                               ax = ax,
+                               return_fig = return_fig,
+                               save = save,
+                               show = show)
 
 @_default_gate_and_default_layer 
 def mds_samplewise(adata: AnnData,
@@ -299,19 +297,19 @@ def mds_samplewise(adata: AnnData,
     if return_dataframe:
         return data
     
-    _samplewise_dr_plot(adata = adata,
-                        layer = layer,
-                        dataframe = data,
-                        reduction = "MDS",
-                        color = color,
-                        cmap = cmap,
-                        vmin = vmin,
-                        vmax = vmax,
-                        color_scale = color_scale,
-                        ax = ax,
-                        return_fig = return_fig,
-                        save = save,
-                        show = show)
+    return _samplewise_dr_plot(adata = adata,
+                               layer = layer,
+                               dataframe = data,
+                               reduction = "MDS",
+                               color = color,
+                               cmap = cmap,
+                               vmin = vmin,
+                               vmax = vmax,
+                               color_scale = color_scale,
+                               ax = ax,
+                               return_fig = return_fig,
+                               save = save,
+                               show = show)
 
 @_default_gate_and_default_layer 
 def umap_samplewise(adata: AnnData,
@@ -403,19 +401,19 @@ def umap_samplewise(adata: AnnData,
     if return_dataframe:
         return data
     
-    _samplewise_dr_plot(adata = adata,
-                        layer = layer,
-                        dataframe = data,
-                        reduction = "UMAP",
-                        color = color,
-                        cmap = cmap,
-                        vmin = vmin,
-                        vmax = vmax,
-                        color_scale = color_scale,
-                        ax = ax,
-                        return_fig = return_fig,
-                        save = save,
-                        show = show)
+    return _samplewise_dr_plot(adata = adata,
+                               layer = layer,
+                               dataframe = data,
+                               reduction = "UMAP",
+                               color = color,
+                               cmap = cmap,
+                               vmin = vmin,
+                               vmax = vmax,
+                               color_scale = color_scale,
+                               ax = ax,
+                               return_fig = return_fig,
+                               save = save,
+                               show = show)
 
 @_default_gate_and_default_layer 
 def tsne_samplewise(adata: AnnData,
@@ -507,16 +505,16 @@ def tsne_samplewise(adata: AnnData,
     if return_dataframe:
         return data
     
-    _samplewise_dr_plot(adata = adata,
-                        layer = layer,
-                        dataframe = data,
-                        reduction = "TSNE",
-                        color = color,
-                        cmap = cmap,
-                        vmin = vmin,
-                        vmax = vmax,
-                        color_scale = color_scale,
-                        return_fig = return_fig,
-                        ax = ax,
-                        save = save,
-                        show = show)
+    return _samplewise_dr_plot(adata = adata,
+                               layer = layer,
+                               dataframe = data,
+                               reduction = "TSNE",
+                               color = color,
+                               cmap = cmap,
+                               vmin = vmin,
+                               vmax = vmax,
+                               color_scale = color_scale,
+                               return_fig = return_fig,
+                               ax = ax,
+                               save = save,
+                               show = show)
