@@ -1,5 +1,7 @@
 import warnings
 
+import matplotlib
+from matplotlib.colors import ListedColormap, Normalize, SymLogNorm, LogNorm
 from matplotlib.axes import Axes
 from matplotlib.patches import Patch
 from matplotlib.transforms import Bbox
@@ -24,8 +26,9 @@ from typing import Literal, Union, Optional
 from ..dataset.supplements import Metadata
 from ..exceptions._exceptions import (AnalysisNotPerformedError,
                                       InvalidScalingError,
-                                      MetaclusterOverwriteWarning)
-from .._utils import find_gate_path_of_gate
+                                      MetaclusterOverwriteWarning,
+                                      CofactorNotFoundWarning)
+from .._utils import find_gate_path_of_gate, scatter_channels
 
 ANNOTATION_CMAPS = ["Set1", "Set2", "tab10", "hls", "Paired"]
 CONTINUOUS_CMAPS = ["YlOrRd", "Reds", "YlOrBr", "PuRd", "Oranges", "Greens"]
@@ -358,3 +361,100 @@ def _get_cofactor_from_var(adata: AnnData,
 
 def _color_var_is_categorical(vals: pd.Series) -> bool:
     return isinstance(vals.dtype, pd.CategoricalDtype)
+
+def _is_scatter(channel: str) -> bool:
+    return any(k in channel for k in scatter_channels)
+
+def _transform_data_to_scale(data: np.ndarray,
+                             channel: str,
+                             adata: AnnData,
+                             user_scale) -> np.ndarray:
+    scale = _define_axis_scale(channel, user_scale=user_scale)
+    if scale == "linear":
+        return data
+    elif scale == "log":
+        transformed = np.log10(data)
+        # data can be negative to nan would be produced
+        # which would mess up the density function
+        transformed[np.where(np.isnan(transformed))] = 0.0
+        return transformed
+    elif scale == "symlog":
+        cofactor = _retrieve_cofactor_or_set_to_default(adata,
+                                                        channel)
+        return np.arcsinh(data / cofactor)
+
+def _define_axis_scale(channel,
+                       user_scale: Literal["biex", "linear", "log"]) -> bool:
+    """
+    decides if data are plotted on a linear or biex scale
+    Log Scaling is not a default but has to be set by the user
+    explicitly.
+    """
+    if user_scale:
+        if user_scale == "biex":
+            return "symlog"
+        return user_scale
+    if _is_scatter(channel):
+        return "linear"
+    return "symlog"
+
+def _continous_color_vector(df: pd.DataFrame,
+                            color_col: str,
+                            vmin: Optional[float],
+                            vmax: Optional[float]):
+    color_vector = df[color_col].values.copy()
+    if vmin:
+        color_vector[np.where(color_vector < vmin)] = vmin
+    if vmax:
+        color_vector[np.where(color_vector > vmax)] = vmax
+    return color_vector
+
+def _retrieve_cofactor_or_set_to_default(adata, channel) -> float:
+    try:
+        return _get_cofactor_from_var(adata, channel)
+    except KeyError:
+        # which means cofactors were not calculated
+        warnings.warn("Cofactor not found. Setting to 1000 for plotting",
+                      CofactorNotFoundWarning)
+        return 1000
+
+def _get_cbar_normalizations(color_vector: np.ndarray,
+                             color_scale: Literal["biex", "log", "linear"],
+                             color_cofactor: Optional[float]):
+    if color_scale == "biex":
+        norm = SymLogNorm(vmin = np.min(color_vector),
+                          vmax = np.max(color_vector),
+                          linthresh = color_cofactor)
+    elif color_scale == "log":
+        norm = LogNorm(vmin = np.min(color_vector),
+                       vmax = np.max(color_vector))
+    else:
+        assert color_scale == "linear"
+        norm = Normalize(vmin = np.min(color_vector),
+                         vmax = np.max(color_vector))
+        
+    return norm
+
+def _transform_color_to_scale(color_vector: np.ndarray,
+                              color_cofactor: Optional[float],
+                              color_scale: Literal["biex", "log", "linear"]) -> np.ndarray:
+    norm = _get_cbar_normalizations(color_vector,
+                                    color_scale,
+                                    color_cofactor)
+    return norm(color_vector)
+
+def _generate_continous_color_scale(color_vector: np.ndarray,
+                                    cmap: str,
+                                    color_cofactor: Optional[float],
+                                    ax: Axes,
+                                    color_scale: Literal["biex", "log", "linear"]):
+    custom_cmap = matplotlib.colormaps[cmap]
+    custom_colors = custom_cmap(np.linspace(0,1,256))
+    norm = _get_cbar_normalizations(color_vector,
+                                    color_scale,
+                                    color_cofactor)
+    sm = plt.cm.ScalarMappable(cmap = ListedColormap(custom_colors),
+                               norm = norm)
+    return ax.figure.colorbar(sm,
+                              ax = ax)
+ 
