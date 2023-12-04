@@ -1,9 +1,6 @@
-import warnings
 import numpy as np
 import pandas as pd
 
-import matplotlib
-from matplotlib.colors import ListedColormap, Normalize, SymLogNorm
 from matplotlib import pyplot as plt
 import seaborn as sns
 
@@ -14,14 +11,17 @@ from anndata import AnnData
 from typing import Union, Optional, Literal
 from scipy.interpolate import interpn
 from ._utils import (savefig_or_show,
-                     _get_cofactor_from_var,
-                     _color_var_is_categorical)
+                     _color_var_is_categorical,
+                     _continous_color_vector,
+                     _retrieve_cofactor_or_set_to_default,
+                     _generate_continous_color_scale,
+                     _define_axis_scale,
+                     _transform_data_to_scale,
+                     _transform_color_to_scale)
 from .._utils import (subset_gate,
                       is_valid_filename,
                       is_valid_sample_ID,
-                      _default_layer,
-                      scatter_channels)
-from ..exceptions._exceptions import CofactorNotFoundWarning
+                      _default_layer)
 
 def _generate_scale_kwargs(channel,
                            channel_scale,
@@ -42,27 +42,11 @@ def _get_cmap_biax(cmap,
         return "jet"
     return "viridis"
 
-def _define_axis_scale(channel,
-                       user_scale: Literal["biex", "linear", "log"]) -> bool:
-    """
-    decides if data are plotted on a linear or biex scale
-    Log Scaling is not a default but has to be set by the user
-    explicitly.
-    """
-    if user_scale:
-        if user_scale == "biex":
-            return "symlog"
-        return user_scale
-    if _is_scatter(channel):
-        return "linear"
-    return "symlog"
-
 def _create_expression_frame(adata: AnnData,
                              layer: str) -> pd.DataFrame:
     expression_data = adata.to_df(layer = layer)
     obs_data = adata.obs.copy()
     return pd.concat([expression_data, obs_data], axis = 1)
-
 
 def _calculate_density(x: np.ndarray,
                        y: np.ndarray,
@@ -78,38 +62,6 @@ def _calculate_density(x: np.ndarray,
     z[np.where(np.isnan(z))] = 0.0
     return z
 
-def _is_scatter(channel: str) -> bool:
-    return any(k in channel for k in scatter_channels)
-
-def _transform_data_to_scale(data: np.ndarray,
-                             channel: str,
-                             adata: AnnData,
-                             user_scale) -> np.ndarray:
-    scale = _define_axis_scale(channel, user_scale=user_scale)
-    if scale == "linear":
-        return data
-    elif scale == "log":
-        transformed = np.log10(data)
-        # data can be negative to nan would be produced
-        # which would mess up the density function
-        transformed[np.where(np.isnan(transformed))] = 0.0
-        return transformed
-    elif scale == "symlog":
-        cofactor = _retrieve_cofactor_or_set_to_default(adata,
-                                                        channel)
-        # for biex, we only log data above a certain value
-        return np.arcsinh(data / cofactor)
-
-def _retrieve_cofactor_or_set_to_default(adata, channel) -> float:
-    try:
-        return _get_cofactor_from_var(adata, channel)
-    except KeyError:
-        # which means cofactors were not calculated
-        warnings.warn("Cofactor not found. Setting to 1000 for plotting",
-                      CofactorNotFoundWarning)
-        return 1000
-
-#TODO: add legend
 @_default_layer
 def biax(adata: AnnData,
          gate: str,
@@ -121,6 +73,7 @@ def biax(adata: AnnData,
          add_cofactor: Literal["x", "y", "both"] = False,
          x_scale: Literal["biex", "log", "linear"] = None,
          y_scale: Literal["biex", "log", "linear"] = None,
+         color_scale: Literal["biex", "log", "linear"] = "linear",
          cmap: str = None,
          vmin: float = None,
          vmax: float = None,
@@ -131,11 +84,80 @@ def biax(adata: AnnData,
          return_dataframe: bool = False,
          return_fig: bool = False) -> Optional[Figure]:
     
+    """
+    Plot for normal biaxial representation of cytometry data.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    x_channel
+        The channel that is plotted on the x axis.
+    y_channel
+        The channel that is plotted on the y axis
+    color
+        The parameter that controls the coloring of the plot.
+        Can be set to categorical variables from the .obs slot
+        or continuous variables corresponding to channels.
+        Default is set to 'density', which calculates the point
+        density in the plot.
+    sample_identifier
+        Controls the data that are extracted. Defaults to None.
+        If set, has to be one of the sample_IDs or the file_names.
+    add_cofactor
+        if set, adds the cofactor as a line to the plot for visualization.
+        if 'x', sets the cofactor for the x-axis,
+        if 'y', sets the cofactor for the y-axis,
+        if 'both', sets both axis cofactors
+    x_scale
+        sets the scale for the x axis. Has to be one of 'biex', 'log', 'linear'.
+        The value 'biex' gets converted to 'symlog' internally
+    y_scale
+        sets the scale for the y axis. Has to be one of 'biex', 'log', 'linear'.
+        The value 'biex' gets converted to 'symlog' internally
+    color_scale
+        sets the scale for the colorbar. Has to be one of 'biex', 'log', 'linear'.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value
+    vmin
+        minimum value to plot in the color vector
+    vmax
+        maximum value to plot in the color vector
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    title
+        sets the figure title. Optional
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    
+    """
+    
     if x_channel is None or y_channel is None:
         raise ValueError("Please provide x_channel and y_channel")
     if x_scale not in ["biex", "linear", "log"] and x_scale is not None:
         raise ValueError("parameter x_scale has to be one of ['biex', 'linear', 'log']")
     if y_scale not in ["biex", "linear", "log"] and y_scale is not None:
+        raise ValueError("parameter x_scale has to be one of ['biex', 'linear', 'log']")
+    if color_scale not in ["biex", "linear", "log"] and color_scale is not None:
         raise ValueError("parameter x_scale has to be one of ['biex', 'linear', 'log']")
     
     adata = subset_gate(adata, gate = gate, as_view = True)
@@ -164,6 +186,12 @@ def biax(adata: AnnData,
 
         dataframe["density"] = _calculate_density(x = x, y = y)
 
+        # also, we set vmin and vmax to None as there is no colorbar
+        vmin = None
+        vmax = None
+        # color scale is still set explicitly
+        color_scale = "linear"
+
     if return_dataframe:
         return dataframe
     
@@ -173,11 +201,19 @@ def biax(adata: AnnData,
 
     categorical_color = _color_var_is_categorical(dataframe[color])
     if not categorical_color:
-        color_vector = dataframe[color].values.copy()
-        if vmin:
-            color_vector[np.where(color_vector < vmin)] = vmin
-        if vmax:
-            color_vector[np.where(color_vector > vmax)] = vmax
+        if color in adata.var_names and color_scale == "biex":
+            color_cofactor = _retrieve_cofactor_or_set_to_default(adata,
+                                                                  color)
+        else:
+            color_cofactor = None
+
+        color_vector = _continous_color_vector(dataframe,
+                                               color,
+                                               vmin,
+                                               vmax)
+        transformed_color_vector= _transform_color_to_scale(color_vector,
+                                                            color_cofactor,
+                                                            color_scale)
 
     continous_cmap = _get_cmap_biax(cmap, color)
 
@@ -190,7 +226,7 @@ def biax(adata: AnnData,
         "s": 2,
         "hue": dataframe[color] if categorical_color else None,
         "palette": cmap or "Set1",
-        "c": color_vector if not categorical_color else None,
+        "c": transformed_color_vector if not categorical_color else None,
         "cmap": continous_cmap,
         "legend": "auto"
     }
@@ -205,12 +241,6 @@ def biax(adata: AnnData,
     y_channel_cofactor = _retrieve_cofactor_or_set_to_default(adata,
                                                               y_channel)
     
-    if color in adata.var_names:
-        color_cofactor = _retrieve_cofactor_or_set_to_default(adata,
-                                                              color)
-    else:
-        color_cofactor = 1
-
     x_scale_kwargs = _generate_scale_kwargs(x_channel,
                                             x_scale,
                                             x_channel_cofactor)
@@ -236,19 +266,11 @@ def biax(adata: AnnData,
     if categorical_color:
         ax.legend(bbox_to_anchor = (1.1, 0.5), loc = "center left")
     if not categorical_color and color != "density":
-        custom_cmap = matplotlib.colormaps[continous_cmap]
-        custom_colors = custom_cmap(np.linspace(0,1,256))
-        if layer == "compensated":
-            norm = SymLogNorm(vmin = np.min(color_vector),
-                              vmax = np.max(color_vector),
-                              linthresh = color_cofactor)
-        else:
-            norm = Normalize(vmin = np.min(color_vector),
-                             vmax = np.max(color_vector))
-        sm = plt.cm.ScalarMappable(cmap = ListedColormap(custom_colors),
-                                   norm = norm)
-        cbar = ax.figure.colorbar(sm,
-                                  ax = ax)
+        cbar = _generate_continous_color_scale(color_vector = color_vector,
+                                               cmap = continous_cmap,
+                                               color_cofactor = color_cofactor,
+                                               ax = ax,
+                                               color_scale = color_scale)
         cbar.ax.set_ylabel(f"{layer} expression\n{color}",
                            rotation = 270,
                            labelpad = 30)
