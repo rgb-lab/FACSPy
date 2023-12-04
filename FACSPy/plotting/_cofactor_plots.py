@@ -284,6 +284,8 @@ def cofactor_distribution(adata: AnnData,
         cofactors = cofactors.loc[:, cofactors.columns.isin(channels)]
     metadata = adata.uns["metadata"].to_df()
     data = cofactors.merge(metadata, left_index = True, right_on = "file_name")
+    if return_dataframe:
+        return data
 
     nrows = calculate_nrows(ncols, cofactors)
     figsize = calculate_fig_size(ncols,
