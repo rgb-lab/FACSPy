@@ -4,6 +4,7 @@ import seaborn as sns
 import pandas as pd
 from matplotlib.colors import LogNorm, ListedColormap
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 
 from ..tools._fold_change import _calculate_fold_changes
@@ -60,6 +61,7 @@ def fold_change(adata: AnnData,
                 group2_label: Optional[str] = None,
                 return_dataframe: bool = False,
                 return_fig: bool = False,
+                ax: Axes = None,
                 save: bool = None,
                 show: bool = None
                 ):
@@ -83,7 +85,9 @@ def fold_change(adata: AnnData,
                                                 stat = stat,
                                                 min_pval = min_pval)
 
-       fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = figsize)
+       if ax is None:
+              fig = plt.figure(figsize = figsize)
+              ax = fig.add_subplot(111)
        sns.barplot(data = fold_changes,
                    x = "asinh_fc",
                    y = "index",
@@ -111,3 +115,5 @@ def fold_change(adata: AnnData,
               return fig
 
        savefig_or_show(save = save, show = show)
+       if show is False:
+              return ax
