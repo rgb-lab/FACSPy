@@ -86,7 +86,7 @@ def _samplewise_dr_plot(adata: AnnData,
     plt.tight_layout()
 
     if return_fig:
-        return ax 
+        return fig
 
     savefig_or_show(show = show, save = save)
 
