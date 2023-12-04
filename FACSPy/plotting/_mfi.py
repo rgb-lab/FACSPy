@@ -30,6 +30,7 @@ def fop(adata: AnnData,
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
         return_fig: bool = False,
+        ax: Axes = None,
         save: bool = None,
         show: bool = None):
     
@@ -51,6 +52,7 @@ def fop(adata: AnnData,
                       figsize = figsize,
                       order = order,
                       return_fig = return_fig,
+                      ax = ax,
                       save = save,
                       show = show)
 
@@ -68,6 +70,7 @@ def mfi(adata: AnnData,
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
         return_fig: bool = False,
+        ax: Axes = None,
         save: bool = None,
         show: bool = None):
 
@@ -90,7 +93,8 @@ def mfi(adata: AnnData,
                       order = order,
                       return_fig = return_fig,
                       save = save,
-                      show = show)
+                      show = show,
+                      ax = ax)
 
 def _mfi_fop_baseplot(adata: AnnData,
                       dataframe: pd.DataFrame,
@@ -103,6 +107,7 @@ def _mfi_fop_baseplot(adata: AnnData,
                       overview: bool = False,
                       figsize: tuple[float, float] = None,
                       return_fig: bool = False,
+                      ax: Axes = None,
                       save: bool = None,
                       show: bool = None):
     
@@ -135,7 +140,10 @@ def _mfi_fop_baseplot(adata: AnnData,
         "order": order if colorby[0] is None else None
     }
 
-    fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
+    if ax is None:
+        fig = plt.figure(figsize = figsize)
+        ax = fig.add_subplot(111)
+    # fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
     if groupby == ["sample_ID"]:
         ax = barplot(ax,
                      plot_params = plot_params)
@@ -172,6 +180,8 @@ def _mfi_fop_baseplot(adata: AnnData,
 
     plt.tight_layout()
     savefig_or_show(save = save, show = show)
+    if show is False:
+        return ax
 
 def label_plot(ax: Axes,
                marker: str,
