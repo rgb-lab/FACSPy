@@ -4,7 +4,7 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from matplotlib.axis import Axis
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from typing import Literal, Union, Optional
@@ -29,6 +29,7 @@ def _samplewise_dr_plot(adata: AnnData,
                         vmax: float = None,
                         figsize: tuple[float, float] = (4,3),
                         return_fig: bool = False,
+                        ax: Axes = None,
                         save: bool = None,
                         show: bool = None):
     
@@ -51,7 +52,9 @@ def _samplewise_dr_plot(adata: AnnData,
     continous_cmap = cmap or "viridis"
 
 
-    fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = figsize)
+    if ax is None:
+        fig = plt.figure(figsize = figsize)
+        ax = fig.add_subplot(111)
     plot_params = {
         "x": plotting_dimensions[0],
         "y": plotting_dimensions[1],
@@ -83,15 +86,18 @@ def _samplewise_dr_plot(adata: AnnData,
     plt.tight_layout()
 
     if return_fig:
-        return fig
+        return ax 
 
     savefig_or_show(show = show, save = save)
+
+    if show is False:
+        return ax
 
 def _get_plotting_dimensions(reduction: str):
     return reduction_names[reduction][:2]
 
-def create_scatterplot(ax: Axis,
-                       plot_params: dict) -> Axis:
+def create_scatterplot(ax: Axes,
+                       plot_params: dict) -> Axes:
     return sns.scatterplot(**plot_params,
                            edgecolor = "black",
                            ax = ax)
@@ -112,6 +118,7 @@ def pca_samplewise(adata: AnnData,
                    show: bool = None,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
+                   ax: Axes = None,
                    groupby: str = None
                    ) -> Optional[Figure]:
     """
@@ -197,6 +204,7 @@ def pca_samplewise(adata: AnnData,
                         vmax = vmax,
                         color_scale = color_scale,
                         figsize = figsize,
+                        ax = ax,
                         return_fig = return_fig,
                         save = save,
                         show = show)
@@ -216,6 +224,7 @@ def mds_samplewise(adata: AnnData,
                    show: bool = None,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
+                   ax: Axes = None,
                    groupby: str = None
                    ) -> Optional[Figure]:
     """
@@ -299,6 +308,7 @@ def mds_samplewise(adata: AnnData,
                         vmin = vmin,
                         vmax = vmax,
                         color_scale = color_scale,
+                        ax = ax,
                         return_fig = return_fig,
                         save = save,
                         show = show)
@@ -318,6 +328,7 @@ def umap_samplewise(adata: AnnData,
                     show: bool = None,
                     return_dataframe: bool = False,
                     return_fig: bool = False,
+                    ax: Axes = None,
                     groupby: str = None
                     ) -> Optional[Figure]:
     """
@@ -401,6 +412,7 @@ def umap_samplewise(adata: AnnData,
                         vmin = vmin,
                         vmax = vmax,
                         color_scale = color_scale,
+                        ax = ax,
                         return_fig = return_fig,
                         save = save,
                         show = show)
@@ -420,6 +432,7 @@ def tsne_samplewise(adata: AnnData,
                     show: bool = None,
                     return_dataframe: bool = False,
                     return_fig: bool = False,
+                    ax: Axes = None,
                     groupby: str = None
                     ) -> Optional[Figure]:
     """
@@ -504,5 +517,6 @@ def tsne_samplewise(adata: AnnData,
                         vmax = vmax,
                         color_scale = color_scale,
                         return_fig = return_fig,
+                        ax = ax,
                         save = save,
                         show = show)
