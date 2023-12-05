@@ -125,8 +125,8 @@ def fold_change(adata: AnnData,
     
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
+
     """
        
     fold_changes = _calculate_fold_changes(adata = adata,
