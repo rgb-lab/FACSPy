@@ -34,12 +34,14 @@ def _create_dimred_plot(adata: AnnData,
                         dimred: str,
                         figsize: tuple[float, float],
                         layer: str,
+                        ax: Axes,
                         *args,
                         **kwargs) -> Figure:
     
     color = kwargs.get("color", None)
-    
-    fig, ax = plt.subplots(ncols = 1, nrows = 1, figsize = figsize)
+    if ax is None:
+        fig = plt.figure(figsize = figsize)
+        ax = fig.add_subplot(111)
     axs: Axes = sc.pl.embedding(adata = adata,
                                 basis = basis,
                                 layer = layer,
@@ -51,11 +53,11 @@ def _create_dimred_plot(adata: AnnData,
         axs._children[0].colorbar.ax.set_ylabel(f"{layer} expression",
                                                 rotation = 270,
                                                 labelpad = 20)
-    ax.set_xlabel(f"{dimred}1")
-    ax.set_ylabel(f"{dimred}2")
-    ax.set_title(color)
+    axs.set_xlabel(f"{dimred}1")
+    axs.set_ylabel(f"{dimred}2")
+    axs.set_title(color)
 
-    return fig
+    return axs
 
 @_default_gate_and_default_layer
 def diffmap(adata: AnnData,
@@ -66,6 +68,7 @@ def diffmap(adata: AnnData,
             return_dataframe: bool = False,
             save: Optional[bool] = None,
             show: Optional[bool] = None,
+            ax: Axes = None,
             *args,
             **kwargs):
     
@@ -87,13 +90,17 @@ def diffmap(adata: AnnData,
                               dimred = dimred,
                               figsize = figsize,
                               layer = layer,
+                              ax = ax,
                               *args,
                               **kwargs)
     
     if return_fig:
         return fig
 
-    savefig_or_show(show = show, save = save)   
+    savefig_or_show(show = show, save = save)
+
+    if show is False:
+        return fig
 
 @_default_gate_and_default_layer
 def pca(adata: AnnData,
@@ -104,6 +111,7 @@ def pca(adata: AnnData,
         return_dataframe: bool = False,
         save: Optional[bool] = None,
         show: Optional[bool] = None,
+        ax: Axes = None,
         *args,
         **kwargs):
     
@@ -125,6 +133,7 @@ def pca(adata: AnnData,
                               dimred = dimred,
                               figsize = figsize,
                               layer = layer,
+                              ax = ax,
                               *args,
                               **kwargs)
     
@@ -132,6 +141,9 @@ def pca(adata: AnnData,
         return fig
 
     savefig_or_show(show = show, save = save)   
+
+    if show is False:
+        return fig
 
 @_default_gate_and_default_layer
 def tsne(adata: AnnData,
@@ -142,6 +154,7 @@ def tsne(adata: AnnData,
          return_dataframe: bool = False,
          save: Optional[bool] = None,
          show: Optional[bool] = None,
+         ax: Axes = None,
          *args,
          **kwargs):
     
@@ -163,6 +176,7 @@ def tsne(adata: AnnData,
                               dimred = dimred,
                               figsize = figsize,
                               layer = layer,
+                              ax = ax,
                               *args,
                               **kwargs)
     
@@ -170,6 +184,9 @@ def tsne(adata: AnnData,
         return fig
 
     savefig_or_show(show = show, save = save)   
+
+    if show is False:
+        return fig
 
 @_default_gate_and_default_layer
 def umap(adata: AnnData,
@@ -180,6 +197,7 @@ def umap(adata: AnnData,
          return_dataframe: bool = False,
          save: Optional[bool] = None,
          show: Optional[bool] = None,
+         ax: Axes = None,
          *args,
          **kwargs):
     
@@ -201,6 +219,7 @@ def umap(adata: AnnData,
                               dimred = dimred,
                               figsize = figsize,
                               layer = layer,
+                              ax = ax,
                               *args,
                               **kwargs)
     
@@ -208,3 +227,6 @@ def umap(adata: AnnData,
         return fig
 
     savefig_or_show(show = show, save = save)
+
+    if show is False:
+        return fig
