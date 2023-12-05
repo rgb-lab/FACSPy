@@ -23,8 +23,8 @@ def _create_custom_cbar(cmap: str,
        if min_pval:
               vmin = min_pval
        else:
-              if fold_changes[stat].min() <= 0.1:
-                     vmin = min_pval or 1e-5
+              if fold_changes[stat].min() >= 0.1:
+                     vmin = 1e-5
               else:
                      vmin = fold_changes[stat].min()
        lognorm = LogNorm(vmin = vmin,
@@ -36,9 +36,7 @@ def _create_custom_cbar(cmap: str,
 
        sm = plt.cm.ScalarMappable(cmap = ListedColormap(custom_colors),
                                   norm = lognorm)
-       zeroed = (np.log10(fold_changes[stat].tolist()) - np.min(np.log10(fold_changes[stat].tolist())))
-       zeroed = zeroed / np.max(zeroed)
-       p_color = sm.cmap(zeroed)
+       p_color = sm.cmap(lognorm(fold_changes[stat]))
        return sm, p_color
 
 
@@ -110,7 +108,6 @@ def fold_change(adata: AnnData,
                     color = "white",
                     weight = "bold")
 
-       plt.tight_layout()
        if return_fig:
               return fig
 
