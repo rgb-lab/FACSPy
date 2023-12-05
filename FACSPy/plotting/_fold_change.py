@@ -36,7 +36,7 @@ def _create_custom_cbar(cmap: str,
 
        sm = plt.cm.ScalarMappable(cmap = ListedColormap(custom_colors),
                                   norm = lognorm)
-       p_color = sm.cmap(lognorm(fold_changes[stat]))
+       p_color = sm.cmap(lognorm(fold_changes[stat].tolist()))
        return sm, p_color
 
 
