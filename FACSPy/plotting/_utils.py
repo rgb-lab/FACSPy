@@ -110,6 +110,7 @@ def _map_metaclusters_to_sample_ID(metaclusters: dict,
     sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
     for metacluster in metaclusters:
         sample_IDs.loc[sample_IDs["sample_ID"].isin(metaclusters[metacluster]), "metacluster"] = str(int(metacluster))
+    sample_IDs["metacluster"] = sample_IDs["metacluster"].astype("category")
     return sample_IDs
 
 def _merge_metaclusters_into_dataframe(data: pd.DataFrame,
@@ -350,6 +351,7 @@ def savefig_or_show(show: Optional[bool] = None,
                     bbox_inches = "tight")
     
     if show:
+        plt.tight_layout()
         plt.show()
     
     if save:
