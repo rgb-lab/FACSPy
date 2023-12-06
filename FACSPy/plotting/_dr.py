@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 import pandas as pd
 
-from typing import Optional, Literal
+from typing import Optional
 
 
 from ._utils import savefig_or_show
@@ -71,6 +71,49 @@ def diffmap(adata: AnnData,
             ax: Axes = None,
             *args,
             **kwargs):
+    """
+    Plots the diffusion embedding.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    title
+        sets the figure title. Optional
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+    *args
+        arguments ultimately passed to sc.pl.diffmap
+    **kwargs
+        arguments ultimately passed to sc.pl.diffmap
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
+    
+    """
     
     dimred = "DMAP"
     basis = f"X_diffmap_{gate}_{layer}"
@@ -114,7 +157,50 @@ def pca(adata: AnnData,
         ax: Axes = None,
         *args,
         **kwargs):
+    """
+    Plots the PCA embedding.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    title
+        sets the figure title. Optional
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+    *args
+        arguments ultimately passed to sc.pl.pca
+    **kwargs
+        arguments ultimately passed to sc.pl.pca
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
     
+    """
+ 
     dimred = "PCA"
     basis = f"X_pca_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
@@ -157,6 +243,50 @@ def tsne(adata: AnnData,
          ax: Axes = None,
          *args,
          **kwargs):
+    """
+    Plots the TSNE embedding.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    title
+        sets the figure title. Optional
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+    *args
+        arguments ultimately passed to sc.pl.tsne
+    **kwargs
+        arguments ultimately passed to sc.pl.tsne
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
+    
+    """
+ 
     
     dimred = "TSNE"
     basis = f"X_tsne_{gate}_{layer}"
@@ -200,7 +330,50 @@ def umap(adata: AnnData,
          ax: Axes = None,
          *args,
          **kwargs):
+    """
+    Plots the UMAP embedding.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    title
+        sets the figure title. Optional
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+    *args
+        arguments ultimately passed to sc.pl.umap
+    **kwargs
+        arguments ultimately passed to sc.pl.umap
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
     
+    """
+ 
     dimred = "UMAP"
     basis = f"X_umap_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
