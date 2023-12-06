@@ -87,16 +87,60 @@ def _prepare_dataframe_cell_counts(adata: AnnData,
 @_default_gate
 def gate_frequency(adata: AnnData,
                    gate: Union[str, list[str]] = None,
+                   freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent", "all"]]] = None,
                    groupby: Optional[str] = None,
                    colorby: Optional[str] = None,
                    cmap: str = None,
-                   freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent", "all"]]] = None,
                    figsize: tuple[float, float] = (4,3),
                    return_dataframe: bool = False,
                    return_fig: bool = False,
                    ax: Axes = None,
                    save: bool = None,
                    show: bool = None):
+    """
+    Plots the gate frequency in comparison to a defined gate.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    freq_of
+        Sets the reference gate of which the frequency of the chosen gate
+        is displayed
+    groupby
+        controls the x axis and the grouping of the data points
+    colorby
+        controls the coloring of the data points. Defaults to None.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
+    
+    """
     
     if not isinstance(groupby, list):
         groupby = [groupby]
@@ -177,6 +221,47 @@ def cell_counts(adata: AnnData,
                 ax: Axes = None,
                 save: bool = None,
                 show: bool = None) -> Optional[Union[Figure, Axes]]:
+    """
+    Plots the cell counts of a specific population.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    groupby
+        controls the x axis and the grouping of the data points
+    colorby
+        controls the coloring of the data points. Defaults to None.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
+    
+    """
 
     if gate is not None:
         if gate not in adata.obs.columns:
@@ -252,4 +337,3 @@ def cell_counts(adata: AnnData,
 
     if show is False:
         return ax
-        
