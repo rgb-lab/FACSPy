@@ -51,25 +51,79 @@ def _prepare_plot_data(adata: AnnData,
 def sample_distance(adata: AnnData,
                     gate: str = None,
                     layer: str = None,
-
                     annotate: Union[str, list[str]] = None,
-
                     data_group: Optional[Union[str, list[str]]] = "sample_ID",
                     data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
                     cmap: str = "inferno",
                     figsize: tuple[float, float] = (4,4),
-                    return_dataframe: bool = False,
                     metaclusters: Optional[int] = None,
                     label_metaclusters_in_dataset: bool = True,
                     label_metaclusters_key: Optional[str] = "sample_distance_metaclusters",
                     return_fig: bool = False,
+                    return_dataframe: bool = False,
                     save: bool = None,
                     show: bool = None) -> Optional[Figure]:
     
-    """ plots sample distance data_metrics as a heatmap """
-    
+    """
+    Plot to display sample distance as a heatmap.
+
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    annotate
+        controls the annotated variables on top of the plot.
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    data_metric
+        One of `mfi` or `fop`. Using a different metric will calculate
+        the asinh fold change on mfi and fop values, respectively
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler`(Z-score)
+    corr_method
+        correlation method that is used for correlation analysis. One of
+        `pearson`, `spearman` or `kendall`.
+    cmap
+        Sets the colormap for plotting the markers
+    metaclusters
+        controls the n of metaclusters to be computed
+    label_metaclusters_in_dataset
+        Whether to label the calculated metaclusters and write into the metadata
+    label_metaclusters_key
+        Column name that is used to store the metaclusters in
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats
+    save
+        Expects a file path and a file name. saves the figure to the indicated path
+    show
+        Whether to show the figure
+    return_dataframe
+        If set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        If set to True, the figure is returned.
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~seaborn.ClusterGrid`
+
+    """
+ 
     if not isinstance(annotate, list):
         annotate = [annotate] 
     
