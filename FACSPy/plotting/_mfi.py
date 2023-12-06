@@ -23,8 +23,8 @@ def fop(adata: AnnData,
         marker: Union[str, list[str]] = None,
         groupby: Union[str, list[str]] = None,
         colorby: Optional[str] = None,
+        cmap: str = None,
         order: list[str] = None,
-        overview: bool = False,
         data_group: Optional[Union[str, list[str]]] = "sample_ID",
         data_metric: Literal["mfi", "fop", "gate_frequency"] = "fop",
         figsize: tuple[float, float] = (3,3),
@@ -33,7 +33,62 @@ def fop(adata: AnnData,
         ax: Axes = None,
         save: bool = None,
         show: bool = None):
+    """
+    Plots the fop values as calculated by fp.tl.fop
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    marker
+        The channel to be displayed. Has to be in adata.var_names
+    groupby
+        controls the x axis and the grouping of the data points
+    colorby
+        controls the coloring of the data points. Defaults to None.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value
+    order
+        specifies the order of x-values.
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    data_metric
+        One of `mfi` or `fop`. Using a different metric will calculate
+        the asinh fold change on mfi and fop values, respectively
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
     
+    """
+
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
                               table_identifier = f"{data_metric}_{data_group}_{layer}")
@@ -48,7 +103,7 @@ def fop(adata: AnnData,
                              colorby = colorby,
                              gate = gate,
                              assay = "fop",
-                             overview = overview,
+                             cmap = cmap,
                              figsize = figsize,
                              order = order,
                              return_fig = return_fig,
@@ -61,18 +116,73 @@ def mfi(adata: AnnData,
         gate: str = None,
         layer: str = None,
         marker: Union[str, list[str]] = None,
-        colorby: Optional[str] = None,
-        order: list[str] = None,
         groupby: Union[str, list[str]] = None,
+        colorby: Optional[str] = None,
+        cmap: str = None,
+        order: list[str] = None,
         data_group: Optional[Union[str, list[str]]] = "sample_ID",
         data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-        overview: bool = False,
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
         return_fig: bool = False,
         ax: Axes = None,
         save: bool = None,
         show: bool = None):
+    """
+    Plots the mfi values as calculated by fp.tl.mfi
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    marker
+        The channel to be displayed. Has to be in adata.var_names
+    groupby
+        controls the x axis and the grouping of the data points
+    colorby
+        controls the coloring of the data points. Defaults to None.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value
+    order
+        specifies the order of x-values.
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    data_metric
+        One of `mfi` or `fop`. Using a different metric will calculate
+        the asinh fold change on mfi and fop values, respectively
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+    ax
+        Optional parameter. Sets user defined ax from for example plt.subplots
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
+    
+    """
 
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
@@ -88,7 +198,7 @@ def mfi(adata: AnnData,
                              colorby = colorby,
                              gate = gate,
                              assay = "mfi",
-                             overview = overview,
+                             cmap = cmap,
                              figsize = figsize,
                              order = order,
                              return_fig = return_fig,
@@ -102,9 +212,9 @@ def _mfi_fop_baseplot(adata: AnnData,
                       groupby: Union[str, list[str]],
                       colorby: str,
                       assay: Literal["mfi", "fop"],
+                      cmap: str = None,
                       order: list[str] = None,
                       gate: str = None,
-                      overview: bool = False,
                       figsize: tuple[float, float] = None,
                       return_fig: bool = False,
                       ax: Axes = None,
@@ -114,37 +224,21 @@ def _mfi_fop_baseplot(adata: AnnData,
     if gate is None:
         raise TypeError("A Gate has to be provided")
     
-    if overview:
-        if marker:
-            print("warning... marker argument is ignored when using overview")
-        marker = adata.var_names.to_list()
 
-    if not isinstance(marker, list):
-        marker = [marker]
-
-    if not isinstance(groupby, list):
-        groupby = [groupby]
-
-    if not isinstance(colorby, list):
-        colorby = [colorby]
-
-    ncols = 1
-    nrows = len(groupby)
-    figsize = figsize
     plot_params = {
         "data": dataframe,
-        "x": groupby[0],
-        "y": marker[0],
-        "hue": colorby[0],
-        "hue_order": order if colorby[0] is not None else None,
-        "order": order if colorby[0] is None else None
+        "x": groupby,
+        "y": marker,
+        "hue": colorby,
+        "hue_order": order if colorby is not None else None,
+        "order": order if colorby is None else None
     }
 
     if ax is None:
         fig = plt.figure(figsize = figsize)
         ax = fig.add_subplot(111)
-    # fig, ax = plt.subplots(ncols = ncols, nrows = nrows, figsize = figsize)
-    if groupby == ["sample_ID"]:
+
+    if groupby == "sample_ID":
         ax = barplot(ax,
                      plot_params = plot_params)
 
@@ -164,12 +258,12 @@ def _mfi_fop_baseplot(adata: AnnData,
                 print("warning... Values were uniform, no statistics to plot.")
 
     ax = label_plot_basic(ax = ax,
-                          title = f"{marker[0]}\ngrouped by {groupby[0]}",
-                          y_label = f"{marker[0]}",
+                          title = f"{marker}\ngrouped by {groupby}",
+                          y_label = f"{marker}",
                           x_label = "")
-    if colorby != [None]:
+    if colorby is None:
         ax = adjust_legend(ax,
-                        title = colorby[0] or None)
+                        title = colorby or None)
     else:
         ax.legend().remove()
     
@@ -178,8 +272,8 @@ def _mfi_fop_baseplot(adata: AnnData,
     if return_fig:
         return fig
 
-    plt.tight_layout()
     savefig_or_show(save = save, show = show)
+    
     if show is False:
         return ax
 
