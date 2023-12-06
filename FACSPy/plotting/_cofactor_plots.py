@@ -165,11 +165,53 @@ def transformation_plot(adata: AnnData,
                         marker: Optional[Union[str, list[str]]] = None,
                         scatter: str = "SSC-A",
                         sample_size: Optional[int] = 5_000,
+                        figsize: tuple[float, float] = (10,3),
                         return_dataframe: bool = False,
                         return_fig: bool = False,
                         save: bool = None,
                         show: bool = None
                         ) -> Union[Figure, Axes, tuple[pd.DataFrame]]:
+    """
+    Transformation plot. Plots the data on a log scale (biaxial), the data on the transformed
+    scale (biaxial) and the data on a transformed scale as histogram.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    sample_identifier
+        Used to specify a specific sample. Can be a valid sample_ID and a valid file_name
+        from the .obs slot or the metadata
+    marker
+        the channel to plot
+    scatter
+        the scatter channel to use on the y-axis. Defaults to SSC-A
+    sample_size
+        Controls how many data points are displayed. Defaults to 5000. More displayed data
+        points can significantly increase plotting time.
+    figsize
+        contains the dimensions of the final figure as a tuple of two ints or floats
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
+    
+    """
 
     if not is_valid_sample_ID(adata, sample_identifier) and not is_valid_filename(adata, sample_identifier):
         raise ValueError(f"{sample_identifier} not found")
@@ -259,22 +301,50 @@ def transformation_plot(adata: AnnData,
     if return_fig:
         return fig
     
-    if not show:
+    savefig_or_show(show = show, save = save)
+
+    if show is False:
         return ax
     
-    plt.tight_layout()
-    
-    savefig_or_show(show = show, save = save)
 
 def cofactor_distribution(adata: AnnData,
                           groupby: Optional[str] = None,
                           channels: Optional[str] = None,
-                          ax: Optional[Axes] = None,
                           ncols: int = 4,
                           return_dataframe: bool = False,
                           return_fig: bool = False,
                           save: bool = None,
                           show: bool = None) -> Union[Figure, Axes, None]:
+    """
+    Plots the cofactor distribution of specific channels
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    groupby
+        controls the x-axis and sets the variables to group the data by. Should be categorical.
+    channels
+        the channels to display. Each channel gets its individual plot.
+    ncols
+        controls the number of columns for the plotting of multiple channels
+    show
+        whether to show the figure
+    save
+        expects a file path and a file name. saves the figure to the indicated path
+    return_dataframe
+        if set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        if set to True, the figure is returned.
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~matplotlib.axes.Axes`
+ 
+    """
     
     assert "raw_cofactors" in adata.uns, "raw cofactors not found..."
     cofactors = adata.uns["raw_cofactors"]
@@ -327,9 +397,7 @@ def cofactor_distribution(adata: AnnData,
     if return_fig:
         return fig
     
-    if not show:
-        return ax
-    
-    plt.tight_layout()
-    
     savefig_or_show(show = show, save = save)
+
+    if show is False:
+        return ax
