@@ -1,19 +1,19 @@
 from anndata import AnnData
-import matplotlib
 import seaborn as sns
 import pandas as pd
+import numpy as np
+
+import matplotlib
 from matplotlib.colors import LogNorm, ListedColormap
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-import numpy as np
-
-from ..tools._fold_change import _calculate_fold_changes
 
 from typing import Literal, Union, Optional
 
+from ._utils import savefig_or_show
+from ..tools._fold_change import _calculate_fold_changes
 from .._utils import _default_gate_and_default_layer
 
-from ._utils import savefig_or_show
 
 def _create_custom_cbar(cmap: str,
                         fold_changes: pd.DataFrame,
