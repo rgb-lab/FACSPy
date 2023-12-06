@@ -38,25 +38,82 @@ def prepare_plot_data(adata: AnnData,
 def cluster_heatmap(adata: AnnData,
                     gate: str = None,
                     layer: str = None,
-                    
                     data_group: Optional[Union[str, list[str]]] = "sample_ID",
                     data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                     cluster_method: Literal["correlation", "distance"] = "distance",
-                    
                     annotate: Optional[Union[Literal["frequency"], str]] = None,
                     annotation_kwargs: dict = {},
-                    
-                    cmap: str = "inferno",
+                    cmap: str = "RdYlBu_r",
                     figsize: Optional[tuple[float, float]] = (5,3.8),
                     y_label_fontsize: Optional[Union[int, float]] = 4,
-                    
                     return_dataframe: bool = False,
                     return_fig: bool = False,
                     save: bool = None,
                     show: bool = None) -> Optional[Figure]:
+    """
+    Plots a heatmap where every column corresponds to one cluster and the
+    rows display the marker expression.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where Rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    data_metric
+        One of `mfi` or `fop`. Using a different metric will calculate
+        the asinh fold change on mfi and fop values, respectively
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler`(Z-score)
+    corr_method
+        correlation method that is used for hierarchical clustering by cluster correlation.
+        if cluster_method == `distance`, this parameter is ignored. One of `pearson`, `spearman` 
+        or `kendall`.
+    cluster_method
+        Method for hierarchical clustering of displayed clusters. If `correlation`, the correlation
+        specified by corr_method is computed (default: pearson). If `distance`, the euclidean
+        distance is computed.
+    annotate
+        Parameter to control the annotation plot. Default: `frequency`. Adds a plot on top of
+        the heatmap to display cluster-specific data. Other valid values are marker names as
+        contained in adata.var_names
+    annotation_kwargs
+        Used to specify and customize the annotation plot. 
+    y_label_fontsize
+        controls the fontsize of the marker labels
+    cmap
+        Sets the colormap for plotting the markers
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats
+    save
+        Expects a file path and a file name. saves the figure to the indicated path
+    show
+        Whether to show the figure
+    return_dataframe
+        If set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        If set to True, the figure is returned.
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~seaborn.ClusterGrid`
+ 
+    """
     
     raw_data = _get_uns_dataframe(adata = adata,
                                   gate = gate,
@@ -127,6 +184,9 @@ def cluster_heatmap(adata: AnnData,
         return clustermap
 
     savefig_or_show(show = show, save = save)
+    
+    if show is False:
+        return clustermap
 
 
 
