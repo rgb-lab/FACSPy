@@ -40,13 +40,10 @@ def prepare_plot_data(adata: AnnData,
 def expression_heatmap(adata: AnnData,
                        gate: str = None,
                        layer: str = None,
-                       
                        annotate: Optional[Union[str, list[str]]] = None,
-
+                       plot_annotate: Optional[str] = None,
                        data_group: Optional[Union[str, list[str]]] = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                       
-                       plot_annotate: Optional[str] = None,
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cluster_method: Literal["correlation", "distance"] = "distance",
@@ -60,6 +57,73 @@ def expression_heatmap(adata: AnnData,
                        return_fig: bool = False,
                        save: bool = None,
                        show: bool = None) -> Optional[Figure]:
+    """
+    Plot for expression heatmap. Rows are the individual channels and columns are the data points.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    annotate
+        controls the annotated variables on top of the plot.
+    plot_annotate
+        creates a second plot on top of the heatmap where marker expressions can
+        be shown. 
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    data_metric
+        One of `mfi` or `fop`. Using a different metric will calculate
+        the asinh fold change on mfi and fop values, respectively
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler`(Z-score)
+    corr_method
+        correlation method that is used for hierarchical clustering by sample correlation.
+        if cluster_method == `distance`, this parameter is ignored. One of `pearson`, `spearman` 
+        or `kendall`.
+    cluster_method
+        Method for hierarchical clustering of displayed samples. If `correlation`, the correlation
+        specified by corr_method is computed (default: pearson). If `distance`, the euclidean
+        distance is computed.
+    metaclusters
+        controls the n of metaclusters to be computed
+    label_metaclusters_in_dataset
+        Whether to label the calculated metaclusters and write into the metadata
+    label_metaclusters_key
+        Column name that is used to store the metaclusters in
+    y_label_fontsize
+        controls the fontsize of the marker labels
+    cmap
+        Sets the colormap for plotting the markers
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats
+    save
+        Expects a file path and a file name. saves the figure to the indicated path
+    show
+        Whether to show the figure
+    return_dataframe
+        If set to True, returns the raw data that are used for plotting. vmin and vmax
+        are not set.
+    return_fig
+        If set to True, the figure is returned.
+
+    Returns
+    -------
+
+    if `show==False` a :class:`~seaborn.ClusterGrid`
+
+    """
 
     if not isinstance(annotate, list):
         annotate = [annotate]    
@@ -148,3 +212,6 @@ def expression_heatmap(adata: AnnData,
         return clustermap
     
     savefig_or_show(save = save, show = show)
+
+    if show is False:
+        return clustermap
