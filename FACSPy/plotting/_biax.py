@@ -142,10 +142,7 @@ def biax(adata: AnnData,
     title
         sets the figure title. Optional
     show
-        whether to show the fifig = if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-    
+        whether to show the fig
     save
         expects a file path and a file name. saves the figure to the indicated path
     return_dataframe
