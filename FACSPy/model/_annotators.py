@@ -735,20 +735,20 @@ class unsupervisedGating(BaseGating):
             else:
                 raise ParentGateNotFoundError(population_to_cluster)
             
-        if self.adata.shape[0] <= 1:
-            """
-            Handles the case where no parent cells have been found. In order to avoid missing gates,
-            empty gates are appended.
-            TODO: code doubling...
-            """
-            for population_list in self.gating_strategy[population_to_cluster]:
-                population_name: str = population_list[0]
-                print(f"... gating population {population_name}")
-                parent_gate_path = find_gate_path_of_gate(file_subset, population_to_cluster)
-                population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
-
-                if not self._population_is_already_a_gate(population_name):
-                    self._append_gate_column_to_adata(population_gate_path)
+#        if self.adata.shape[0] <= 1:
+#            """
+#            Handles the case where no parent cells have been found. In order to avoid missing gates,
+#            empty gates are appended.
+#            TODO: code doubling...
+#            """
+#            for population_list in self.gating_strategy[population_to_cluster]:
+#                population_name: str = population_list[0]
+#                print(f"... gating population {population_name}")
+#                parent_gate_path = find_gate_path_of_gate(file_subset, population_to_cluster)
+#                population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
+#
+#                if not self._population_is_already_a_gate(population_name):
+#                    self._append_gate_column_to_adata(population_gate_path)
 
         else:
             for sample in self.adata.obs["file_name"].unique():
@@ -756,6 +756,22 @@ class unsupervisedGating(BaseGating):
                 file_subset = self._subset_anndata_by_sample(adata = self.adata,
                                                              samples = sample,
                                                              copy = True)
+                if file_subset.shape[0] <= 1:
+                    """
+                    Handles the case where no parent cells have been found. In order to avoid missing gates,
+                    empty gates are appended.
+                    TODO: code doubling...
+                    """
+                    for population_list in self.gating_strategy[population_to_cluster]:
+                        population_name: str = population_list[0]
+                        print(f"... gating population {population_name}")
+                        parent_gate_path = find_gate_path_of_gate(file_subset, population_to_cluster)
+                        population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
+
+                        if not self._population_is_already_a_gate(population_name):
+                            self._append_gate_column_to_adata(population_gate_path)
+                    continue
+
                 file_subset = self._cluster_dataset(adata = file_subset,
                                                     gate = population_to_cluster,
                                                     layer = self.layer,
