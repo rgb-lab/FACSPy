@@ -9,7 +9,9 @@ from ._utils import (_preprocess_adata,
                      _extract_valid_parc_kwargs,
                      _save_cluster_settings,
                      _choose_use_rep_as_scanpy,
-                     _recreate_preprocessed_view)
+                     _recreate_preprocessed_view,
+                     _extract_valid_pca_kwargs)
+from ._pca import _pca
 from ._neighbors import _neighbors
 
 from .._utils import (_default_gate_and_default_layer,
@@ -52,6 +54,16 @@ def parc(adata: AnnData,
                                            use_only_fluo = use_only_fluo,
                                            exclude = exclude,
                                            scaling = scaling)
+
+    if f"X_pca_{uns_key}" not in adata.obsm:
+        print("computing PCA for parc!")
+        pca_kwargs = _extract_valid_pca_kwargs(kwargs)
+        adata = _pca(adata = adata,
+                     preprocessed_adata = preprocessed_adata,
+                     dimred_key = f"pca_{uns_key}",
+                     **pca_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
 
     if connectivities_key not in adata.obsp:
         print("computing neighbors for parc!")
