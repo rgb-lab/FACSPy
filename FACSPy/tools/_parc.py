@@ -70,7 +70,7 @@ def parc(adata: AnnData,
 
     parc_kwargs = _extract_valid_parc_kwargs(kwargs)
     parcer = _parc.PARC(preprocessed_adata.X,
-                        neighbor_graph = adata.obsp[connectivities_key]
+                        neighbor_graph = preprocessed_adata.obsp[connectivities_key]
                                          if connectivities_key in adata.obsp else None,
                         **parc_kwargs)
     parcer.run_PARC()
