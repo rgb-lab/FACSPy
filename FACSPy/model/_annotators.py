@@ -756,7 +756,8 @@ class unsupervisedGating(BaseGating):
                 file_subset = self._subset_anndata_by_sample(adata = self.adata,
                                                              samples = sample,
                                                              copy = True)
-                if file_subset.shape[0] <= 1:
+                if file_subset.shape[0] <= 1 or self._has_no_cells_in_gate(file_subset,
+                                                                           gate = population_to_cluster):
                     """
                     Handles the case where no parent cells have been found. In order to avoid missing gates,
                     empty gates are appended.
@@ -805,6 +806,14 @@ class unsupervisedGating(BaseGating):
         self.already_analyzed.append(population_to_cluster)
         return 
   
+    def _has_no_cells_in_gate(self,
+                              adata: AnnData,
+                              gate: str):
+        gate_subset = subset_gate(adata,
+                                  gate,
+                                  as_view = True)
+        return gate_subset.shape[0] <= 1
+
     def _convert_cell_types_to_bool(self,
                                     cell_types: list[str]) -> np.ndarray:
         return np.array(
