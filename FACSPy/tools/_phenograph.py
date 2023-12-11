@@ -28,6 +28,8 @@ def phenograph(adata: AnnData,
 
     if not "clustering_algo" in kwargs:
         kwargs["clustering_algo"] = "leiden"
+    if not "n_neighbors" in kwargs:
+        kwargs["k"] = min(adata.shape[0] - 1, 30)
     _save_cluster_settings(adata = adata,
                            gate = gate,
                            layer = layer,
