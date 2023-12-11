@@ -5,7 +5,13 @@ from typing import Optional, Literal, Union
 
 from ._utils import (_preprocess_adata,
                      _merge_cluster_info_into_adata,
-                     _save_cluster_settings)
+                     _save_cluster_settings,
+                     _extract_valid_pca_kwargs,
+                     _extract_valid_neighbors_kwargs,
+                     _choose_use_rep_as_scanpy,
+                     _recreate_preprocessed_view)
+from ._pca import _pca
+from ._neighbors import _neighbors
 from .._utils import (_default_gate_and_default_layer,
                       IMPLEMENTED_SCALERS)
 from ..exceptions._exceptions import InvalidScalingError
@@ -28,6 +34,7 @@ def phenograph(adata: AnnData,
 
     if not "clustering_algo" in kwargs:
         kwargs["clustering_algo"] = "leiden"
+
     _save_cluster_settings(adata = adata,
                            gate = gate,
                            layer = layer,
@@ -39,6 +46,41 @@ def phenograph(adata: AnnData,
 
     uns_key = f"{gate}_{layer}"
     cluster_key = key_added or f"{uns_key}_phenograph"
+    neighbors_key = f"{uns_key}_neighbors"
+    connectivities_key = f"{neighbors_key}_connectivities"
+
+    preprocessed_adata = _preprocess_adata(adata,
+                                           gate = gate,
+                                           layer = layer,
+                                           use_only_fluo = use_only_fluo,
+                                           exclude = exclude,
+                                           scaling = scaling)
+
+    if f"X_pca_{uns_key}" not in adata.obsm:
+        print("computing PCA for parc!")
+        pca_kwargs = _extract_valid_pca_kwargs(kwargs)
+        adata = _pca(adata = adata,
+                     preprocessed_adata = preprocessed_adata,
+                     dimred_key = f"pca_{uns_key}",
+                     **pca_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
+
+    if connectivities_key not in adata.obsp:
+        print("computing neighbors for parc!")
+        neighbors_kwargs = _extract_valid_neighbors_kwargs(kwargs)
+        if not "use_rep" in neighbors_kwargs:
+            neighbors_kwargs["use_rep"] = _choose_use_rep_as_scanpy(adata,
+                                                                    uns_key = uns_key,
+                                                                    use_rep = None,
+                                                                    n_pcs = neighbors_kwargs.get("n_pcs"))
+        adata = _neighbors(adata = adata,
+                           preprocessed_adata = preprocessed_adata,
+                           neighbors_key = neighbors_key,
+                           **neighbors_kwargs)
+        preprocessed_adata = _recreate_preprocessed_view(adata,
+                                                         preprocessed_adata)
+
 
     preprocessed_adata = _preprocess_adata(adata,
                                            gate = gate,
@@ -49,7 +91,8 @@ def phenograph(adata: AnnData,
     if not "k" in kwargs:
         kwargs["k"] = min(preprocessed_adata.shape[0] - 1, 30)
 
-    communities, graph, Q = _phenograph.cluster(preprocessed_adata.X,
+    communities, graph, Q = _phenograph.cluster(preprocessed_adata.obsp[connectivities_key]
+                                                if connectivities_key in adata.obsp else preprocessed_adata.X,
                                                 **kwargs)
 
     adata = _merge_cluster_info_into_adata(adata,
