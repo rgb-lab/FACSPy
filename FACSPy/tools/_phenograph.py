@@ -88,8 +88,9 @@ def phenograph(adata: AnnData,
                                            use_only_fluo = use_only_fluo,
                                            exclude = exclude,
                                            scaling = scaling)
-    if not "k" in kwargs:
-        kwargs["k"] = min(preprocessed_adata.shape[0] - 1, 30)
+    if ("k" in kwargs and kwargs["k"] <= preprocessed_adata.shape[0]) or "k" not in kwargs:
+        print(f"warning! Setting k to {min(preprocessed_adata.shape[0] - 1, 30)} to avoid errors")
+        kwargs["k"] = min(preprocessed_adata.shape[0]-1, 30)
 
     communities, graph, Q = _phenograph.cluster(preprocessed_adata.X,
                                                 **kwargs)
