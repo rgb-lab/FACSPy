@@ -37,14 +37,11 @@ def save_dataset(adata: AnnData,
     if os.path.isfile(os.path.join(output_dir, f"{file_name}.h5ad")) and not overwrite:
         raise FileExistsError("The file already exists. Please set 'overwrite' to True")
     
-    uns = adata.uns.copy()
-
-    del adata.uns
-
-    adata = _make_obs_valid(adata)
-    adata = _make_var_valid(adata) 
-
     try:
+        uns = adata.uns.copy()
+        del adata.uns
+        adata = _make_obs_valid(adata)
+        adata = _make_var_valid(adata) 
         adata.write(os.path.join(output_dir, f"{file_name}.h5ad"))
         with open(os.path.join(output_dir, f"{file_name}.uns"), "wb") as uns_metadata:
             pickle.dump(uns, uns_metadata)
