@@ -650,13 +650,20 @@ class unsupervisedGating(BaseGating):
                  gating_strategy: dict,
                  layer: str = None,
                  clustering_algorithm: Literal["leiden", "FlowSOM"] = "leiden",
-                 cluster_key: str = None) -> None:
+                 cluster_key: str = None,
+                 sensitivity: float = 1) -> None:
         gating_strategy = gating_strategy
         self.gating_strategy = self._preprocess_gating_strategy(gating_strategy)
         self.clustering_algorithm = clustering_algorithm
         self.adata = adata
         self.cluster_key = cluster_key or "clusters"
         self.layer = layer
+        # sensitivity controls the cutoff.
+        # will be log-transformed so that a sensitivity of 1 leads to cutoff of np.arcsinh(1) (~0.88).
+        # and for every log there will be the addition of 0.1. sensitivity of 0.1 therefore
+        # leads to np.arcsinh(1) + 0.1*-np.log10(0.1) which is np.arcsinh(1) + 0.1.
+        # to increase the sensitivity, choose higher values (100 will result in a decrease of 0.2).
+        self.sensitivity = sensitivity # will be logtransformed so that 1 is a cut
 
     def identify_populations(self,
                              cluster_kwargs: Optional[dict] = None):
@@ -828,10 +835,13 @@ class unsupervisedGating(BaseGating):
         # TODO: map function...
         return [population if cluster in cluster_vector else "other"
                 for cluster in subset.obs[self.cluster_key].to_list()]
-        
+    
     def _convert_markers_to_query_string(self,
                                          markers_of_interest: dict[str: list[Optional[str]]]) -> str:
-        cutoff = str(np.arcsinh(1))
+        cutoff = np.arcsinh(1)
+        cutoff = cutoff - (0.1 * np.log10(self.sensitivity))
+
+        cutoff = str(cutoff)
         up_markers = markers_of_interest["up"]
         down_markers = markers_of_interest["down"]
         query_strings = (
