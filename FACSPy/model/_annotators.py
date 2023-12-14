@@ -838,10 +838,8 @@ class unsupervisedGating(BaseGating):
     
     def _convert_markers_to_query_string(self,
                                          markers_of_interest: dict[str: list[Optional[str]]]) -> str:
-        cutoff = np.arcsinh(1)
-        cutoff = cutoff - (0.1 * np.log10(self.sensitivity))
 
-        cutoff = str(cutoff)
+        cutoff = str(np.arcsinh(1) - (0.1 * np.log10(self.sensitivity)))
         up_markers = markers_of_interest["up"]
         down_markers = markers_of_interest["down"]
         query_strings = (
