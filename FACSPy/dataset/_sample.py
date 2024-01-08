@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from flowio import FlowData
+from flowio.exceptions import FCSParsingError
 from typing import Optional
 
 from ..transforms._matrix import Matrix
@@ -282,8 +283,8 @@ class FCSFile:
         """function to load the fcs from the hard rive"""
         try:
             return FlowData(os.path.join(input_directory, file_name), ignore_offset_error)
-        except ValueError:
+        except FCSParsingError:
             warnings.warn("FACSPy IO: FCS file could not be read with " + 
-                        f"ignore_offset_error set to {ignore_offset_error}. " +
-                        "Parameter is set to True.")
+                         f"ignore_offset_error set to {ignore_offset_error}. " +
+                          "Parameter is set to True.")
             return FlowData(input_directory, ignore_offset_error = True)
