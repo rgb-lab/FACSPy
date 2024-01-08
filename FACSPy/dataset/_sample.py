@@ -287,4 +287,4 @@ class FCSFile:
             warnings.warn("FACSPy IO: FCS file could not be read with " + 
                          f"ignore_offset_error set to {ignore_offset_error}. " +
                           "Parameter is set to True.")
-            return FlowData(input_directory, file_name, ignore_offset_error = True)
+            return FlowData(os.path.join(input_directory), ignore_offset_error = True)
