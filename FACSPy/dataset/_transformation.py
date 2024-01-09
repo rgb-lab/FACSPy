@@ -122,10 +122,14 @@ class CofactorCalculator:
     def __init__(self,
                  adata: AnnData,
                  add_to_adata: bool = True,
-                 use_gate: Optional[str] = None) -> None:
+                 use_gate: Optional[str] = None,
+                 n_iter: float = 3,
+                 tol: float = 0.4) -> None:
         ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
         print("... calculating cofactors")
         self.cofactor_table, self.raw_cofactor_table = self.calculate_cofactors(adata)
+        self.n_iter = n_iter
+        self.tol = tol
         if add_to_adata:
             adata.uns["cofactors"] = self.cofactor_table
             adata.uns["raw_cofactors"] = self.raw_cofactor_table
