@@ -651,7 +651,13 @@ class unsupervisedGating(BaseGating):
                  layer: str = None,
                  clustering_algorithm: Literal["leiden", "FlowSOM"] = "leiden",
                  cluster_key: str = None,
-                 sensitivity: float = 1) -> None:
+                 sensitivity: float = 1,
+                 intervals: list[float] = [0.33,0.66]) -> None:
+        """
+        intervals:
+            gives the intervals for lo, int and hi so that the first two numbers
+            denote the lo quantile. Defaults to the 33rd percentile and below
+        """
         gating_strategy = gating_strategy
         self.gating_strategy = self._preprocess_gating_strategy(gating_strategy)
         self.clustering_algorithm = clustering_algorithm
@@ -664,6 +670,40 @@ class unsupervisedGating(BaseGating):
         # leads to np.arcsinh(1) + 0.1*-np.log10(0.1) which is np.arcsinh(1) + 0.1.
         # to increase the sensitivity, choose higher values (100 will result in a decrease of 0.2).
         self.sensitivity = sensitivity # will be logtransformed so that 1 is a cut
+        if len(intervals) != 2:
+            raise TypeError("Please provide intervals in two steps (e.g. [0.33, 0.66]).")
+        self.intervals = intervals
+        self._define_disallowed_characters()
+
+    def _define_disallowed_characters(self) -> None:
+        disallowed_characters = ["/", "[", "{", "(", ")", "}", "]", ".", "-"]
+        replacement_dict = {char: "" for char in disallowed_characters}
+        self.transtab = str.maketrans(replacement_dict)
+        return
+
+    def _generate_cutoff_table(self,
+                               adata: AnnData,
+                               layer: str,
+                               sensitivity: float,
+                               intervals: list[float]) -> dict:
+        data_array = adata.layers[layer]
+        cutoffs = {}
+        for i, marker in enumerate(adata.var_names):
+            marker = self._remove_disallowed_character(marker)
+            lo_end_cutoff = self._calculate_cutoff_interval(data_array[:,i], intervals[1])
+            int_end_cutoff = self._calculate_cutoff_interval(data_array[:,i], intervals[2])
+            cutoffs[marker] = {
+                "pos": np.arcsinh(1) - (0.1 * np.log10(sensitivity)),
+                "lo": (np.min(data_array[:,i]), lo_end_cutoff),
+                "int": (lo_end_cutoff, int_end_cutoff),
+                "hi": (int_end_cutoff, np.max(data_array[:,i])),
+            }
+        return cutoffs
+
+    def _calculate_cutoff_interval(self,
+                                   data: np.ndarray,
+                                   quantile: float) -> tuple[float, float]:
+        return np.percentile(data, quantile * 100)
 
     def identify_populations(self,
                              cluster_kwargs: Optional[dict] = None):
@@ -708,12 +748,21 @@ class unsupervisedGating(BaseGating):
         if not isinstance(markers, list):
             markers = [markers]
         marker_dict = {"up": [],
-                       "down": []}
+                       "down": [],
+                       "lo": [],
+                       "int": [],
+                       "hi": []}
         for marker in markers:
-            if "+" in marker:
+            if marker.endswith('+'):
                 marker_dict["up"].append(marker.split("+")[0])
-            elif "-" in marker:
+            elif marker.endswith('-'):
                 marker_dict["down"].append(marker.split("-")[0])
+            elif marker.endswith('lo'):
+                marker_dict["lo"].append(marker.split('lo')[0])
+            elif marker.endswith('int'):
+                marker_dict["int"].append(marker.split('int')[0])
+            elif marker.endswith('hi'):
+                marker_dict["hi"].append(marker.split('hi')[0])
             else:
                 marker_dict["up"].append(marker)
         return marker_dict
@@ -758,6 +807,11 @@ class unsupervisedGating(BaseGating):
                     self._append_gate_column_to_adata(population_gate_path)
 
         else:
+            gate_subset = subset_gate(self.adata, gate = population_to_cluster, as_view = True)
+            self.cutoffs = self._generate_cutoff_table(gate_subset,
+                                                       layer = self.layer,
+                                                       sensitivity = self.sensitivity,
+                                                       intervals = self.intervals)
             for sample in self.adata.obs["file_name"].unique():
                 print(f"... sample {sample}")
                 file_subset = self._subset_anndata_by_sample(adata = self.adata,
@@ -802,7 +856,7 @@ class unsupervisedGating(BaseGating):
                     markers: list[str] = population_list[1]
                     markers_of_interest = self._process_markers(markers)
                     cluster_vector = self._identify_clusters_of_interest(file_subset,
-                                                                        markers_of_interest)
+                                                                         markers_of_interest)
                     cell_types = self._map_cell_types_to_cluster(file_subset,
                                                                  cluster_vector,
                                                                  population_name)
@@ -839,34 +893,52 @@ class unsupervisedGating(BaseGating):
     def _convert_markers_to_query_string(self,
                                          markers_of_interest: dict[str: list[Optional[str]]]) -> str:
 
-        cutoff = str(np.arcsinh(1) - (0.1 * np.log10(self.sensitivity)))
+        #cutoff = str(np.arcsinh(1) - (0.1 * np.log10(self.sensitivity)))
+        cutoffs = self.cutoffs
         up_markers = markers_of_interest["up"]
         down_markers = markers_of_interest["down"]
+        lo_markers = markers_of_interest["lo"]
+        int_markers = markers_of_interest["int"]
+        hi_markers = markers_of_interest["hi"]
         query_strings = (
-            [f"{marker} > {cutoff}" for marker in up_markers] +
-            [f"{marker} < {cutoff}" for marker in down_markers]
+            [f"{marker} > {cutoffs[marker]['pos']}"
+             for marker in up_markers] +
+            [f"{marker} < {cutoffs[marker]['pos']}"
+             for marker in down_markers] + 
+            [f"{cutoffs[marker]['lo'][0]} < {marker} < {cutoffs[marker]['lo'][1]}"
+             for marker in lo_markers] + 
+            [f"{cutoffs[marker]['int'][0]} < {marker} < {cutoffs[marker]['int'][1]}"
+             for marker in int_markers] + 
+            [f"{cutoffs[marker]['hi'][0]} < {marker} < {cutoffs[marker]['hi'][1]}"
+             for marker in hi_markers]
         )
         return " & ".join(query_strings)
-    
+
     def _clean_marker_names(self,
                             markers: list[str]) -> list[str]:
         """This function checks for disallowed characters that would otherwise mess up the pd.query function"""
-        disallowed_characters = ["/", "[", "{", "(", ")", "}", "]", "."]
-        replacement_dict = {char: "" for char in disallowed_characters}       
         if isinstance(markers, pd.Index):
-            markers = list(markers)
-            for i, marker in enumerate(markers):
-                if any(k in marker for k in disallowed_characters):
-                    transtab = marker.maketrans(replacement_dict)
-                    markers[i] = marker.translate(transtab)
+            return self._remove_disallowed_character_list(markers)
+        # if isinstance(markers, pd.Index):
+        #     markers = list(markers)
+        #     for i, marker in enumerate(markers):
+        #         if any(k in marker for k in disallowed_characters):
+        #             transtab = marker.maketrans(replacement_dict)
+        #             markers[i] = marker.translate(transtab)
         if isinstance(markers, dict):
             for direction in markers:
-                for i, marker in enumerate(markers[direction]):
-                    if any(k in marker for k in disallowed_characters):
-                        transtab = marker.maketrans(replacement_dict)
-                        markers[direction][i] = marker.translate(transtab)
+                for i, _ in enumerate(markers[direction]):
+                    markers[direction][i] = self._remove_disallowed_character(markers[direction][i])
         return markers
-            
+
+    def _remove_disallowed_character_list(self,
+                                          str_list: list[str]) -> list[str]:
+        return [self._remove_disallowed_character(string) for string in str_list]
+
+    def _remove_disallowed_character(self,
+                                     input_str: str) -> str:
+        return input_str.translate(self.transtab)
+
     def _identify_clusters_of_interest(self,
                                        adata: AnnData,
                                        markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
