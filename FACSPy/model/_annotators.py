@@ -690,8 +690,8 @@ class unsupervisedGating(BaseGating):
         cutoffs = {}
         for i, marker in enumerate(adata.var_names):
             marker = self._remove_disallowed_character(marker)
-            lo_end_cutoff = self._calculate_cutoff_interval(data_array[:,i], intervals[1])
-            int_end_cutoff = self._calculate_cutoff_interval(data_array[:,i], intervals[2])
+            lo_end_cutoff = self._calculate_cutoff_interval(data_array[:,i], intervals[0])
+            int_end_cutoff = self._calculate_cutoff_interval(data_array[:,i], intervals[1])
             cutoffs[marker] = {
                 "pos": np.arcsinh(1) - (0.1 * np.log10(sensitivity)),
                 "lo": (np.min(data_array[:,i]), lo_end_cutoff),
