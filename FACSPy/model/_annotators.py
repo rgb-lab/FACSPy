@@ -808,10 +808,11 @@ class unsupervisedGating(BaseGating):
 
         else:
             gate_subset = subset_gate(self.adata, gate = population_to_cluster, as_view = True)
-            self.cutoffs = self._generate_cutoff_table(gate_subset,
-                                                       layer = self.layer,
-                                                       sensitivity = self.sensitivity,
-                                                       intervals = self.intervals)
+            if gate_subset.shape[0] > 1:
+                self.cutoffs = self._generate_cutoff_table(gate_subset,
+                                                           layer = self.layer,
+                                                           sensitivity = self.sensitivity,
+                                                           intervals = self.intervals)
             for sample in self.adata.obs["file_name"].unique():
                 print(f"... sample {sample}")
                 file_subset = self._subset_anndata_by_sample(adata = self.adata,
