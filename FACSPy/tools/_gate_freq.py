@@ -12,7 +12,7 @@ def _calculate_gate_freq_per_parent(df: pd.DataFrame,
     gates_of_interest = [
         goi for goi in gates if goi not in parents and goi != gate
     ] + ["sample_ID"]
-    grouped_frame = df.loc[df[gate], gates_of_interest].groupby("sample_ID")
+    grouped_frame = df.loc[df[gate], gates_of_interest].groupby("sample_ID", observed = True)
     freq_frame = grouped_frame.sum() / grouped_frame.count()
     freq_frame["freq_of"] = gate
     freq_frame = freq_frame.set_index("freq_of", append = True)
