@@ -16,6 +16,7 @@ IMPLEMENTED_OVERSAMPLERS = {
     "SMOTENC": SMOTENC,
     "SVMSMOTE": SVMSMOTE,
     "BorderlineSMOTE": BorderlineSMOTE,
+    "RandomOverSampler": RandomOverSampler
 }
 IMPLEMENTED_UNDERSAMPLERS = {
     "RandomUnderSampler": RandomUnderSampler
@@ -24,9 +25,7 @@ IMPLEMENTED_UNDERSAMPLERS = {
 class GateSampler:
 
     def __init__(self,
-                 X: np.ndarray,
-                 y: np.ndarray,
-                 target_size_per_class: int,
+                 target_size_per_gate: int,
                  oversampler: str = "SMOTE",
                  undersampler: str = "RandomUnderSampler",
                  gate_freq_cutoff: Optional[int] = None) -> None:
@@ -35,7 +34,7 @@ class GateSampler:
                                         undersampler)
         
         self.CELL_THRESHOLD = gate_freq_cutoff or 10
-        self.target_size = target_size_per_class
+        self.target_size = target_size_per_gate
 
         if isinstance(oversampler, str):
             self.oversampler = IMPLEMENTED_OVERSAMPLERS[oversampler]
@@ -229,7 +228,7 @@ class GateSampler:
         print("converting bits to int...")
         ### this line is necessary to set all "sign bits" to 0
         y = np.hstack([np.zeros(shape = (y.shape[0], 1)), y])
-        print("hstack done")
+
         ### we have to convert the matrix into <64 wide columns because
         ### the bit conversion is limited to 64bit numbers
         y_list = np.array_split(y, np.ceil(y.shape[1]/64), axis = 1)
