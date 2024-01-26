@@ -172,8 +172,9 @@ class GateSampler:
         at_X, at_y = self._fit_resample_above_threshold(at_X,
                                                         at_y)
 
-        bt_X, bt_y = self.below_threshold_oversampler.fit_resample(bt_X,
-                                                                   bt_y)
+        if bt_X.shape[0] > 0:
+            bt_X, bt_y = self.below_threshold_oversampler.fit_resample(bt_X,
+                                                                       bt_y)
         
         X, y = np.concatenate((at_X, bt_X)), np.concatenate((at_y, bt_y))
 
