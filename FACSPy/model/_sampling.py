@@ -16,7 +16,9 @@ IMPLEMENTED_OVERSAMPLERS = {
     "SMOTENC": SMOTENC,
     "SVMSMOTE": SVMSMOTE,
     "BorderlineSMOTE": BorderlineSMOTE,
-    "RandomOverSampler": RandomOverSampler
+    "RandomOverSampler": RandomOverSampler,
+    "ADASYN": ADASYN,
+    "KMeansSMOTE": KMeansSMOTE
 }
 IMPLEMENTED_UNDERSAMPLERS = {
     "RandomUnderSampler": RandomUnderSampler
