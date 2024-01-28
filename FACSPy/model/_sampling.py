@@ -110,21 +110,20 @@ class GateSampler:
         if undersampler_kwargs is None:
             undersampler_kwargs = {}
 
-        print("starting...")
+        print("Starting Sampling!")
+        print(f"Original n_gates: {y.shape[1]}")
         _y = self._convert_gate_matrix_to_binary(y)
-        print("converted matrix to binary")
+        print(f"Found {len(np.unique(_y))} gates after binarization")
         
         gate_map, reverse_gate_map = self._map_gate_matrix(_y)
     
         _y = self._apply_gate_map(_y, gate_map)
-        print("applied gate map")
 
         binary_classes, binary_classes_frequency = self._calculate_gate_frequencies(_y)
         classes_above_threshold_idxs, classes_below_threshold_idxs = self._calculate_threshold_indices(binary_classes,
                                                                                                        binary_classes_frequency,
                                                                                                        binary_gating = _y)
 
-        print("found threshold indices")
         ## first, the above thresholds
         ## threshold refers to the minimum cells that are needed for SMOTE, so not the class size after sampling!
         ## at = above threshold
@@ -164,8 +163,6 @@ class GateSampler:
                 )
             }
         }
-        print("start sampling")
-        print(oversampler_kwargs, undersampler_kwargs)
         self.oversampler: BaseOverSampler = self.oversampler(**oversampler_kwargs)
         self.undersampler: BaseUnderSampler = self.undersampler(**undersampler_kwargs)
 
