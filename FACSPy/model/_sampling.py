@@ -1,3 +1,4 @@
+from anndata import AnnData
 import imblearn
 import numpy as np
 from typing import Optional
@@ -6,19 +7,91 @@ from imblearn.over_sampling._smote.cluster import KMeansSMOTE
 from imblearn.over_sampling._adasyn import ADASYN
 from imblearn.over_sampling import BorderlineSMOTE, RandomOverSampler
 from imblearn.over_sampling._smote.filter import SVMSMOTE
+from imblearn.combine import SMOTEENN
 
 from imblearn.under_sampling.base import BaseUnderSampler
 from imblearn.under_sampling import RandomUnderSampler
 
+import pandas as pd
+
+class GaussianOverSampler:
+
+    def __init__(self,
+                 sampling_strategy: dict,
+                 standard_deviation: float = 0.01,
+                 random_state: int = 187):
+        
+        self.sampling_strategy = sampling_strategy
+        self.sd = standard_deviation
+        np.random.seed(random_state)
+
+    def fit_resample(self,
+                     X: np.ndarray,
+                     y: np.ndarray):
+        X_sampled = np.empty(shape = (0, X.shape[1]), dtype = np.float64)
+        y_sampled = np.empty(shape = (0, y.shape[1]), dtype = np.int64)
+        
+        for _class, _class_count in self.sampling_strategy.items():
+            idxs = np.where(y == _class)[0]
+            X_ = X[idxs]
+            y_ = y[idxs]
+            if len(idxs) >= _class_count:
+                X_sampled = np.vstack([X_sampled, X_])
+                y_sampled = np.vstack([y_sampled, y_])
+                continue
+            else:
+                class_X_sampled = np.empty(shape = (0, X.shape[1]), dtype = np.float64)
+                class_y_sampled = np.empty(shape = (0, y.shape[1]), dtype = np.int64)
+                class_X_sampled = np.vstack([class_X_sampled, X_])
+                class_y_sampled = np.vstack([class_y_sampled, y_])
+                while class_X_sampled.shape[0] < _class_count:
+                    if (_class_count - class_X_sampled.shape[0]) > X_.shape[0]:
+                        class_X_sampled = np.vstack(
+                            [class_X_sampled, self._apply_noise(X_)]
+                        )
+                        class_y_sampled = np.vstack(
+                            [class_y_sampled, y_]
+                        )
+                    else:
+                        subsampled_X, subsampled_y = self._random_subsample(X_, y_, (_class_count - class_X_sampled.shape[0]))
+                        class_X_sampled = np.vstack(
+                            [class_X_sampled, self._apply_noise(subsampled_X)]
+                        )
+                        class_y_sampled = np.vstack(
+                            [class_y_sampled, subsampled_y]
+                        )
+                assert class_X_sampled.shape[0] == _class_count, class_X_sampled.shape
+                assert class_y_sampled.shape[0] == _class_count, class_y_sampled.shape
+                X_sampled = np.vstack([X_sampled, class_X_sampled])
+                y_sampled = np.vstack([y_sampled, class_y_sampled])
+        return X_sampled, y_sampled
+
+    def _random_subsample(self,
+                          X: np.ndarray,
+                          y: np.ndarray,
+                          n: int):
+        idxs = np.random.choice(X.shape[0], n, replace = False)
+        return X[idxs], y[idxs]
+
+    def _apply_noise(self,
+                     X):
+        noise = np.random.normal(
+            1, self.sd, X.shape[0]*X.shape[1]
+        ).reshape(X.shape)
+        return X*noise
+
+
 IMPLEMENTED_OVERSAMPLERS = {
     "SMOTE": SMOTE,
+    "SMOTEENN": SMOTEENN,
     "SMOTEN": SMOTEN,
     "SMOTENC": SMOTENC,
     "SVMSMOTE": SVMSMOTE,
     "BorderlineSMOTE": BorderlineSMOTE,
     "RandomOverSampler": RandomOverSampler,
     "ADASYN": ADASYN,
-    "KMeansSMOTE": KMeansSMOTE
+    "KMeansSMOTE": KMeansSMOTE,
+    "Gaussian": GaussianOverSampler
 }
 IMPLEMENTED_UNDERSAMPLERS = {
     "RandomUnderSampler": RandomUnderSampler
@@ -27,6 +100,7 @@ IMPLEMENTED_UNDERSAMPLERS = {
 class GateSampler:
 
     def __init__(self,
+                 adata: AnnData,
                  target_size_per_gate: int,
                  oversampler: str = "SMOTE",
                  undersampler: str = "RandomUnderSampler",
@@ -35,8 +109,10 @@ class GateSampler:
         self._validate_input_parameters(oversampler,
                                         undersampler)
         
+        self.gating = self._create_gating_frame(adata)
         self.CELL_THRESHOLD = gate_freq_cutoff or 10
         self.target_size = target_size_per_gate
+        self.target_size_half = int(np.ceil(self.target_size/2))
 
         if isinstance(oversampler, str):
             self.oversampler = IMPLEMENTED_OVERSAMPLERS[oversampler]
@@ -49,7 +125,15 @@ class GateSampler:
             self.undersampler = undersampler
         
         self.random_oversampler = IMPLEMENTED_OVERSAMPLERS["RandomOverSampler"]
-    
+
+    def _create_gating_frame(self,
+                             adata: AnnData) -> pd.DataFrame:
+        return pd.DataFrame(
+            data = adata.obsm["gating"].toarray(),
+            columns = adata.uns["gating_cols"],
+            index = adata.obs_names
+        )
+
     def _validate_input_parameters(self,
                                    oversampler,
                                    undersampler) -> None:
@@ -85,9 +169,15 @@ class GateSampler:
                          y: np.ndarray) -> tuple[np.ndarray, dict]:
         uniques = np.unique(y, axis = 0)
         if y.ndim == 1:
-            return {uniques[i]: i for i in range(uniques.shape[0])}, {i: uniques[i] for i in range(uniques.shape[0])}
+            return (
+                {uniques[i]: i for i in range(uniques.shape[0])},
+                {i: uniques[i] for i in range(uniques.shape[0])}
+            )
         else:
-            return {tuple(uniques[i]): i for i in range(uniques.shape[0])}, {i: tuple(uniques[i]) for i in range(uniques.shape[0])}
+            return (
+                {tuple(uniques[i]): i for i in range(uniques.shape[0])},
+                {i: tuple(uniques[i]) for i in range(uniques.shape[0])}
+            )
 
     def _apply_gate_map(self,
                         y: np.ndarray,
@@ -97,7 +187,194 @@ class GateSampler:
         tuple_list = list(map(tuple, y))
         return np.array(np.array([gate_map.__getitem__(tuple_list[i]) for i in range(len(tuple_list))]))
 
+    def _calculate_sampling_strategy(self,
+                                     y: np.ndarray):
+        bin_classes, counts_per_class = np.unique(y,
+                                                  return_counts = True)
+        counts: dict = {
+            int(bin_class): count
+            for bin_class, count in
+            zip(bin_classes, counts_per_class)
+        }
+        sum_of_counts = y.shape[0]
+        scale_factor = self.target_size_half / sum_of_counts
+        sampling_strategy = {
+            bin_class: int(np.ceil(scale_factor*count))
+            for bin_class, count
+            in counts.items()
+        }
+        return counts, sampling_strategy
+
+    def _oversample(self,
+                    X: np.ndarray,
+                    y: np.ndarray,
+                    sampling_strategy: dict,
+                    counts: dict) -> tuple[np.ndarray, np.ndarray]:
+        
+        sampler: BaseOverSampler = self.oversampler(sampling_strategy = sampling_strategy)
+        sampler: RandomOverSampler = RandomOverSampler(sampling_strategy = sampling_strategy)
+        X_, y_ = sampler.fit_resample(X, y)
+        y_ = y_.reshape(y_.shape[0], 1)
+        return X_, y_
+
+    def _random_subsample(self,
+                          X: np.ndarray,
+                          y: np.ndarray,
+                          n: int):
+        idxs = np.random.choice(X.shape[0], n, replace = False)
+        return X[idxs], y[idxs]
+
+    def _resample(self,
+                  X: np.ndarray,
+                  y_binary: np.ndarray,
+                  X_sampled: np.ndarray,
+                  y_binary_sampled: np.ndarray,
+                  indices: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        if indices.shape[0] == 0 or \
+           indices.shape[0] == self.event_size:
+            ## if there are no indices or if it already has the number we want
+            ## we just add it to our pre-final sampled arrays
+            X_sampled = np.vstack([X_sampled, X[indices]])
+            y_binary_sampled = np.vstack([y_binary_sampled, y_binary[indices]])
+        elif indices.shape[0] < self.event_size:
+            print("case population is smaller ")
+            print(y_binary[indices])
+            ### if the negative events are too few,
+            ### we oversample while keeping the dataset structure
+            counts, sampling_strategy = self._calculate_sampling_strategy(y_binary[indices])
+
+            X_, y_ = self._oversample(X[indices],
+                                      y_binary[indices],
+                                      sampling_strategy,
+                                      counts)
+            
+            X_sampled = np.vstack([X_sampled, X_])
+            y_binary_sampled = np.vstack([y_binary_sampled, y_])
+
+        elif indices.shape[0] > self.event_size:
+            X_, y_ = self._random_subsample(X[indices],
+                                            y_binary[indices],
+                                            n = self.target_size_half)
+            X_sampled = np.vstack([X_sampled, X_])
+            y_binary_sampled = np.vstack([y_binary_sampled, y_])
+
+        return X_sampled, y_binary_sampled
+        
+
+
     def fit_resample(self,
+                     X: np.ndarray,
+                     y: np.ndarray,
+                     shuffle: bool = False,
+                     oversampler_kwargs: Optional[dict] = None,
+                     undersampler_kwargs: Optional[dict] = None):
+        
+        if oversampler_kwargs is None:
+            oversampler_kwargs = {}
+        if undersampler_kwargs is None:
+            undersampler_kwargs = {}
+
+        ## we keep the expression matrix X and the gate matrix y
+
+        ## y is binarized to comply with the dataset heterogeneity
+        ## and the non-multioutput-character of imblearn
+        y_binary = self._convert_gate_matrix_to_binary(y)
+
+        ## we create empty arrays to store the sampled information
+        X_sampled = np.empty(shape = (0, X.shape[1]), dtype = np.float64)
+        y_binary_sampled= np.empty(shape = (0, y_binary.shape[1]), dtype = np.int64)
+
+        ## loop through gates
+        for gate in range(y.shape[1]):
+            print(f"gate {gate}")
+#            if gate == 4:
+#                break
+            negative_indices = np.where(y[:,gate] == 0)[0]
+            positive_indices = np.where(y[:,gate] == 1)[0]
+
+            print(f"Negative indices: {negative_indices.shape[0]}")
+            print(f"Positive indices: {positive_indices.shape[0]}")
+
+            X_sampled, y_binary_sampled = self._resample(X, y_binary, X_sampled, y_binary_sampled,
+                                                         indices = negative_indices)
+            print(y_binary_sampled.shape)
+            X_sampled, y_binary_sampled = self._resample(X, y_binary, X_sampled, y_binary_sampled,
+                                                         indices = positive_indices)
+            print(y_binary_sampled.shape)
+
+        y_binary_sampled = y_binary_sampled.astype(np.int64)
+        y_sampled = self._convert_binary_to_gate_matrix(y_binary_sampled)
+
+
+
+        return X_sampled, y_sampled
+            
+    def fit_resample_specific(self,
+                              X: np.ndarray,
+                              y: np.ndarray,
+                              shuffle: bool = True,
+                              oversampler_kwargs: Optional[dict] = None,
+                              undersampler_kwargs: Optional[dict] = None) -> tuple[np.ndarray, np.ndarray]:
+    
+        if oversampler_kwargs is None:
+            oversampler_kwargs = {}
+        if undersampler_kwargs is None:
+            undersampler_kwargs = {}
+
+        y_binary = self._convert_gate_matrix_to_binary(y)
+        user_defined_gates = self._identify_gates_binaries(self.gating)
+
+        binary_classes, binary_classes_frequency = self._calculate_gate_frequencies(y_binary)
+        binary_classes = [bin_class[0] for bin_class in binary_classes]
+
+        X_sampled = np.empty(shape = (0, X.shape[1]), dtype = np.float64)
+        y_binary_sampled= np.empty(shape = (0, y_binary.shape[1]), dtype = np.int64)
+
+        above_thresholds = {
+            bin_class: self.target_size if bin_class in user_defined_gates else count + 1
+            for bin_class, count
+            in zip(binary_classes, binary_classes_frequency)
+            if count > self.target_size
+        }
+        below_thresholds = {
+            bin_class: self.target_size if bin_class in user_defined_gates else count
+            for bin_class, count
+            in zip(binary_classes, binary_classes_frequency)
+            if self.CELL_THRESHOLD < count <= self.target_size
+        }
+        below_cutoff = {
+            bin_class: self.target_size if bin_class in user_defined_gates else count
+            for bin_class, count
+            in zip(binary_classes, binary_classes_frequency)
+            if count <= self.CELL_THRESHOLD
+
+        }
+
+        for bin_class in above_thresholds:
+            idxs = np.where(y_binary == bin_class)[0]
+            X_, y_ = self._random_subsample(X[idxs], y_binary[idxs], self.target_size)
+            X_sampled = np.vstack([X_sampled, X_])
+            y_binary_sampled = np.vstack([y_binary_sampled, y_])
+        
+        idxs = np.where(np.isin(y_binary, list(below_thresholds.keys())))[0]
+        oversampler: BaseOverSampler = self.oversampler(sampling_strategy = below_thresholds)
+        X_, y_ = oversampler.fit_resample(X[idxs], y_binary[idxs])
+        y_ = y_.reshape(y_.shape[0], 1)
+        X_sampled = np.vstack([X_sampled, X_])
+        y_binary_sampled = np.vstack([y_binary_sampled, y_])
+
+        idxs = np.where(np.isin(y_binary, list(below_cutoff.keys())))[0]
+        oversampler: BaseOverSampler = RandomOverSampler(sampling_strategy = below_cutoff)
+        X_, y_ = oversampler.fit_resample(X[idxs], y_binary[idxs])
+        y_ = y_.reshape(y_.shape[0], 1)
+        X_sampled = np.vstack([X_sampled, X_])
+        y_binary_sampled = np.vstack([y_binary_sampled, y_])
+
+        y_sampled = self._convert_binary_to_gate_matrix(y_binary_sampled.astype(np.int64))
+
+        return self._shuffle(X_sampled, y_sampled) if shuffle else (X_sampled, y_sampled)
+
+    def fit_resample_old(self,
                      X: np.ndarray,
                      y: np.ndarray,
                      shuffle: bool = True,
@@ -118,6 +395,7 @@ class GateSampler:
         gate_map, reverse_gate_map = self._map_gate_matrix(_y)
     
         _y = self._apply_gate_map(_y, gate_map)
+
 
         binary_classes, binary_classes_frequency = self._calculate_gate_frequencies(_y)
         classes_above_threshold_idxs, classes_below_threshold_idxs = self._calculate_threshold_indices(binary_classes,
@@ -179,9 +457,37 @@ class GateSampler:
 
         y = np.array(self._apply_gate_map(y, reverse_gate_map), dtype = np.int64)
 
-
         y = self._convert_binary_to_gate_matrix(y)
         return self._shuffle(X, y) if shuffle else (X, y)
+
+    def _identify_gates_binaries(self,
+                                 gating: pd.DataFrame):
+        """
+        function to verify wanted gates.
+        Everything outside of this
+        is an artifact and will be treated as such"""
+        from .._utils import _find_parents_recursively
+        gates_to_keep = []
+
+        for gate in gating.columns:
+            parents = _find_parents_recursively(gate)
+            parents.append(gate)
+            ### a good gate is a gate where only
+            gate_coding = np.array(
+                [0 if not gate in parents else 1
+                 for gate in gating.columns]
+            )
+            gate_coding = gate_coding.reshape(1, gate_coding.shape[0])
+            gates_to_keep.append(
+                int(
+                    self._convert_gate_matrix_to_binary(
+                        gate_coding
+                    )[0][0]
+                )
+            )
+        
+        return gates_to_keep
+
 
     def _fit_resample_above_threshold(self,
                                       X: np.ndarray,
@@ -204,7 +510,6 @@ class GateSampler:
                                       binary_classes_frequency: np.ndarray) -> np.ndarray:
         return binary_classes[np.where(binary_classes_frequency > self.CELL_THRESHOLD)[0]]
 
-
     def _calculate_gate_frequencies(self,
                                     y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return np.unique(y, axis = 0, return_counts = True)
@@ -220,16 +525,13 @@ class GateSampler:
 
     def _convert_gate_matrix_to_binary(self,
                                        y: np.ndarray) -> np.ndarray:
-        print("converting bits to int...")
         ### this line is necessary to set all "sign bits" to 0
         y = np.hstack([np.zeros(shape = (y.shape[0], 1)), y])
 
         ### we have to convert the matrix into <64 wide columns because
         ### the bit conversion is limited to 64bit numbers
         y_list = np.array_split(y, np.ceil(y.shape[1]/64), axis = 1)
-        print("array split")
         self._bit_ranges = [y_subset.shape[1] for y_subset in y_list]
-        print("calculated bit ranges", self._bit_ranges)
         return np.vstack([self.__bits_to_int(y_subset) for y_subset in y_list]).T
 
     def _convert_binary_to_gate_matrix(self,
