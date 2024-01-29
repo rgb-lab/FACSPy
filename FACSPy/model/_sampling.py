@@ -305,15 +305,10 @@ class GateSampler:
             negative_indices = np.where(y[:,gate] == 0)[0]
             positive_indices = np.where(y[:,gate] == 1)[0]
 
-            print(f"Negative indices: {negative_indices.shape[0]}")
-            print(f"Positive indices: {positive_indices.shape[0]}")
-
             X_sampled, y_binary_sampled = self._resample(X, y_binary, X_sampled, y_binary_sampled,
                                                          indices = negative_indices)
-            print(y_binary_sampled.shape)
             X_sampled, y_binary_sampled = self._resample(X, y_binary, X_sampled, y_binary_sampled,
                                                          indices = positive_indices)
-            print(y_binary_sampled.shape)
 
         y_binary_sampled = y_binary_sampled.astype(np.int64)
         y_sampled = self._convert_binary_to_gate_matrix(y_binary_sampled)
@@ -363,7 +358,6 @@ class GateSampler:
             in zip(binary_classes, binary_classes_frequency)
             if self.CELL_THRESHOLD < count <= self.target_size
         }
-        print(below_thresholds)
         below_cutoff = {
             bin_class: self.target_size if bin_class in user_defined_gates_mapped else count
             for bin_class, count
