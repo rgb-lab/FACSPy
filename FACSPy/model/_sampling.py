@@ -186,15 +186,10 @@ class GateSampler:
     def _fit_resample_above_threshold(self,
                                       X: np.ndarray,
                                       y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        print(X.shape, y.shape)
         X, y = self.undersampler.fit_resample(X,
                                               y)
-        print(np.unique(y, return_counts = True))
-        print(X.shape, y.shape)
         X, y = self.oversampler.fit_resample(X,
                                              y)
-        print(np.unique(y, return_counts = True))
-        print(X.shape, y.shape)
         return X, y
 
     def _shuffle(self,
