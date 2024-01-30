@@ -1,14 +1,17 @@
 from anndata import AnnData
 import numpy as np
-from typing import Optional
+
+from imblearn.over_sampling import BorderlineSMOTE, RandomOverSampler
 from imblearn.over_sampling._smote.base import SMOTE, SMOTEN, SMOTENC, BaseOverSampler
 from imblearn.over_sampling._smote.cluster import KMeansSMOTE
 from imblearn.over_sampling._adasyn import ADASYN
-from imblearn.over_sampling import BorderlineSMOTE, RandomOverSampler
 from imblearn.over_sampling._smote.filter import SVMSMOTE
+
 from imblearn.combine import SMOTEENN
 
 from imblearn.under_sampling import RandomUnderSampler
+
+from typing import Optional
 
 
 class GaussianOverSampler:
@@ -288,7 +291,7 @@ class GateSampler:
 
         if below_cutoff:
             idxs = np.where(np.isin(y_mapped, list(below_cutoff.keys())))[0]
-            oversampler: BaseOverSampler = RandomOverSampler(sampling_strategy = below_cutoff)
+            oversampler: BaseOverSampler = self.oversampler(sampling_strategy = below_cutoff)
             if self.oversample_rare_cells:
                 X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
                 y_ = y_.reshape(y_.shape[0], 1)
