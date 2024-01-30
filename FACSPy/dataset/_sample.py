@@ -243,6 +243,11 @@ class FCSFile:
         try:
             return int(self.fcs_metadata[f"p{channel_number}r"])
         except ValueError as e:
+            """
+            Some FCS Files have deranged channel ranges which throw a conversion error.
+            In order to avoid crashing, we return np.inf instead.
+            These values are not needed down the road, so we do not issue a warning.
+            """
             if "invalid literal for int() with base 10" in str(e):
                 return np.inf
             else:
