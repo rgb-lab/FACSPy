@@ -229,12 +229,12 @@ class GateSampler:
 
         return int(np.ceil(total / other_cells))
 
-    def fit_resample_specific(self,
-                              X: np.ndarray,
-                              y: np.ndarray,
-                              shuffle: bool = True,
-                              oversampler_kwargs: Optional[dict] = None,
-                              undersampler_kwargs: Optional[dict] = None) -> tuple[np.ndarray, np.ndarray]:
+    def fit_resample(self,
+                     X: np.ndarray,
+                     y: np.ndarray,
+                     shuffle: bool = True,
+                     oversampler_kwargs: Optional[dict] = None,
+                     undersampler_kwargs: Optional[dict] = None) -> tuple[np.ndarray, np.ndarray]:
     
         if oversampler_kwargs is None:
             oversampler_kwargs = {}
