@@ -102,15 +102,23 @@ class GateSampler:
     def __init__(self,
                  adata: AnnData,
                  target_size_per_gate: int,
-                 oversampler: str = "SMOTE",
+                 oversampler: str = "Gaussian",
                  undersampler: str = "RandomUnderSampler",
-                 gate_freq_cutoff: Optional[int] = None) -> None:
+                 rare_cells_cutoff: Optional[int] = None,
+                 oversample_rare_cells: bool = False,
+                 rare_cells_target_size: Optional[int] = None) -> None:
+        
+        self.adata = adata
+
         
         self._validate_input_parameters(oversampler,
                                         undersampler)
         
         self.gating = self._create_gating_frame(adata)
-        self.CELL_THRESHOLD = gate_freq_cutoff or 50
+        self.CELL_THRESHOLD = rare_cells_cutoff or 50
+        self.oversample_rare_cells = oversample_rare_cells
+
+        self.rare_cells_target_size = rare_cells_target_size or self.CELL_THRESHOLD
         self.target_size = target_size_per_gate
         self.target_size_half = int(np.ceil(self.target_size/2))
 
@@ -125,6 +133,8 @@ class GateSampler:
             self.undersampler = undersampler
         
         self.random_oversampler = IMPLEMENTED_OVERSAMPLERS["RandomOverSampler"]
+
+        self._bit_ranges = None
 
     def _create_gating_frame(self,
                              adata: AnnData) -> pd.DataFrame:
@@ -316,6 +326,9 @@ class GateSampler:
 
 
         return X_sampled, y_sampled
+    
+    def _adjust_cell_count_to_dataset_shape(self, count):
+        return int(np.ceil(count/self.gating.shape[0]))
             
     def fit_resample_specific(self,
                               X: np.ndarray,
@@ -332,13 +345,11 @@ class GateSampler:
         y_binary = self._convert_gate_matrix_to_binary(y)
         user_defined_gates = self._identify_gates_binaries(self.gating)
 
-
         gate_map, reverse_gate_map = self._map_gate_matrix(y_binary)
 
         y_mapped = self._apply_gate_map(y_binary, gate_map)
-        user_defined_gates_mapped = self._apply_gate_map(user_defined_gates, gate_map)
-        
         y_mapped = y_mapped.reshape(y_mapped.shape[0], 1)
+        user_defined_gates_mapped = self._apply_gate_map(user_defined_gates, gate_map)
         
         binary_classes, binary_classes_frequency = self._calculate_gate_frequencies(y_mapped)
         binary_classes = [bin_class[0] for bin_class in binary_classes]
@@ -346,45 +357,80 @@ class GateSampler:
         X_sampled = np.empty(shape = (0, X.shape[1]), dtype = np.float64)
         y_mapped_sampled = np.empty(shape = (0, y_mapped.shape[1]), dtype = np.int64)
 
+        #above_thresholds = {}
+        #below_thresholds = {}
+        #below_cutoff = {}
+        #gate_counter = 0
+        #for bin_class, count in zip(binary_classes, binary_classes_frequency):
+        #    if count > self.target_size:
+        #        if bin_class in user_defined_gates_mapped:
+        #            gate_counter += 1
+        #            above_thresholds[bin_class] = self.target_size
+        #        else:
+        #            above_thresholds[bin_class] = self._adjust_cell_count_to_dataset_shape(count)
+        #    elif self.CELL_THRESHOLD < count <= self.target_size:
+        #        if bin_class in user_defined_gates_mapped:
+        #            gate_counter += 1
+        #            below_thresholds[bin_class] = self.target_size
+        #        else:
+        #            adjusted_count = self._adjust_cell_count_to_dataset_shape(count)
+        #            if adjusted_count > count:
+        #                below_thresholds[bin_class] = adjusted_count
+        #            else:
+        #                above_thresholds[bin_class] = adjusted_count
+        #    elif count <= self.CELL_THRESHOLD:
+        #        if bin_class in user_defined_gates_mapped:
+        #            gate_counter += 1
+        #            below_cutoff[bin_class] = self.target_size
+        #        else:
+        #            adjusted_count = self._adjust_cell_count_to_dataset_shape(count)
+        #            if adjusted_count > count:
+        #                below_cutoff[bin_class] = adjusted_count
+        #            else:
+        #                above_thresholds[bin_class] = adjusted_count
+        #print(gate_counter)
         above_thresholds = {
-            bin_class: self.target_size if bin_class in user_defined_gates_mapped else count + 1
+            bin_class: self.target_size
             for bin_class, count
             in zip(binary_classes, binary_classes_frequency)
             if count > self.target_size
         }
         below_thresholds = {
-            bin_class: self.target_size if bin_class in user_defined_gates_mapped else count
+            bin_class: self.target_size
             for bin_class, count
             in zip(binary_classes, binary_classes_frequency)
             if self.CELL_THRESHOLD < count <= self.target_size
         }
         below_cutoff = {
-            bin_class: self.target_size if bin_class in user_defined_gates_mapped else count
+            bin_class: self.rare_cells_target_size
             for bin_class, count
             in zip(binary_classes, binary_classes_frequency)
             if count <= self.CELL_THRESHOLD
 
         }
 
-        for bin_class in above_thresholds:
+        for bin_class, count in above_thresholds.items():
             idxs = np.where(y_mapped == bin_class)[0]
-            X_, y_ = self._random_subsample(X[idxs], y_mapped[idxs], self.target_size)
+            X_, y_ = self._random_subsample(X[idxs], y_mapped[idxs], min(self.target_size, count))
             X_sampled = np.vstack([X_sampled, X_])
             y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
         
-        idxs = np.where(np.isin(y_mapped, list(below_thresholds.keys())))[0]
-        oversampler: BaseOverSampler = self.oversampler(sampling_strategy = below_thresholds)
-        X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
-        y_ = y_.reshape(y_.shape[0], 1)
-        X_sampled = np.vstack([X_sampled, X_])
-        y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+        if below_thresholds:
+            idxs = np.where(np.isin(y_mapped, list(below_thresholds.keys())))[0]
+            print(idxs)
+            oversampler: BaseOverSampler = self.oversampler(sampling_strategy = below_thresholds)
+            X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+            y_ = y_.reshape(y_.shape[0], 1)
+            X_sampled = np.vstack([X_sampled, X_])
+            y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
 
-        #idxs = np.where(np.isin(y_mapped, list(below_cutoff.keys())))[0]
-        #oversampler: BaseOverSampler = RandomOverSampler(sampling_strategy = below_cutoff)
-        #X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
-        #y_ = y_.reshape(y_.shape[0], 1)
-        #X_sampled = np.vstack([X_sampled, X_])
-        #y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+        if self.oversample_rare_cells and below_cutoff:
+            idxs = np.where(np.isin(y_mapped, list(below_cutoff.keys())))[0]
+            oversampler: BaseOverSampler = RandomOverSampler(sampling_strategy = below_cutoff)
+            X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+            y_ = y_.reshape(y_.shape[0], 1)
+            X_sampled = np.vstack([X_sampled, X_])
+            y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
 
         y_binary_sampled = self._apply_gate_map(y_mapped_sampled, reverse_gate_map)
 
@@ -484,12 +530,13 @@ class GateSampler:
         function to verify wanted gates.
         Everything outside of this
         is an artifact and will be treated as such"""
-        from .._utils import _find_parents_recursively
+        from .._utils import _find_parents_recursively, find_parent_gate, _find_children_of_gate
         gates_to_keep = []
 
         for gate in gating.columns:
             parents = _find_parents_recursively(gate)
             parents.append(gate)
+
             ### a good gate is a gate where only
             gate_coding = np.array(
                 [0 if not gate in parents else 1
@@ -546,7 +593,8 @@ class GateSampler:
         ### we have to convert the matrix into <64 wide columns because
         ### the bit conversion is limited to 64bit numbers
         y_list = np.array_split(y, np.ceil(y.shape[1]/64), axis = 1)
-        self._bit_ranges = [y_subset.shape[1] for y_subset in y_list]
+        if self._bit_ranges is None:
+            self._bit_ranges = [y_subset.shape[1] for y_subset in y_list]
         return np.vstack([self.__bits_to_int(y_subset) for y_subset in y_list]).astype(np.int64).T
 
     def _convert_binary_to_gate_matrix(self,
