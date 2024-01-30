@@ -222,13 +222,13 @@ class GateSampler:
                                        frequencies: np.ndarray):
         total = self.target_size
         rare_cells = frequencies[frequencies <= self.rare_cell_cutoff].shape[0]
+        other_cells = frequencies[frequencies > self.rare_cell_cutoff].shape[0]
 
-        if self.oversample_rare_cells:
+        if rare_cells and self.oversample_rare_cells:
             self.rare_cells_target_size_per_gate = int(np.ceil(self.rare_cells_target_size / rare_cells))
             rare_cells_total = rare_cells * self.rare_cells_target_size_per_gate
             total -= rare_cells_total
         
-        other_cells = frequencies[frequencies > self.rare_cell_cutoff].shape[0]
 
         return int(np.ceil(total / other_cells))
 
