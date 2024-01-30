@@ -240,7 +240,13 @@ class FCSFile:
     def _parse_channel_range(self,
                              channel_number: str) -> int:
         """parses the channel range from the fcs file"""
-        return int(self.fcs_metadata[f"p{channel_number}r"])
+        try:
+            return int(self.fcs_metadata[f"p{channel_number}r"])
+        except ValueError as e:
+            if "invalid literal for int() with base 10" in str(e):
+                return np.inf
+            else:
+                raise ValueError from e
 
     def _parse_channel_lin_log(self,
                                channel_number: str) -> tuple[float, float]:
