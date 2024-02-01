@@ -48,8 +48,8 @@ class FACSPyConfig:
         return self._tight_layout
 
     @default_gate.setter
-    def tight_layout(self,
-                     value : bool):
+    def _tight_layout(self,
+                      value : bool):
         self._default_gate = value
 
 
