@@ -43,5 +43,14 @@ class FACSPyConfig:
                      gate: str):
         self._default_gate = gate
 
+    @property
+    def tight_layout(self):
+        return self._tight_layout
+
+    @default_gate.setter
+    def tight_layout(self,
+                     value : bool):
+        self._default_gate = value
+
 
 settings = FACSPyConfig()
