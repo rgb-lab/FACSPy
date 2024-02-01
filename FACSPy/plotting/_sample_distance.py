@@ -189,4 +189,3 @@ def sample_distance(adata: AnnData,
     if return_fig:
         return clustermap
     savefig_or_show(save = save, show = show)
-    plt.show()
