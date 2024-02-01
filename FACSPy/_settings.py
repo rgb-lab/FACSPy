@@ -15,6 +15,7 @@ class FACSPyConfig:
         self.n_jobs = n_jobs
         self.default_layer = layer
         self.default_gate = gate
+        self.tight_layout = False
 
     @property
     def n_jobs(self):
@@ -47,7 +48,7 @@ class FACSPyConfig:
     def tight_layout(self):
         return self._tight_layout
 
-    @default_gate.setter
+    @tight_layout.setter
     def _tight_layout(self,
                       value : bool):
         self._default_gate = value
