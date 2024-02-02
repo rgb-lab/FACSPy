@@ -1,25 +1,13 @@
-
-
 from anndata import AnnData
-from typing import Union, Optional, Literal
-
 import pandas as pd
-from matplotlib import pyplot as plt
-import seaborn as sns
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from ..exceptions._exceptions import HierarchyError
+from typing import Union, Optional, Literal
+
 from ._categorical_stripplot import _categorical_strip_box_plot
-from ._utils import (savefig_or_show,
-                     CATEGORICAL_BOXPLOT_PARAMS,
-                     CATEGORICAL_STRIPPLOT_PARAMS)
-from ._baseplot import (stripboxplot,
-                        barplot,
-                        label_plot_basic,
-                        adjust_legend)
-from ._basestats import add_statistic
+from ._utils import savefig_or_show
 
 from .._utils import (subset_gate,
                       convert_gate_to_obs,
@@ -31,7 +19,7 @@ from .._utils import (subset_gate,
                       _find_current_population,
                       _default_gate,
                       GATE_SEPARATOR)
-from ..exceptions._exceptions import AnalysisNotPerformedError
+from ..exceptions._exceptions import AnalysisNotPerformedError, HierarchyError
 from .._settings import settings
 
 def _find_y_label(adata: AnnData,
