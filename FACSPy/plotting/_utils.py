@@ -28,10 +28,23 @@ from ..exceptions._exceptions import (AnalysisNotPerformedError,
                                       InvalidScalingError,
                                       MetaclusterOverwriteWarning,
                                       CofactorNotFoundWarning)
-from .._utils import find_gate_path_of_gate, scatter_channels
+from .._utils import _find_gate_path_of_gate, scatter_channels
+
+from .._settings import settings
 
 ANNOTATION_CMAPS = ["Set1", "Set2", "tab10", "hls", "Paired"]
 CONTINUOUS_CMAPS = ["YlOrRd", "Reds", "YlOrBr", "PuRd", "Oranges", "Greens"]
+
+CATEGORICAL_STRIPPLOT_PARAMS = {
+    "dodge": True,
+    "jitter": True,
+    "linewidth": 0.5,
+}
+
+CATEGORICAL_BOXPLOT_PARAMS = {
+    "boxprops": dict(facecolor = "white"),
+    "whis": (0,100)
+}
 
 def _remove_ticks(ax: Axes,
                   which: Literal["x", "y", "both"]) -> None:
@@ -165,14 +178,13 @@ def _append_metadata(adata: AnnData,
                                   if col in dataframe_to_merge.columns
                                   and not col == "sample_ID"],
                                  axis = 1)
-
-    return _remove_unused_categories(
-        pd.merge(dataframe_to_merge.reset_index(),
-                 metadata,
-                 on = "sample_ID",
-                 how = "outer"
-        )
-    )
+    
+    merged = pd.merge(dataframe_to_merge.reset_index(),
+                      metadata,
+                      on = "sample_ID",
+                      how = "outer")
+    merged["sample_ID"] = merged["sample_ID"].astype("category")
+    return _remove_unused_categories(merged)
 
 def _get_uns_dataframe(adata: AnnData,
                        gate: str,
@@ -182,7 +194,7 @@ def _get_uns_dataframe(adata: AnnData,
         raise AnalysisNotPerformedError(table_identifier)
     
     data: pd.DataFrame = adata.uns[table_identifier].copy()
-    data = data.loc[data.index.get_level_values("gate") == find_gate_path_of_gate(adata, gate),:]
+    data = data.loc[data.index.get_level_values("gate") == _find_gate_path_of_gate(adata, gate),:]
     data = data.reset_index()
     if "sample_ID" in data.columns:
         data = _append_metadata(adata, data)
@@ -351,7 +363,8 @@ def savefig_or_show(show: Optional[bool] = None,
                     bbox_inches = "tight")
     
     if show:
-        plt.tight_layout()
+        if settings.tight_layout:
+            plt.tight_layout()
         plt.show()
     
     if save:
