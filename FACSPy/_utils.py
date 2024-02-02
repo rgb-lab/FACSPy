@@ -4,11 +4,15 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from .exceptions._exceptions import ChannelSubsetError, GateNotFoundError
+from .exceptions._exceptions import (ChannelSubsetError,
+                                     GateNotFoundError,
+                                     GateAmbiguityError,
+                                     PopulationAsGateError,
+                                     ExhaustedGatePathError,
+                                     GateNameError)
 from .exceptions._utils import GateNotProvidedError, ExhaustedHierarchyError
 from itertools import combinations
 
-from typing import Any
 import inspect
 
 
@@ -35,7 +39,19 @@ scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
 time_channels = ["time", "Time"]
 spectral_flow_technical_channels = ["AF"]
 
-def find_current_population(gate: str) -> str:
+def _check_gate_name(gate: str) -> None:
+    if gate.startswith(GATE_SEPARATOR) or gate.endswith(GATE_SEPARATOR):
+        raise GateNameError(GATE_SEPARATOR)
+    if not gate:
+        raise GateNotProvidedError(gate)
+    
+def _check_gate_path(gate_path):
+    _check_gate_name(gate_path)
+    if not GATE_SEPARATOR in gate_path:
+        raise PopulationAsGateError(gate_path)
+
+
+def _find_current_population(gate: str) -> str:
     """Finds current population of a specified gating path
 
     Parameters
@@ -51,15 +67,13 @@ def find_current_population(gate: str) -> str:
     >>> find_current_population("root")
     root
     >>> find_current_population("root/singlets/T_cells")
-    singlets
+    T_cells
     """
-
-    if not gate:
-        raise GateNotProvidedError(gate)
+    _check_gate_name(gate)
     return gate.split(GATE_SEPARATOR)[-1]
 
-def find_gate_path_of_gate(adata: AnnData,
-                           gate: str) -> str:
+def _find_gate_path_of_gate(adata: AnnData,
+                            gate: str) -> str:
     """Finds the gate path of the specified population
     This function looks into adata.uns["gating_cols"] and selects
     the entry that endswith the provided population
@@ -81,14 +95,44 @@ def find_gate_path_of_gate(adata: AnnData,
     "root/singlets"
 
     """
-    try:
-        return [gate_path for gate_path in adata.uns["gating_cols"]
-                if gate_path.endswith(gate)][0]
-    except IndexError as e:
-        raise GateNotFoundError(gate) from e
+    _check_gate_name(gate)
+    if GATE_SEPARATOR in gate:
+        n_separators = gate.count(GATE_SEPARATOR)
+        n_gates = n_separators + 1
+        gates = [gate_path for gate_path in adata.uns["gating_cols"]
+                 if _gate_path_length(gate_path) >= n_gates and
+                 _extract_partial_gate_path_end(gate_path, n_gates) == gate]
+    else:
+        gates = [gate_path for gate_path in adata.uns["gating_cols"]
+                 if _find_current_population(gate_path) == gate]
+    if not gates:
+        raise GateNotFoundError(gate)
+    if len(gates) > 1:
+        raise GateAmbiguityError(gates)
+    return gates[0]
 
-def find_gate_indices(adata: AnnData,
-                      gate_columns: Union[str, list[str]]) -> list[int]:
+def _gate_path_length(gate_path: str) -> int:
+    _check_gate_path(gate_path)
+    return len(gate_path.split(GATE_SEPARATOR))
+
+def _extract_partial_gate_path_end(gate_path: str,
+                                   n_positions: int) -> str:
+    _check_gate_path(gate_path)
+    gate_components = gate_path.split(GATE_SEPARATOR)
+    if len(gate_components) < n_positions:
+        raise ExhaustedGatePathError(n_positions, len(gate_components))
+    return GATE_SEPARATOR.join(gate_path.split(GATE_SEPARATOR)[-n_positions:])
+
+def _extract_partial_gate_path_start(gate_path: str,
+                                     n_positions: int) -> str:
+    _check_gate_path(gate_path)
+    gate_components = gate_path.split(GATE_SEPARATOR)
+    if len(gate_components) < n_positions:
+        raise ExhaustedGatePathError(n_positions, len(gate_components))
+    return GATE_SEPARATOR.join(gate_path.split("/")[:n_positions])
+
+def _find_gate_indices(adata: AnnData,
+                       gate_columns: Union[str, list[str]]) -> list[int]:
     """Finds the index of provided populations in adata.uns["gating_cols"]
     This function is supposed to index columns provided as a string.
     That way, the indices can be used to access the sparse matrix
@@ -117,7 +161,7 @@ def find_gate_indices(adata: AnnData,
         gate_columns = [gate_columns]
     return [adata.uns["gating_cols"].get_loc(gate) for gate in gate_columns]
 
-def find_parent_gate(gate: str) -> str:
+def _find_parent_gate(gate: str) -> str:
     """Returns the parent gate path of the provided gate
 
     Parameters
@@ -136,15 +180,13 @@ def find_parent_gate(gate: str) -> str:
     root
     
     """
-
-    if not gate:
-        raise GateNotProvidedError(gate)
+    _check_gate_name(gate)
     if GATE_SEPARATOR in gate:
         return GATE_SEPARATOR.join(gate.split(GATE_SEPARATOR)[:-1])
     else:
         raise ExhaustedHierarchyError(gate)
 
-def find_parent_population(gate: str) -> str:
+def _find_parent_population(gate: str) -> str:
     """Returns the parent population of the provided gate path
 
     Parameters
@@ -162,14 +204,13 @@ def find_parent_population(gate: str) -> str:
     root
     """
 
-    if not gate:
-        raise GateNotProvidedError(gate)
+    _check_gate_name(gate)
     if GATE_SEPARATOR in gate:
         return gate.split(GATE_SEPARATOR)[:-1][::-1][0]
     else:
         raise ExhaustedHierarchyError(gate)
 
-def find_grandparent_gate(gate: str) -> str:
+def _find_grandparent_gate(gate: str) -> str:
     """Finds the grandparent gating path of a provided gate
 
     Parameters
@@ -187,10 +228,10 @@ def find_grandparent_gate(gate: str) -> str:
     >>> find_grandparent_gate("root/singlets")
     ExhaustedHieararchyError
     """
+    _check_gate_name(gate)
+    return _find_parent_gate(_find_parent_gate(gate))
 
-    return find_parent_gate(find_parent_gate(gate))
-
-def find_grandparent_population(gate: str) -> str:
+def _find_grandparent_population(gate: str) -> str:
     """Finds the grandparent population of a provided gate
 
     Parameters
@@ -208,7 +249,8 @@ def find_grandparent_population(gate: str) -> str:
     >>> find_grandparent_gate("root/singlets")
     ExhaustedHieararchyError
     """
-    return find_parent_population(find_parent_gate(gate))
+    _check_gate_name(gate)
+    return _find_parent_population(_find_parent_gate(gate))
 
 def _find_parents_recursively(gate: str, parent_list = None) -> list[str]:
     """Finds all parent gates of a specified gate
@@ -230,70 +272,20 @@ def _find_parents_recursively(gate: str, parent_list = None) -> list[str]:
     """
     if parent_list is None:
         parent_list = []
-    parent = find_parent_gate(gate)
+    parent = _find_parent_gate(gate)
     parent_list.append(parent)
     if parent != "root":
         return _find_parents_recursively(parent, parent_list)
     return parent_list
 
-# deprecated...
-#def subset_stained_samples(adata: AnnData,
-#                           copy: bool = False) -> Optional[AnnData]:
-#    """Subsets all stained samples from a anndata dataset
-#    
-#    Parameters
-#    ----------
-#    adata:
-#        the provided dataset
-#    copy: bool
-#        whether to copy and return the adata object or subset inplace
-#
-#    Examples
-#    --------
-#
-#    >>> adata = ad.AnnData(obs = pd.DataFrame({"staining": ["stained", "stained", "unstained"]}))
-#    >>> stained_adata = subset_stained_samples(adata, copy = True)
-#    >>> len(stained_adata)
-#    2
-#    >>> stained_adata.obs["staining"].to_list()
-#    ["stained", "stained"]
-#
-#    """
-#    adata = adata.copy() if copy else adata
-#    adata._inplace_subset_obs(adata.obs[adata.obs["staining"] == "stained"].index)
-#    return adata if copy else None
+def _find_children_of_gate(adata: AnnData,
+                           query_gate: str) -> list[str]:
+    gates = adata.uns["gating_cols"]
+    return [gate for gate in gates if GATE_SEPARATOR.join(gate.split(GATE_SEPARATOR)[:-1]) == query_gate]
 
-# deprecated...
-#def subset_unstained_samples(adata: AnnData,
-#                             copy: bool = False) -> Optional[AnnData]:
-#
-#    """Subsets all unstained samples from a anndata dataset
-#    
-#    Parameters
-#    ----------
-#    adata:
-#        the provided dataset
-#    copy: bool
-#        whether to copy and return the adata object or subset inplace
-#
-#    Examples
-#    --------
-#
-#    >>> adata = ad.AnnData(obs = pd.DataFrame({"staining": ["stained", "stained", "unstained"]}))
-#    >>> unstained_adata = subset_unstained_samples(adata, copy = True)
-#    >>> len(unstained_adata)
-#    1
-#    >>> stained_adata.obs["staining"].to_list()
-#    ["unstained"]
-#
-#    """    
-#    adata = adata.copy() if copy else adata
-#    adata._inplace_subset_obs(adata.obs[adata.obs["staining"] != "stained"].index)
-#    return adata if copy else None
-
-def transform_gates_according_to_gate_transform(vertices: np.ndarray,
-                                                transforms: dict,
-                                                gate_channels: list[str]) -> np.ndarray:
+def _transform_gates_according_to_gate_transform(vertices: np.ndarray,
+                                                 transforms: dict,
+                                                 gate_channels: list[str]) -> np.ndarray:
     
     for i, gate_channel in enumerate(gate_channels):
         channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
@@ -304,9 +296,9 @@ def transform_gates_according_to_gate_transform(vertices: np.ndarray,
         vertices[i] = transform.apply(vertices[i])
     return vertices
 
-def transform_vertices_according_to_gate_transform(vertices: np.ndarray,
-                                                   transforms: dict,
-                                                   gate_channels: list[str]) -> np.ndarray:
+def _transform_vertices_according_to_gate_transform(vertices: np.ndarray,
+                                                    transforms: dict,
+                                                    gate_channels: list[str]) -> np.ndarray:
     for i, gate_channel in enumerate(gate_channels):
         channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
         if len(channel_transforms) > 1:
@@ -316,9 +308,9 @@ def transform_vertices_according_to_gate_transform(vertices: np.ndarray,
         vertices[:,i] = transform.apply(vertices[:,i])
     return vertices
 
-def inverse_transform_gates_according_to_gate_transform(vertices: np.ndarray,
-                                                transforms: dict,
-                                                gate_channels: list[str]) -> np.ndarray:
+def _inverse_transform_gates_according_to_gate_transform(vertices: np.ndarray,
+                                                         transforms: dict,
+                                                         gate_channels: list[str]) -> np.ndarray:
     
     for i, gate_channel in enumerate(gate_channels):
         channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
@@ -329,9 +321,9 @@ def inverse_transform_gates_according_to_gate_transform(vertices: np.ndarray,
         vertices[i] = transform.inverse(vertices[i])
     return vertices
 
-def inverse_transform_vertices_according_to_gate_transform(vertices: np.ndarray,
-                                                   transforms: dict,
-                                                   gate_channels: list[str]) -> np.ndarray:
+def _inverse_transform_vertices_according_to_gate_transform(vertices: np.ndarray,
+                                                            transforms: dict,
+                                                            gate_channels: list[str]) -> np.ndarray:
     
     for i, gate_channel in enumerate(gate_channels):
         channel_transforms = [transform for transform in transforms if gate_channel in transform.id]
@@ -342,7 +334,7 @@ def inverse_transform_vertices_according_to_gate_transform(vertices: np.ndarray,
         vertices[:,i] = transform.inverse(vertices[:,i])
     return vertices
 
-def close_polygon_gate_coordinates(vertices: np.ndarray) -> np.ndarray:
+def _close_polygon_gate_coordinates(vertices: np.ndarray) -> np.ndarray:
     """Closes a polygon gate by adding the first coordinate to the bottom of the array
 
     Parameters
@@ -360,7 +352,7 @@ def close_polygon_gate_coordinates(vertices: np.ndarray) -> np.ndarray:
     return np.vstack([vertices, vertices[0]])
 
 
-def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
+def _create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
     #TODO: needs check for group...
     _gate_lut = {}
     gated_files = []
@@ -384,16 +376,16 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
             gate_dimensions = np.array([(dim.min, dim.max)
                                          for dim in wsp_dict[file]["gates"][i]["gate"].dimensions],
                                          dtype = np.float32)
-            gate_dimensions = inverse_transform_gates_according_to_gate_transform(gate_dimensions,
-                                                                                  wsp_dict[file]["transforms"],
-                                                                                  gate_channels)
+            gate_dimensions = _inverse_transform_gates_according_to_gate_transform(gate_dimensions,
+                                                                                   wsp_dict[file]["transforms"],
+                                                                                   gate_channels)
             
             try:
                 vertices = np.array(wsp_dict[file]["gates"][i]["gate"].vertices)
-                vertices = close_polygon_gate_coordinates(vertices)
-                vertices = inverse_transform_vertices_according_to_gate_transform(vertices,
-                                                                                  wsp_dict[file]["transforms"],
-                                                                                  gate_channels)
+                vertices = _close_polygon_gate_coordinates(vertices)
+                vertices = _inverse_transform_vertices_according_to_gate_transform(vertices,
+                                                                                   wsp_dict[file]["transforms"],
+                                                                                   gate_channels)
             except AttributeError:
                 vertices = gate_dimensions
 
@@ -405,7 +397,6 @@ def create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
             _gate_lut[file][gate_name]["gate_type"] = wsp_dict[file]["gates"][i]["gate"].__class__.__name__
             _gate_lut[file][gate_name]["gate_dimensions"] = gate_dimensions
             _gate_lut[file][gate_name]["vertices"] = vertices
-    #_gate_lut = _remove_duplicates_from_gate_lut(_gate_lut)
 
     return _gate_lut
 
@@ -456,7 +447,7 @@ def subset_gate(adata: AnnData,
     gates: list[str] = adata.uns["gating_cols"].to_list()
     
     if gate:
-        gate_path = find_gate_path_of_gate(adata, gate)
+        gate_path = _find_gate_path_of_gate(adata, gate)
 
     gate_idx = gates.index(gate_path)
 
@@ -501,18 +492,6 @@ def equalize_groups(data: AnnData,
         X = data
         return X[obs_indices], obs_indices
     
-#def annotate_metadata_samplewise(adata: AnnData,
-#                                 sample_ID: Union[str, int],
-#                                 annotation: Union[str, int],
-#                                 factor_name: str,
-#                                 copy: bool = False) -> Optional[AnnData]:
-#    
-#    adata = adata.copy() if copy else adata
-#    adata.obs.loc[adata.obs["sample_ID"] == sample_ID, factor_name] = annotation
-#    adata.obs[factor_name] = adata.obs[factor_name].astype("category")
-#
-#    return adata if copy else None
-
 def contains_only_fluo(adata: AnnData) -> bool:
     return all(adata.var["type"] == "fluo")
 
@@ -538,33 +517,31 @@ def remove_unnamed_channels(adata: AnnData,
 def _flatten_nested_list(l):
     return [item for sublist in l for item in sublist]
 
-#def get_filename_from_sample_ID(adata: AnnData,
-#                                sample_ID: str) -> str:
-#    return adata.uns["metadata"].dataframe.loc[adata.uns["metadata"].dataframe["sample_ID"] == sample_ID, "file_name"].iloc[0]
-#
-#def get_sample_ID_from_filename(adata: AnnData,
-#                                file_name: str) -> str:
-#    return adata.uns["metadata"].dataframe.loc[adata.uns["metadata"].dataframe["file_name"] == file_name, "sample_ID"].iloc[0]
-
-def is_valid_sample_ID(adata: AnnData,
-                       string_to_check) -> bool:
+def _is_valid_sample_ID(adata: AnnData,
+                        string_to_check) -> bool:
     return string_to_check in adata.obs["sample_ID"].unique()
 
-def is_valid_filename(adata: AnnData,
-                      string_to_check) -> bool:
+def _is_valid_filename(adata: AnnData,
+                       string_to_check) -> bool:
     return string_to_check in adata.obs["file_name"].unique()
 
 def is_fluo_channel(adata: AnnData,
                     channel: str) -> bool:
     return adata.var.loc[adata.var["pns"] == channel, "type"].iloc[0] == "fluo"
 
-def create_comparisons(data: pd.DataFrame,
-                       groupby: str,
-                       n: int = 2) -> list[tuple[str, str]]:
+def _create_comparisons(data: pd.DataFrame,
+                        groupby: str,
+                        splitby: Optional[str],
+                        n: int = 2) -> list[tuple[str, str]]:
+    groupby_values = data[groupby].unique()
+    from itertools import product
+    if splitby:
+        splitby_values = data[splitby].unique()
+        return [
+            tuple(zip(groupby_values, element))
+            for element in product(splitby_values, repeat = len(groupby_values))
+        ]
     return list(combinations(data[groupby].unique(), n))
-
-#def ifelse(condition, true_val, false_val) -> Any:
-#    return true_val if condition else false_val
 
 def convert_cluster_to_gate(adata: AnnData,
                             obs_column: str,
@@ -574,7 +551,7 @@ def convert_cluster_to_gate(adata: AnnData,
                             copy: bool = False) -> Optional[AnnData]:
     from scipy.sparse import csr_matrix, hstack
     adata = adata.copy() if copy else adata
-    full_parent = find_gate_path_of_gate(adata, parent_name)
+    full_parent = _find_gate_path_of_gate(adata, parent_name)
     full_gate = GATE_SEPARATOR.join([full_parent, population_name])
     if full_gate in adata.uns["gating_cols"]:
         raise TypeError("Gate already present. Please choose a different name!")
@@ -590,23 +567,6 @@ def convert_cluster_to_gate(adata: AnnData,
     adata.uns["gating_cols"] = adata.uns["gating_cols"].append(pd.Index([full_gate]))
 
     return adata if copy else None
-
-#def convert_obs_to_gate(adata: AnnData,
-#                        obs_column: str,
-#                        gate_name: Optional[str] = None,
-#                        negative_identifier: Optional[str] = "other"
-#                        ) -> Optional[AnnData]:
-#    gate_list = adata.obs[obs_column]
-#    unique_entries = gate_list.unique()
-#    if len(unique_entries) > 2:
-#        raise TypeError("To apply for gates, only two values are allowed")
-#    if negative_identifier not in unique_entries:
-#        raise TypeError("Please provide a negative identifier for the gate")
-#    if gate_name is None:
-#        raise TypeError("Please provide a gate path")
-#    positive_identifier = [entry for entry in unique_entries if entry != negative_identifier][0]
-#    mapped_gate = gate_list.map({negative_identifier: False,
-#                                 positive_identifier: True})
     
 def convert_gate_to_obs(adata: AnnData,
                         gate: str,
@@ -614,12 +574,13 @@ def convert_gate_to_obs(adata: AnnData,
                         copy: bool = False) -> Optional[AnnData]:
     adata = adata.copy() if copy else adata
 
-    gate_path = find_gate_path_of_gate(adata, gate)
-    gate_index = find_gate_indices(adata, gate_path)
+    gate_path = _find_gate_path_of_gate(adata, gate)
+    gate_index = _find_gate_indices(adata, gate_path)
     gate_id = key_added or gate
     adata.obs[gate_id] = adata.obsm["gating"][:,gate_index].todense()
-    adata.obs[gate_id] = adata.obs[gate_id].map({True: gate, False: "other"})
+    adata.obs[gate_id] = adata.obs[gate_id].map({True: gate_id, False: "other"})
     adata.obs[gate_id] = adata.obs[gate_id].astype("category")
+    adata.obs[gate_id] = adata.obs[gate_id].cat.set_categories([gate_id, "other"])
     return adata if copy else None
 
 def convert_gates_to_obs(adata: AnnData,
@@ -627,7 +588,7 @@ def convert_gates_to_obs(adata: AnnData,
     adata = adata.copy() if copy else adata
     for gate in adata.uns["gating_cols"]:
         convert_gate_to_obs(adata,
-                            find_current_population(gate),
+                            _find_current_population(gate),
                             copy = False)
     return adata if copy else None
 
@@ -690,7 +651,6 @@ def convert_var_to_panel(adata: AnnData,
 
 
 def _default_layer(func):
-
     argspec = inspect.getfullargspec(func)
     position_count = len(argspec.args) - len(argspec.defaults)
 
