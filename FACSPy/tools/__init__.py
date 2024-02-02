@@ -13,3 +13,4 @@ from ._pca import pca_samplewise
 from ._tsne import tsne_samplewise
 from ._mds import mds_samplewise
 from ._umap import umap_samplewise
+from ._correct_expression import correct_expression
