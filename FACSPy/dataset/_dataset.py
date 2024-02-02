@@ -185,10 +185,7 @@ class DatasetAssembler:
                                  metadata: Metadata) -> pd.DataFrame:
         metadata_df = metadata.to_df()
         file_row = metadata_df.loc[metadata_df["file_name"] == file.original_filename]
-        if file.original_events is not None:
-            cell_number = file.original_events.shape[0]
-        else:
-            cell_number = file.compensated_events.shape[0]
+        cell_number = file.event_count
         metadata_frame = pd.DataFrame(np.repeat(file_row.values,
                                                 cell_number,
                                                 axis = 0),

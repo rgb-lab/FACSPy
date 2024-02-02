@@ -30,12 +30,13 @@ class FCSFile:
         self.transform_status = "untransformed"
         self.gating_status = "ungated"
 
-        self.event_count = self._parse_event_count(raw_data)
+        self._fcs_event_count = self._parse_event_count(raw_data)
         self.version = self._parse_fcs_version(raw_data)
         self.fcs_metadata = self._parse_fcs_metadata(raw_data)
         self.channels = self._parse_channel_information(raw_data)
         self.original_events = self._parse_and_process_original_events(raw_data,
                                                                        subsample)
+        self.event_count = self.original_events.shape[0]
         self.compensated_events: Optional[np.ndarray] = None
         self.fcs_compensation = self._parse_compensation_matrix_from_fcs()
 
