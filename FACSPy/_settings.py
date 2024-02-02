@@ -10,12 +10,15 @@ class FACSPyConfig:
                  *,
                  n_jobs = 1,
                  layer = "compensated",
-                 gate = ""
+                 gate = "",
+                 tight_layout = False,
+                 default_categorical_cmap = "Set1"
                  ):
         self.n_jobs = n_jobs
         self.default_layer = layer
         self.default_gate = gate
-        self.tight_layout = False
+        self.tight_layout = tight_layout
+        self.default_categorical_cmap = default_categorical_cmap
 
     @property
     def n_jobs(self):
@@ -49,9 +52,18 @@ class FACSPyConfig:
         return self._tight_layout
 
     @tight_layout.setter
-    def _tight_layout(self,
-                      value : bool):
-        self._default_gate = value
+    def tight_layout(self,
+                     value : bool):
+        self._tight_layout = value
+
+    @property
+    def default_categorical_cmap(self):
+        return self._default_categorical_cmap
+
+    @default_categorical_cmap.setter
+    def default_categorical_cmap(self,
+                                 cmap: str):
+        self._default_categorical_cmap = cmap
 
 
 settings = FACSPyConfig()
