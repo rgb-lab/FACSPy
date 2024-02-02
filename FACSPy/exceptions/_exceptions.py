@@ -139,7 +139,8 @@ class HierarchyError(Exception):
 
     def __init__(self):
         self.message = (
-            "The specified parent gate is lower or equal in the gating hierarchy than the gate to display. " +
+            "The specified parent gate is lower or equal in the gating " +
+            "hierarchy than the gate to display or is not a parent. " +
             "Please make sure that the parent is actually a parent."
         )
         super().__init__(self.message)
@@ -159,6 +160,44 @@ class AnnDataSetupError(Exception):
     def __init__(self):
         self.message = (
             "This AnnData object has not been setup yet. Please call .setup_anndata() first."
+        )
+        super().__init__(self.message)
+
+class PopulationAsGateError(Exception):
+    def __init__(self,
+                 gate: str):
+        self.message = (
+            f"You tried to access a gate path of {gate}. " +
+            "There is no Gate Separator in the provided gate."
+        )
+        super().__init__(self.message)
+
+class GateNameError(Exception):
+    def __init__(self,
+                 gate_separator):
+        self.message = (
+            f"To avoid ambiguities, please provide a gate without leading or trailing '{gate_separator}'"
+        )
+        super().__init__(self.message)
+
+class ExhaustedGatePathError(Exception):
+    def __init__(self,
+                 n: int,
+                 m: int):
+        self.message = (
+            f"You tried to access {n} elements of the gate path, " + 
+            f"which has only {m} gates."
+        )
+        super().__init__(self.message)
+
+
+class GateAmbiguityError(Exception):
+    def __init__(self,
+                 found_gates):
+        self.message = (
+            f"Multiple matching gates have been found ({found_gates}). " +
+            f"Please select the appropriate gate by supplying a partial " +
+            "gating strategy." 
         )
         super().__init__(self.message)
 
