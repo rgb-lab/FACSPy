@@ -5,6 +5,7 @@ from typing import Union, Literal, Optional
 from matplotlib.axes import Axes
 
 from matplotlib import pyplot as plt
+import seaborn as sns
 
 from ._basestats import add_statistic
 from ._baseplot import adjust_legend
@@ -12,9 +13,12 @@ from ._baseplot import adjust_legend
 from ._basestats import add_statistic
 from ._baseplot import barplot, stripboxplot, label_plot_basic
 from ._utils import (_get_uns_dataframe,
-                    savefig_or_show)
+                     savefig_or_show,
+                     CATEGORICAL_STRIPPLOT_PARAMS,
+                     CATEGORICAL_BOXPLOT_PARAMS)
 
 from .._utils import _default_gate_and_default_layer
+from .._settings import settings
 
 @_default_gate_and_default_layer
 def fop(adata: AnnData,
@@ -22,11 +26,12 @@ def fop(adata: AnnData,
         layer: str = None,
         marker: Union[str, list[str]] = None,
         groupby: Union[str, list[str]] = None,
-        colorby: Optional[str] = None,
+        splitby: str = None,
         cmap: str = None,
         order: list[str] = None,
+        stat_test: str = "Kruskal",
         data_group: Optional[Union[str, list[str]]] = "sample_ID",
-        data_metric: Literal["mfi", "fop", "gate_frequency"] = "fop",
+        data_metric: Literal["mfi", "fop"] = "fop",
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
         return_fig: bool = False,
@@ -54,8 +59,6 @@ def fop(adata: AnnData,
         The channel to be displayed. Has to be in adata.var_names
     groupby
         controls the x axis and the grouping of the data points
-    colorby
-        controls the coloring of the data points. Defaults to None.
     cmap
         Sets the colormap for plotting. Can be continuous or categorical, depending
         on the input data. When set, both seaborns 'palette' and 'cmap'
@@ -89,27 +92,24 @@ def fop(adata: AnnData,
     
     """
 
-    data = _get_uns_dataframe(adata = adata,
-                              gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{layer}")
-
-    if return_dataframe:
-        return data
-    
     return _mfi_fop_baseplot(adata = adata,
-                             dataframe = data,
+                             gate = gate,
+                             data_metric = data_metric,
+                             data_group = data_group,
+                             layer = layer,
                              marker = marker,
                              groupby = groupby,
-                             colorby = colorby,
-                             gate = gate,
-                             assay = "fop",
+                             splitby = splitby,
                              cmap = cmap,
                              figsize = figsize,
                              order = order,
+                             stat_test = stat_test,
                              return_fig = return_fig,
-                             ax = ax,
+                             return_dataframe = return_dataframe,
                              save = save,
-                             show = show)
+                             show = show,
+                             ax = ax)
+
 
 @_default_gate_and_default_layer
 def mfi(adata: AnnData,
@@ -117,11 +117,12 @@ def mfi(adata: AnnData,
         layer: str = None,
         marker: Union[str, list[str]] = None,
         groupby: Union[str, list[str]] = None,
-        colorby: Optional[str] = None,
+        splitby: str = None,
         cmap: str = None,
         order: list[str] = None,
+        stat_test: str = "Kruskal",
         data_group: Optional[Union[str, list[str]]] = "sample_ID",
-        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+        data_metric: Literal["mfi", "fop"] = "mfi",
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
         return_fig: bool = False,
@@ -149,8 +150,6 @@ def mfi(adata: AnnData,
         The channel to be displayed. Has to be in adata.var_names
     groupby
         controls the x axis and the grouping of the data points
-    colorby
-        controls the coloring of the data points. Defaults to None.
     cmap
         Sets the colormap for plotting. Can be continuous or categorical, depending
         on the input data. When set, both seaborns 'palette' and 'cmap'
@@ -183,7 +182,48 @@ def mfi(adata: AnnData,
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """
+    
+    return _mfi_fop_baseplot(adata = adata,
+                             gate = gate,
+                             data_metric = data_metric,
+                             data_group = data_group,
+                             layer = layer,
+                             marker = marker,
+                             groupby = groupby,
+                             splitby = splitby,
+                             cmap = cmap,
+                             figsize = figsize,
+                             order = order,
+                             stat_test = stat_test,
+                             return_fig = return_fig,
+                             return_dataframe = return_dataframe,
+                             save = save,
+                             show = show,
+                             ax = ax)
 
+def _mfi_fop_baseplot(adata: AnnData,
+                      gate: str,
+                      data_metric: str,
+                      data_group: str,
+                      layer: str,
+                      marker: Union[str, list[str]],
+                      groupby: Union[str, list[str]],
+                      splitby: str,
+                      cmap: str = None,
+                      stat_test: str = None,
+                      order: list[str] = None,
+                      figsize: tuple[float, float] = None,
+                      return_fig: bool = False,
+                      return_dataframe: bool = False,
+                      ax: Axes = None,
+                      save: bool = None,
+                      show: bool = None):
+    
+    if gate is None:
+        raise TypeError("A Gate has to be provided")
+    if marker is None:
+        raise TypeError("Please provide a marker to plot.")
+    
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
                               table_identifier = f"{data_metric}_{data_group}_{layer}")
@@ -191,47 +231,13 @@ def mfi(adata: AnnData,
     if return_dataframe:
         return data
     
-    return _mfi_fop_baseplot(adata = adata,
-                             dataframe = data,
-                             marker = marker,
-                             groupby = groupby,
-                             colorby = colorby,
-                             gate = gate,
-                             assay = "mfi",
-                             cmap = cmap,
-                             figsize = figsize,
-                             order = order,
-                             return_fig = return_fig,
-                             save = save,
-                             show = show,
-                             ax = ax)
-
-def _mfi_fop_baseplot(adata: AnnData,
-                      dataframe: pd.DataFrame,
-                      marker: Union[str, list[str]],
-                      groupby: Union[str, list[str]],
-                      colorby: str,
-                      assay: Literal["mfi", "fop"],
-                      cmap: str = None,
-                      order: list[str] = None,
-                      gate: str = None,
-                      figsize: tuple[float, float] = None,
-                      return_fig: bool = False,
-                      ax: Axes = None,
-                      save: bool = None,
-                      show: bool = None):
-    
-    if gate is None:
-        raise TypeError("A Gate has to be provided")
-    
-
     plot_params = {
-        "data": dataframe,
+        "data": data,
         "x": groupby,
         "y": marker,
-        "hue": colorby,
-        "hue_order": order if colorby is not None else None,
-        "order": order if colorby is None else None
+        "hue": splitby,
+        "palette": cmap or settings.default_categorical_cmap if splitby else None,
+        "order": order
     }
 
     if ax is None:
@@ -239,35 +245,48 @@ def _mfi_fop_baseplot(adata: AnnData,
         ax = fig.add_subplot(111)
 
     if groupby == "sample_ID":
+        if plot_params["hue"]:
+            raise TypeError("You selected a splitby parameter while plotting sample ID. Don't.")
         ax = barplot(ax,
                      plot_params = plot_params)
 
     else:
-        ax = stripboxplot(ax,
-                          plot_params = plot_params)
-        try:
-            ax = add_statistic(ax = ax,
-                                test = "Kruskal",
-                                dataframe = dataframe,
-                                groupby = groupby[0],
-                                plot_params = plot_params)
-        except ValueError as e:
-            if str(e) != "All numbers are identical in kruskal":
-                raise ValueError from e
-            else:
-                print("warning... Values were uniform, no statistics to plot.")
+        sns.stripplot(**plot_params,
+                      **CATEGORICAL_STRIPPLOT_PARAMS)
+        handles, labels = ax.get_legend_handles_labels()
+        sns.boxplot(**plot_params,
+                    **CATEGORICAL_BOXPLOT_PARAMS)
 
-    ax = label_plot_basic(ax = ax,
-                          title = f"{marker}\ngrouped by {groupby}",
-                          y_label = f"{marker}",
-                          x_label = "")
-    if colorby is None:
-        ax = adjust_legend(ax,
-                        title = colorby or None)
+        if stat_test:
+            try:
+                ax = add_statistic(ax = ax,
+                                   test = stat_test,
+                                   dataframe = data,
+                                   groupby = groupby,
+                                   splitby = splitby,
+                                   plot_params = plot_params)
+            except ValueError as e:
+                if str(e) != "All numbers are identical in kruskal":
+                    raise ValueError from e
+                else:
+                    print("warning... Values were uniform, no statistics to plot.")
+
+    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
+
+    ax.set_title(f"{marker}\ngrouped by {groupby}")
+    ax.set_xlabel("")
+    ax.set_ylabel(f"{marker} {data_metric.upper()} " +
+                  f"[{'AFU' if data_metric == 'mfi' else 'dec.'}]")
+
+    if splitby is not None:
+        ax.legend(handles,
+                  labels,
+                  bbox_to_anchor = (1.1, 0.5),
+                  loc = "center left",
+                  title = splitby or None)
     else:
         ax.legend().remove()
     
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
         
     if return_fig:
         return fig
@@ -276,13 +295,3 @@ def _mfi_fop_baseplot(adata: AnnData,
     
     if show is False:
         return ax
-
-def label_plot(ax: Axes,
-               marker: str,
-               grouping: str,
-               assay: Literal["mfi", "fop"]) -> Axes:
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
-    ax.set_title(f"{marker} expression\nper {grouping}")
-    ax.set_ylabel("expression" if assay == "mfi" else "fraction positive")
-    ax.set_xlabel("")
-    return ax
