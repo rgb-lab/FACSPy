@@ -5,16 +5,18 @@ from anndata import AnnData
 import anndata as ad
 import FACSPy as fp
 from FACSPy._utils import (GATE_SEPARATOR,
-                           find_gate_path_of_gate,
-                           find_gate_indices,
+                           _find_gate_path_of_gate,
+                           _extract_partial_gate_path_end,
+                           _extract_partial_gate_path_start,
+                           _find_gate_indices,
                            equalize_groups,
-                           find_parent_population,
-                           find_current_population,
-                           find_parent_gate,
+                           _find_parent_population,
+                           _find_current_population,
+                           _find_parent_gate,
                            _find_parents_recursively,
-                           find_grandparent_gate,
-                           find_grandparent_population,
-                           close_polygon_gate_coordinates,
+                           _find_grandparent_gate,
+                           _find_grandparent_population,
+                           _close_polygon_gate_coordinates,
                            _flatten_nested_list,
                            subset_fluo_channels,
                            subset_gate,
@@ -24,6 +26,11 @@ from FACSPy._utils import (GATE_SEPARATOR,
 
 from FACSPy.exceptions._utils import (GateNotProvidedError,
                                       ExhaustedHierarchyError)
+from FACSPy.exceptions._exceptions import (GateAmbiguityError,
+                                           GateNotFoundError,
+                                           PopulationAsGateError,
+                                           ExhaustedGatePathError,
+                                           GateNameError)
 
 # QUICKFIND: Gates
 @pytest.fixture
@@ -61,19 +68,73 @@ def mock_anndata_gating() -> AnnData:
     concatenated = ad.concat([adata1, adata2, adata3])
     concatenated.var_names_make_unique()
     concatenated.obs_names_make_unique()
-    concatenated.uns = {"gating_cols": pd.Index([f"root{GATE_SEPARATOR}singlets",
-                                                 f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells",
-                                                 f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live"])}
+    concatenated.uns = {"gating_cols": pd.Index([
+        f"root{GATE_SEPARATOR}singlets",
+        f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells",
+        f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live",
+        f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live{GATE_SEPARATOR}subset",
+        f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}subset"
+    ])}
     return concatenated
+
+def test_extract_partial_gate_path_start():
+    test_string1 = f"root{GATE_SEPARATOR}singlets"
+    test_string2 = "root"
+    test_string3 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}live"
+    test_string4 = ""
+    test_string0 = "/some_gate"
+    test_string01 = "some_gate/"
+
+    with pytest.raises(GateNameError):
+        _extract_partial_gate_path_start(test_string0, 1)
+    with pytest.raises(GateNameError):
+        _extract_partial_gate_path_start(test_string01, 1)
+
+    assert _extract_partial_gate_path_start(test_string1, 1) == "root"
+    with pytest.raises(ExhaustedGatePathError):
+        _extract_partial_gate_path_start(test_string1, 4)
+    with pytest.raises(PopulationAsGateError):
+        _extract_partial_gate_path_start(test_string2, 1)
+    assert _extract_partial_gate_path_start(test_string3, 2) == "root/singlets"
+    assert _extract_partial_gate_path_start(test_string3, 3) == test_string3
+    with pytest.raises(GateNotProvidedError):
+        _extract_partial_gate_path_start(test_string4, 3)
+
+def test_extract_partial_gate_path_end():
+    test_string1 = f"root{GATE_SEPARATOR}singlets"
+    test_string2 = "root"
+    test_string3 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}live"
+    test_string4 = ""
+    test_string0 = "/some_gate"
+    test_string01 = "some_gate/"
+
+    with pytest.raises(GateNameError):
+        _extract_partial_gate_path_end(test_string0, 1)
+    with pytest.raises(GateNameError):
+        _extract_partial_gate_path_end(test_string01, 1)
+
+    assert _extract_partial_gate_path_end(test_string1, 1) == "singlets"
+    with pytest.raises(ExhaustedGatePathError):
+        _extract_partial_gate_path_end(test_string1, 4)
+    with pytest.raises(PopulationAsGateError):
+        _extract_partial_gate_path_end(test_string2, 1)
+    assert _extract_partial_gate_path_end(test_string3, 2) == "singlets/live"
+    assert _extract_partial_gate_path_end(test_string3, 3) == test_string3
+    with pytest.raises(GateNotProvidedError):
+        _extract_partial_gate_path_end(test_string4, 3)
 
 
 def test_find_gate_path_of_gate(mock_anndata_gating: AnnData):
-    assert find_gate_path_of_gate(mock_anndata_gating, "T_cells") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
-    assert find_gate_path_of_gate(mock_anndata_gating, "live") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live"
-    assert find_gate_path_of_gate(mock_anndata_gating, "singlets") == f"root{GATE_SEPARATOR}singlets"
+    assert _find_gate_path_of_gate(mock_anndata_gating, "T_cells") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
+    assert _find_gate_path_of_gate(mock_anndata_gating, "live") == f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}live"
+    assert _find_gate_path_of_gate(mock_anndata_gating, "singlets") == f"root{GATE_SEPARATOR}singlets"
+    with pytest.raises(GateNotFoundError):
+        _find_gate_path_of_gate(mock_anndata_gating, "some_gate")
+    with pytest.raises(GateAmbiguityError):
+        _find_gate_path_of_gate(mock_anndata_gating, "subset")
 
 def test_find_gate_indices(mock_anndata_gating):
-    assert find_gate_indices(mock_anndata_gating, find_gate_path_of_gate(mock_anndata_gating,"T_cells")) == [1]
+    assert _find_gate_indices(mock_anndata_gating, _find_gate_path_of_gate(mock_anndata_gating,"T_cells")) == [1]
 
 
 # QUICKFIND: Group Equalizing
@@ -142,11 +203,11 @@ def test_find_current_population():
     test_string3 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}live"
     test_string4 = ""
 
-    assert find_current_population(test_string1) == "singlets"
-    assert find_current_population(test_string2) == "root"
-    assert find_current_population(test_string3) == "live"
+    assert _find_current_population(test_string1) == "singlets"
+    assert _find_current_population(test_string2) == "root"
+    assert _find_current_population(test_string3) == "live"
     with pytest.raises(GateNotProvidedError):
-        find_current_population(test_string4)
+        _find_current_population(test_string4)
 
 def test_find_parent_gate():
     test_string1 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
@@ -154,12 +215,12 @@ def test_find_parent_gate():
     test_string3 = f"root{GATE_SEPARATOR}singlets"
     test_string4 = ""
 
-    assert find_parent_gate(test_string1) == f"root{GATE_SEPARATOR}singlets"
-    assert find_parent_gate(test_string3) ==  "root"
+    assert _find_parent_gate(test_string1) == f"root{GATE_SEPARATOR}singlets"
+    assert _find_parent_gate(test_string3) ==  "root"
     with pytest.raises(ExhaustedHierarchyError):
-        find_parent_gate(test_string2)
+        _find_parent_gate(test_string2)
     with pytest.raises(GateNotProvidedError):
-        find_parent_gate(test_string4)
+        _find_parent_gate(test_string4)
 
 def test_find_grandparent_gate():
     test_string1 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
@@ -167,13 +228,13 @@ def test_find_grandparent_gate():
     test_string3 = f"root{GATE_SEPARATOR}singlets"
     test_string4 = ""
 
-    assert find_grandparent_gate(test_string1) == "root"
+    assert _find_grandparent_gate(test_string1) == "root"
     with pytest.raises(ExhaustedHierarchyError):
-        find_grandparent_gate(test_string2)
+        _find_grandparent_gate(test_string2)
     with pytest.raises(ExhaustedHierarchyError):
-        find_grandparent_gate(test_string3)
+        _find_grandparent_gate(test_string3)
     with pytest.raises(GateNotProvidedError):
-        find_grandparent_gate(test_string4)
+        _find_grandparent_gate(test_string4)
 
 def test_find_parent_population():
     test_string1 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
@@ -181,12 +242,12 @@ def test_find_parent_population():
     test_string3 = f"root{GATE_SEPARATOR}singlets"
     test_string4 = ""
 
-    assert find_parent_population(test_string1) == "singlets"
-    assert find_parent_population(test_string3) == "root"
+    assert _find_parent_population(test_string1) == "singlets"
+    assert _find_parent_population(test_string3) == "root"
     with pytest.raises(GateNotProvidedError):
-        find_parent_population(test_string4)
+        _find_parent_population(test_string4)
     with pytest.raises(ExhaustedHierarchyError):
-        find_parent_population(test_string2)
+        _find_parent_population(test_string2)
 
 def test_find_grandparent_population():
     test_string1 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
@@ -194,13 +255,13 @@ def test_find_grandparent_population():
     test_string3 = f"root{GATE_SEPARATOR}singlets"
     test_string4 = ""
     
-    assert find_grandparent_population(test_string1) == "root"
+    assert _find_grandparent_population(test_string1) == "root"
     with pytest.raises(ExhaustedHierarchyError):
-        find_grandparent_population(test_string2)
+        _find_grandparent_population(test_string2)
     with pytest.raises(ExhaustedHierarchyError):
-        find_grandparent_population(test_string3)
+        _find_grandparent_population(test_string3)
     with pytest.raises(GateNotProvidedError):
-        find_grandparent_population(test_string4)
+        _find_grandparent_population(test_string4)
 
 def test_find_parents_recursively():
     test_string1 = f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells"
@@ -220,7 +281,7 @@ def test_find_parents_recursively():
 
 def test_close_polygon_gate_coordinates():
     coordinate_array = np.array([[1,2],[3,4]])
-    assert np.array_equal(close_polygon_gate_coordinates(coordinate_array),
+    assert np.array_equal(_close_polygon_gate_coordinates(coordinate_array),
                           np.array([[1,2],[3,4],[1,2]]))
 
 def test_flatten_nested_list():
@@ -330,11 +391,17 @@ def test_gate_subset_gate_path_as_gate(mock_anndata_gate_subset):
                           copy = True)
     assert dataset.shape[0] == 3
 
-def test_gate_subset_gate_path_as_gate(mock_anndata_gate_subset):
+def test_gate_subset_gate_path_as_gate_2(mock_anndata_gate_subset):
     dataset = subset_gate(mock_anndata_gate_subset,
                           gate = "root/singlets",
                           copy = True)
     assert dataset.shape[0] == 5
+
+def test_gate_subset_gate_path_as_partial_gate(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
+                          gate = "singlets/T_cells",
+                          copy = True)
+    assert dataset.shape[0] == 3
 
 def test_gate_subset_wrong_inputs(mock_anndata_gate_subset):
     with pytest.raises(TypeError):

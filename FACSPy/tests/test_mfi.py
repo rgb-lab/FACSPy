@@ -8,7 +8,7 @@ import FACSPy as fp
 from FACSPy.tools._mfi import mfi
 from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
-from FACSPy._utils import find_gate_path_of_gate
+from FACSPy._utils import _find_gate_path_of_gate
 
 WSP_FILE_PATH = "FACSPy/_resources/"
 WSP_FILE_NAME = "test_wsp.wsp"
@@ -92,7 +92,7 @@ def test_layer_setting(mock_dataset: AnnData):
 
 def test_correct_mfi_mean(mock_dataset: AnnData):
     specific_gate_adata = fp.subset_gate(mock_dataset, "live", copy = True)
-    full_gate_path = find_gate_path_of_gate(mock_dataset, "live")
+    full_gate_path = _find_gate_path_of_gate(mock_dataset, "live")
     df = specific_gate_adata.to_df(layer = "compensated")
     df["sample_ID"] = specific_gate_adata.obs["sample_ID"]
     mean_df = df.groupby("sample_ID").mean()
@@ -110,7 +110,7 @@ def test_correct_mfi_mean(mock_dataset: AnnData):
 
 def test_correct_mfi_median(mock_dataset: AnnData):
     specific_gate_adata = fp.subset_gate(mock_dataset, "live", copy = True)
-    full_gate_path = find_gate_path_of_gate(mock_dataset, "live")
+    full_gate_path = _find_gate_path_of_gate(mock_dataset, "live")
     df = specific_gate_adata.to_df(layer = "compensated")
     df["sample_ID"] = specific_gate_adata.obs["sample_ID"]
     mean_df = df.groupby("sample_ID").median()

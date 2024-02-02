@@ -17,7 +17,7 @@ from FACSPy.exceptions._exceptions import (AnalysisNotPerformedError,
                                            InvalidScalingError,
                                            InsufficientSampleNumberWarning,
                                            DimredSettingModificationWarning)
-from FACSPy._utils import find_gate_path_of_gate, _fetch_fluo_channels
+from FACSPy._utils import _find_gate_path_of_gate, _fetch_fluo_channels
 from FACSPy.tools._dr_samplewise import (_save_samplewise_dr_settings,
                                          _perform_dr)
 from FACSPy.tools._pca import pca_samplewise
@@ -138,7 +138,7 @@ def test_saving_with_kwargs(mock_dataset: AnnData):
 def test_values_tsne(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :].values
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = TSNE(n_components = 3,
                          perplexity = min(30, mfi_values.shape[0]-1),
@@ -149,14 +149,14 @@ def test_values_tsne(mock_dataset: AnnData):
                           layer = "compensated")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["TSNE1", "TSNE2", "TSNE3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_kwarg_passing_tsne(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :].values
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = TSNE(n_components = 3,
                          perplexity = min(30, mfi_values.shape[0]-1),
@@ -169,14 +169,14 @@ def test_kwarg_passing_tsne(mock_dataset: AnnData):
                           learning_rate = 100)
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["TSNE1", "TSNE2", "TSNE3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_exclude_channels_tsne(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :]
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :]
     mfi_values = mfi_values.loc[:,~mfi_values.columns.isin(["CD15", "live_dead"])].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = TSNE(n_components = 3,
@@ -189,14 +189,14 @@ def test_exclude_channels_tsne(mock_dataset: AnnData):
                           exclude = ["CD15", "live_dead"])
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["TSNE1", "TSNE2", "TSNE3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_use_only_fluo_channels_tsne(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :]
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :]
     mfi_values = mfi_values[_fetch_fluo_channels(adata)].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = TSNE(n_components = 3,
@@ -208,7 +208,7 @@ def test_use_only_fluo_channels_tsne(mock_dataset: AnnData):
                           layer = "compensated")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["TSNE1", "TSNE2", "TSNE3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
@@ -248,7 +248,7 @@ def test_warnings_tsne(mock_dataset: AnnData):
 def test_values_mds(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :].values
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = MDS(n_components = 3,
                         random_state = 187).fit_transform(mfi_values)
@@ -258,14 +258,14 @@ def test_values_mds(mock_dataset: AnnData):
                           layer = "compensated")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                                ["MDS1", "MDS2", "MDS3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_kwarg_passing_mds(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :].values
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = MDS(n_components = 3,
                         random_state = 187,
@@ -277,14 +277,14 @@ def test_kwarg_passing_mds(mock_dataset: AnnData):
                           eps = 1)
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["MDS1", "MDS2", "MDS3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_exclude_channels_mds(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :]
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :]
     mfi_values = mfi_values.loc[:,~mfi_values.columns.isin(["CD15", "live_dead"])].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = MDS(n_components = 3,
@@ -296,14 +296,14 @@ def test_exclude_channels_mds(mock_dataset: AnnData):
                          exclude = ["CD15", "live_dead"])
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["MDS1", "MDS2", "MDS3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_use_only_fluo_channels_mds(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :]
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :]
     mfi_values = mfi_values[_fetch_fluo_channels(adata)].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = MDS(n_components = 3,
@@ -314,7 +314,7 @@ def test_use_only_fluo_channels_mds(mock_dataset: AnnData):
                           layer = "compensated")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["MDS1", "MDS2", "MDS3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
@@ -353,7 +353,7 @@ def test_warnings_mds(mock_dataset: AnnData):
 def test_values_umap(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :].values
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = UMAP(n_components = 3,
                          random_state = 187).fit_transform(mfi_values)
@@ -363,14 +363,14 @@ def test_values_umap(mock_dataset: AnnData):
                           layer = "compensated")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                                ["UMAP1", "UMAP2", "UMAP3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_kwarg_passing_umap(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :].values
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = UMAP(n_components = 3,
                          random_state = 187,
@@ -382,14 +382,14 @@ def test_kwarg_passing_umap(mock_dataset: AnnData):
                           metric = "manhattan")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["UMAP1", "UMAP2", "UMAP3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_exclude_channels_umap(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :]
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :]
     mfi_values = mfi_values.loc[:,~mfi_values.columns.isin(["CD15", "live_dead"])].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = UMAP(n_components = 3,
@@ -401,14 +401,14 @@ def test_exclude_channels_umap(mock_dataset: AnnData):
                           exclude = ["CD15", "live_dead"])
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["UMAP1", "UMAP2", "UMAP3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
 def test_use_only_fluo_channels_umap(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :]
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :]
     mfi_values = mfi_values[_fetch_fluo_channels(adata)].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     coords_manual = UMAP(n_components = 3,
@@ -419,7 +419,7 @@ def test_use_only_fluo_channels_umap(mock_dataset: AnnData):
                           layer = "compensated")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"),
+    coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"),
                            ["UMAP1", "UMAP2", "UMAP3"]]
     np.testing.assert_array_equal(coords_manual, coords_facspy.values)
 
@@ -459,7 +459,7 @@ def test_warnings_umap(mock_dataset: AnnData):
 def test_values_pca(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :].values
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     # the kwarg we choose is svd_solver
     pca_coords_manual = PCA(n_components = 3,
@@ -470,13 +470,13 @@ def test_values_pca(mock_dataset: AnnData):
                          layer = "compensated")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    pca_coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), ["PCA1", "PCA2", "PCA3"]]
+    pca_coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), ["PCA1", "PCA2", "PCA3"]]
     np.testing.assert_array_equal(pca_coords_manual, pca_coords_facspy.values)
 
 def test_kwarg_passing_pca(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :].values
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     # the kwarg we choose is svd_solver
     pca_coords_manual = PCA(n_components = 3,
@@ -489,13 +489,13 @@ def test_kwarg_passing_pca(mock_dataset: AnnData):
                          whiten = True)
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    pca_coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), ["PCA1", "PCA2", "PCA3"]]
+    pca_coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), ["PCA1", "PCA2", "PCA3"]]
     np.testing.assert_array_equal(pca_coords_manual, pca_coords_facspy.values)
 
 def test_exclude_channels_pca(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :]
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :]
     mfi_values = mfi_values.loc[:,~mfi_values.columns.isin(["CD15", "live_dead"])].values
 
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
@@ -509,13 +509,13 @@ def test_exclude_channels_pca(mock_dataset: AnnData):
                          exclude = ["CD15", "live_dead"])
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    pca_coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), ["PCA1", "PCA2", "PCA3"]]
+    pca_coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), ["PCA1", "PCA2", "PCA3"]]
     np.testing.assert_array_equal(pca_coords_manual, pca_coords_facspy.values)
 
 def test_use_only_fluo_channels_pca(mock_dataset: AnnData):
     adata = mock_dataset
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    mfi_values = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), :]
+    mfi_values = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), :]
     mfi_values = mfi_values[_fetch_fluo_channels(adata)].values
     mfi_values = MinMaxScaler().fit_transform(mfi_values)
     # the kwarg we choose is svd_solver
@@ -527,7 +527,7 @@ def test_use_only_fluo_channels_pca(mock_dataset: AnnData):
                          layer = "compensated")
 
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    pca_coords_facspy = df.loc[df.index.get_level_values("gate") == find_gate_path_of_gate(adata, "live"), ["PCA1", "PCA2", "PCA3"]]
+    pca_coords_facspy = df.loc[df.index.get_level_values("gate") == _find_gate_path_of_gate(adata, "live"), ["PCA1", "PCA2", "PCA3"]]
     np.testing.assert_array_equal(pca_coords_manual, pca_coords_facspy.values)
 
 def test_n_components_parameter_pca(mock_dataset: AnnData):

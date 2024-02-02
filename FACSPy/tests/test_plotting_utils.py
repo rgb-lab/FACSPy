@@ -139,11 +139,11 @@ def test_map_metaclusters_to_sample_ID():
 def test_get_uns_dataframe_I(mock_dataset: AnnData):
     fp.tl.mfi(mock_dataset, layer = "compensated")
     from FACSPy.plotting._utils import _get_uns_dataframe
-    from FACSPy._utils import find_gate_path_of_gate
+    from FACSPy._utils import _find_gate_path_of_gate
     df = _get_uns_dataframe(mock_dataset,
                             gate = "live",
                             table_identifier = "mfi_sample_ID_compensated")
-    assert all(df["gate"] == find_gate_path_of_gate(mock_dataset, "live"))
+    assert all(df["gate"] == _find_gate_path_of_gate(mock_dataset, "live"))
     assert all(col in df.columns for col in mock_dataset.uns["metadata"].dataframe.columns)
     assert "sample_ID" in df.columns
     assert "gate" in df.columns
@@ -151,11 +151,11 @@ def test_get_uns_dataframe_I(mock_dataset: AnnData):
 def test_get_uns_dataframe_II(mock_dataset: AnnData):
     fp.tl.mfi(mock_dataset, groupby = "condition1", layer = "compensated")
     from FACSPy.plotting._utils import _get_uns_dataframe
-    from FACSPy._utils import find_gate_path_of_gate
+    from FACSPy._utils import _find_gate_path_of_gate
     df = _get_uns_dataframe(mock_dataset,
                             gate = "live",
                             table_identifier = "mfi_condition1_compensated")
-    assert all(df["gate"] == find_gate_path_of_gate(mock_dataset, "live"))
+    assert all(df["gate"] == _find_gate_path_of_gate(mock_dataset, "live"))
     assert all(col in df.columns for col in mock_dataset.uns["metadata"].dataframe.columns)
     assert "sample_ID" in df.columns
     assert "gate" in df.columns
