@@ -21,6 +21,8 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
     if ax is None:
         fig = plt.figure(figsize = figsize)
         ax = fig.add_subplot(111)
+    else:
+        fig = None
 
     if groupby == "sample_ID":
         if plot_params["hue"]:
