@@ -1,19 +1,13 @@
-from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-
 from anndata import AnnData
+
+from typing import Optional
 
 from ._utils import savefig_or_show
 from ._categorical_stripplot import _categorical_strip_box_plot
 
-from ._baseplot import (stripboxplot,
-                        barplot,
-                        label_plot_basic,
-                        adjust_legend)
-from ._basestats import add_statistic
 from .._settings import settings
 
-from typing import Optional
 
 def metadata(adata: AnnData,
              marker: str,
