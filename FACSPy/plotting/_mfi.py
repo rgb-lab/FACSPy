@@ -1,21 +1,13 @@
 from anndata import AnnData
-import pandas as pd
-from typing import Union, Literal, Optional
 
 from matplotlib.axes import Axes
 
-from matplotlib import pyplot as plt
-import seaborn as sns
+from typing import Union, Literal, Optional
 
-from ._basestats import add_statistic
-from ._baseplot import adjust_legend
+from ._categorical_stripplot import _categorical_strip_box_plot
 
-from ._basestats import add_statistic
-from ._baseplot import barplot, stripboxplot, label_plot_basic
 from ._utils import (_get_uns_dataframe,
-                     savefig_or_show,
-                     CATEGORICAL_STRIPPLOT_PARAMS,
-                     CATEGORICAL_BOXPLOT_PARAMS)
+                     savefig_or_show)
 
 from .._utils import _default_gate_and_default_layer
 from .._settings import settings
@@ -240,54 +232,20 @@ def _mfi_fop_baseplot(adata: AnnData,
         "order": order
     }
 
-    if ax is None:
-        fig = plt.figure(figsize = figsize)
-        ax = fig.add_subplot(111)
 
-    if groupby == "sample_ID":
-        if plot_params["hue"]:
-            raise TypeError("You selected a splitby parameter while plotting sample ID. Don't.")
-        ax = barplot(ax,
-                     plot_params = plot_params)
-
-    else:
-        sns.stripplot(**plot_params,
-                      **CATEGORICAL_STRIPPLOT_PARAMS)
-        handles, labels = ax.get_legend_handles_labels()
-        sns.boxplot(**plot_params,
-                    **CATEGORICAL_BOXPLOT_PARAMS)
-
-        if stat_test:
-            try:
-                ax = add_statistic(ax = ax,
-                                   test = stat_test,
-                                   dataframe = data,
-                                   groupby = groupby,
-                                   splitby = splitby,
-                                   plot_params = plot_params)
-            except ValueError as e:
-                if str(e) != "All numbers are identical in kruskal":
-                    raise ValueError from e
-                else:
-                    print("warning... Values were uniform, no statistics to plot.")
-
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha = "center")
+    fig, ax = _categorical_strip_box_plot(ax = ax,
+                                          data = data,
+                                          plot_params = plot_params,
+                                          groupby = groupby,
+                                          splitby = splitby,
+                                          stat_test = stat_test,
+                                          figsize = figsize)
 
     ax.set_title(f"{marker}\ngrouped by {groupby}")
     ax.set_xlabel("")
     ax.set_ylabel(f"{marker} {data_metric.upper()} " +
                   f"[{'AFU' if data_metric == 'mfi' else 'dec.'}]")
 
-    if splitby is not None:
-        ax.legend(handles,
-                  labels,
-                  bbox_to_anchor = (1.1, 0.5),
-                  loc = "center left",
-                  title = splitby or None)
-    else:
-        ax.legend().remove()
-    
-        
     if return_fig:
         return fig
 
