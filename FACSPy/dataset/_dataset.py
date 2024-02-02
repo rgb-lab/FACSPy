@@ -77,12 +77,12 @@ class DatasetAssembler:
                                                         metadata,
                                                         subsample_fcs_to)
         
-
-        file_list: list[FCSFile] = self.compensate_samples(file_list,
-                                                           workspace)
-        
         gates = self.gate_samples(file_list,
                                   workspace)
+
+        file_list: list[FCSFile] = self.compensate_samples(file_list,
+                                                           workspace,
+                                                           keep_raw)
 
         gates = self.fill_empty_gates(file_list, gates)
 
@@ -91,9 +91,6 @@ class DatasetAssembler:
                                               panel)
         
         dataset = self.concatenate_dataset(dataset_list)
-
-        if not keep_raw:
-            del dataset.layers["raw"]
 
         dataset = self.append_supplements(dataset,
                                           metadata,
@@ -115,7 +112,6 @@ class DatasetAssembler:
             if gate_table.shape[0] == 0:
                 gates[i] = pd.DataFrame(index = range(file.event_count))
         return gates
-
 
     def append_gates(self,
                      dataset: AnnData,
@@ -160,6 +156,7 @@ class DatasetAssembler:
     def gate_sample(self,
                     file: FCSFile,
                     workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> pd.DataFrame:
+        print(f"... gating sample {file.original_filename}")
         gating_strategy: GatingStrategy = self.create_gating_strategy(file, workspace)
         gating_results = gating_strategy.gate_sample(file)
         gate_table = pd.DataFrame(columns = ["/".join([path, gate]) for gate, path in gating_results._raw_results.keys()])
@@ -188,7 +185,10 @@ class DatasetAssembler:
                                  metadata: Metadata) -> pd.DataFrame:
         metadata_df = metadata.to_df()
         file_row = metadata_df.loc[metadata_df["file_name"] == file.original_filename]
-        cell_number = file.original_events.shape[0]
+        if file.original_events is not None:
+            cell_number = file.original_events.shape[0]
+        else:
+            cell_number = file.compensated_events.shape[0]
         metadata_frame = pd.DataFrame(np.repeat(file_row.values,
                                                 cell_number,
                                                 axis = 0),
@@ -263,11 +263,16 @@ class DatasetAssembler:
                                             metadata)
         var = self.create_var_from_panel(file,
                                          panel)
+        if file.original_events is not None:
+            layers = {"raw": file.original_events.astype(np.float32),
+                      "compensated": file.compensated_events.astype(np.float32)}
+        else:
+            layers = {"compensated": file.compensated_events.astype(np.float32)}
+
         return AnnData(X = None,
                        obs = obs,
                        var = var,
-                       layers = {"raw": file.original_events.astype(np.float32),
-                                 "compensated": file.compensated_events.astype(np.float32)})
+                       layers = layers)
 
     def create_anndata_representations(self,
                                        file_list: list[FCSFile],
@@ -284,17 +289,21 @@ class DatasetAssembler:
 
     def compensate_samples(self,
                            file_list: list[FCSFile],
-                           workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> list[FCSFile]:
-        return [self.compensate_sample(sample, workspace) for sample in file_list]
+                           workspace: Union[FlowJoWorkspace, DivaWorkspace],
+                           keep_raw: bool) -> list[FCSFile]:
+        return [self.compensate_sample(sample, workspace, keep_raw) for sample in file_list]
 
     def compensate_sample(self,
                           sample: FCSFile,
-                          workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> FCSFile:
+                          workspace: Union[FlowJoWorkspace, DivaWorkspace],
+                          keep_raw: bool) -> FCSFile:
         """Function finds compensation matrix and applies it to raw data"""
         print(f"... compensating sample {sample.original_filename}")
         comp_matrix = self.find_comp_matrix(sample, workspace)
         sample.compensated_events = comp_matrix.apply(sample)
         sample.compensation_status = "compensated"
+        if not keep_raw:
+            sample.original_events = None
         return sample
 
     def find_comp_matrix(self,
