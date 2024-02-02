@@ -14,12 +14,12 @@ import matplotlib.patches as patches
 from typing import Union, Optional, Literal
 
 
-from .._utils import (create_gate_lut,
+from .._utils import (_create_gate_lut,
                       GATE_SEPARATOR,
-                      find_parent_population,
+                      _find_parent_population,
                       subset_gate,
-                      find_gate_indices,
-                      find_gate_path_of_gate)
+                      _find_gate_indices,
+                      _find_gate_path_of_gate)
 
 from ._utils import turn_off_missing_plot, savefig_or_show
 
@@ -80,7 +80,7 @@ class GatingStrategyGrid:
             hierarchy_map[n - 1] += gates_at_nth_depth
             # fetch parent gates from current gates...
             # ...and add them into the level above
-            hierarchy_map[n - 2] += [find_parent_population(self.full_gate_path(gate)) for gate in gates_at_nth_depth]
+            hierarchy_map[n - 2] += [_find_parent_population(self.full_gate_path(gate)) for gate in gates_at_nth_depth]
 
         ## processes the hierarchy map so that empty values are removed and unique gates are kept
         ## example: {0: ['singlets'], 1: ['T_cells', 'B_cells']}
@@ -221,7 +221,7 @@ def get_rectangle_quadrant(gate_lut: dict,
 def extract_gate_lut(adata: AnnData,
                      wsp_group: str,
                      file_name: str) -> dict[str: dict[str: Union[list[str], str]]]:
-    return create_gate_lut(adata.uns["workspace"][wsp_group])[file_name]
+    return _create_gate_lut(adata.uns["workspace"][wsp_group])[file_name]
 
 def map_sample_ID_to_filename(adata:AnnData,
                               sample_ID: str) -> str:
@@ -242,7 +242,7 @@ def prepare_plot_data(adata: AnnData,
                                         parent_gating_path)
     if sample_size is not None and adata_subset.shape[0] > sample_size:
         sc.pp.subsample(adata_subset, n_obs = sample_size)
-    gate_list = [find_gate_path_of_gate(adata, gate) for gate in gate_list]
+    gate_list = [_find_gate_path_of_gate(adata, gate) for gate in gate_list]
     
     return prepare_plot_dataframe(adata_subset,
                                   gates = gate_list,
@@ -258,7 +258,7 @@ def prepare_plot_dataframe(adata: AnnData,
         df = adata.to_df(layer = "compensated")[[x_channel]]
     else:
         df = adata.to_df(layer = "compensated")[[x_channel, y_channel]]
-    df[gates] = adata.obsm["gating"][:, find_gate_indices(adata, gates)].toarray()
+    df[gates] = adata.obsm["gating"][:, _find_gate_indices(adata, gates)].toarray()
     return df
 
 def gate_parent_in_adata(adata: AnnData,
@@ -323,7 +323,7 @@ def group_plot(adata: AnnData,
         plot_params = merge_plotting_parameters(plot_params, user_plot_params)
     
     for i, gate in enumerate(gate_list):
-        gate_specific_data = plot_data[plot_data[find_gate_path_of_gate(adata, gate)] == True]
+        gate_specific_data = plot_data[plot_data[_find_gate_path_of_gate(adata, gate)] == True]
         ax = sns.scatterplot(data = gate_specific_data,
                              color = sns.color_palette("Set1")[i],
                              **plot_params)
@@ -366,7 +366,7 @@ def single_plot(adata: AnnData,
     if user_plot_params:
         plot_params = merge_plotting_parameters(plot_params, user_plot_params)
 
-    ax = sns.scatterplot(c = plot_data[find_gate_path_of_gate(adata, gate)].map({True: "red",
+    ax = sns.scatterplot(c = plot_data[_find_gate_path_of_gate(adata, gate)].map({True: "red",
                                                                                  False: "gray"}),
                            **plot_params)
 

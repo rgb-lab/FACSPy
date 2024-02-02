@@ -16,9 +16,15 @@ from ._utils import (_get_uns_dataframe,
                      _retrieve_cofactor_or_set_to_default,
                      _generate_continous_color_scale,
                      _transform_color_to_scale)
+
 from .._utils import _default_gate_and_default_layer, reduction_names
 
+from .._settings import settings
+
 def _samplewise_dr_plot(adata: AnnData,
+                        gate: str,
+                        data_metric: str,
+                        data_group: str,
                         layer: str,
                         dataframe: pd.DataFrame,
                         color: Optional[Union[str, list[str]]],
@@ -29,9 +35,17 @@ def _samplewise_dr_plot(adata: AnnData,
                         vmax: float = None,
                         figsize: tuple[float, float] = (4,3),
                         return_fig: bool = False,
+                        return_dataframe = False,
                         ax: Axes = None,
                         save: bool = None,
                         show: bool = None):
+
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{data_group}_{layer}")
+
+    if return_dataframe:
+        return data
     
     plotting_dimensions = _get_plotting_dimensions(reduction)
     categorical_color = _color_var_is_categorical(dataframe[color])
@@ -51,21 +65,21 @@ def _samplewise_dr_plot(adata: AnnData,
 
     continous_cmap = cmap or "viridis"
 
-
-    if ax is None:
-        fig = plt.figure(figsize = figsize)
-        ax = fig.add_subplot(111)
     plot_params = {
         "x": plotting_dimensions[0],
         "y": plotting_dimensions[1],
         "data": dataframe,
         "hue": dataframe[color] if categorical_color else None,
-        "palette": cmap or "Set1",
+        "palette": cmap or settings.default_categorical_cmap,
         "c": transformed_color_vector if not categorical_color else None,
         "cmap": continous_cmap,
         "legend": "auto",
         "ax": ax
     }
+
+    if ax is None:
+        fig = plt.figure(figsize = figsize)
+        ax = fig.add_subplot(111)
 
     sns.scatterplot(**plot_params)
     
@@ -94,12 +108,6 @@ def _samplewise_dr_plot(adata: AnnData,
 def _get_plotting_dimensions(reduction: str):
     return reduction_names[reduction][:2]
 
-def create_scatterplot(ax: Axes,
-                       plot_params: dict) -> Axes:
-    return sns.scatterplot(**plot_params,
-                           edgecolor = "black",
-                           ax = ax)
-
 @_default_gate_and_default_layer
 def pca_samplewise(adata: AnnData,
                    gate: str = None,
@@ -111,13 +119,12 @@ def pca_samplewise(adata: AnnData,
                    cmap: str = None,
                    vmin: float = None,
                    vmax: float = None,
-                   figsize: tuple[float, float] = (4,3),
+                   figsize: tuple[float, float] = (3,3),
                    save: bool = None,
                    show: bool = None,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
                    ax: Axes = None,
-                   groupby: str = None
                    ) -> Optional[Figure]:
     """
     Plot for visualizing sample-wise dimensionality reduction (PCA).
@@ -170,42 +177,26 @@ def pca_samplewise(adata: AnnData,
         are not set.
     return_fig
         If set to True, the figure is returned.
-    groupby
-        Deprecated parameter. Value is assigned to the color variable
-    
     """
- 
-    if gate is None:
-        raise TypeError("A Gate has to be provided")
-    
-    if groupby:
-        warnings.warn("Groupby parameter is deprecated. Use the color parameter",
-                      DeprecationWarning)
-        if not color:
-            color = groupby
 
-    
-    data = _get_uns_dataframe(adata = adata,
-                              gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{layer}")
-
-    if return_dataframe:
-        return data
-    
-    return _samplewise_dr_plot(adata = adata,
+    return _samplewise_dr_plot(reduction = "PCA",
+                               adata = adata,
+                               gate = gate,
                                layer = layer,
-                               dataframe = data,
-                               reduction = "PCA",
                                color = color,
+                               data_metric = data_metric,
+                               data_group = data_group,
+                               color_scale = color_scale,
                                cmap = cmap,
                                vmin = vmin,
                                vmax = vmax,
-                               color_scale = color_scale,
-                               figsize = figsize,
                                ax = ax,
+                               figsize = figsize,
+                               return_dataframe = return_dataframe,
                                return_fig = return_fig,
                                save = save,
                                show = show)
+
 
 @_default_gate_and_default_layer 
 def mds_samplewise(adata: AnnData,
@@ -218,12 +209,12 @@ def mds_samplewise(adata: AnnData,
                    cmap: str = None,
                    vmin: float = None,
                    vmax: float = None,
-                   save: bool = None,
-                   show: bool = None,
+                   figsize: tuple[float, float] = (3,3),
+                   ax: Axes = None,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
-                   ax: Axes = None,
-                   groupby: str = None
+                   save: bool = None,
+                   show: bool = None
                    ) -> Optional[Figure]:
     """
     Plot for visualizing sample-wise dimensionality reduction (PCA).
@@ -276,37 +267,22 @@ def mds_samplewise(adata: AnnData,
         are not set.
     return_fig
         if set to True, the figure is returned.
-    groupby
-        deprecated parameter. value is assigned to the color variable
-    
     """
  
-    if gate is None:
-        raise TypeError("A Gate has to be provided")
-
-    if groupby:
-        warnings.warn("Groupby parameter is deprecated. Use the color parameter",
-                      DeprecationWarning)
-        if not color:
-            color = groupby
-    
-    data = _get_uns_dataframe(adata = adata,
-                              gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{layer}")
-
-    if return_dataframe:
-        return data
-    
-    return _samplewise_dr_plot(adata = adata,
+    return _samplewise_dr_plot(reduction = "MDS",
+                               adata = adata,
+                               gate = gate,
                                layer = layer,
-                               dataframe = data,
-                               reduction = "MDS",
                                color = color,
+                               data_metric = data_metric,
+                               data_group = data_group,
+                               color_scale = color_scale,
                                cmap = cmap,
                                vmin = vmin,
                                vmax = vmax,
-                               color_scale = color_scale,
+                               figsize = figsize,
                                ax = ax,
+                               return_dataframe = return_dataframe,
                                return_fig = return_fig,
                                save = save,
                                show = show)
@@ -320,6 +296,7 @@ def umap_samplewise(adata: AnnData,
                     data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     color_scale: Literal["biex", "log", "linear"] = "linear",
                     cmap: str = None,
+                    figsize: tuple[float, float] = (3,3),
                     vmin: float = None,
                     vmax: float = None,
                     save: bool = None,
@@ -327,7 +304,6 @@ def umap_samplewise(adata: AnnData,
                     return_dataframe: bool = False,
                     return_fig: bool = False,
                     ax: Axes = None,
-                    groupby: str = None
                     ) -> Optional[Figure]:
     """
     Plot for visualizing sample-wise dimensionality reduction (UMAP).
@@ -380,40 +356,26 @@ def umap_samplewise(adata: AnnData,
         are not set.
     return_fig
         if set to True, the figure is returned.
-    groupby
-        deprecated parameter. value is assigned to the color variable
-    
     """
     
-    if gate is None:
-        raise TypeError("A Gate has to be provided")
-
-    if groupby:
-        warnings.warn("Groupby parameter is deprecated. Use the color parameter",
-                      DeprecationWarning)
-        if not color:
-            color = groupby
-    
-    data = _get_uns_dataframe(adata = adata,
-                              gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{layer}")
-
-    if return_dataframe:
-        return data
-    
-    return _samplewise_dr_plot(adata = adata,
+    return _samplewise_dr_plot(reduction = "UMAP",
+                               adata = adata,
+                               gate = gate,
                                layer = layer,
-                               dataframe = data,
-                               reduction = "UMAP",
                                color = color,
+                               data_metric = data_metric,
+                               data_group = data_group,
+                               color_scale = color_scale,
                                cmap = cmap,
                                vmin = vmin,
                                vmax = vmax,
-                               color_scale = color_scale,
+                               figsize = figsize,
                                ax = ax,
+                               return_dataframe = return_dataframe,
                                return_fig = return_fig,
                                save = save,
                                show = show)
+
 
 @_default_gate_and_default_layer 
 def tsne_samplewise(adata: AnnData,
@@ -424,14 +386,14 @@ def tsne_samplewise(adata: AnnData,
                     data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     color_scale: Literal["biex", "log", "linear"] = "linear",
                     cmap: str = None,
+                    figsize: tuple[float, float] = (3,3),
                     vmin: float = None,
                     vmax: float = None,
                     save: bool = None,
                     show: bool = None,
                     return_dataframe: bool = False,
                     return_fig: bool = False,
-                    ax: Axes = None,
-                    groupby: str = None
+                    ax: Axes = None
                     ) -> Optional[Figure]:
     """
     Plot for visualizing sample-wise dimensionality reduction (TSNE).
@@ -484,37 +446,22 @@ def tsne_samplewise(adata: AnnData,
         are not set.
     return_fig
         if set to True, the figure is returned.
-    groupby
-        deprecated parameter. value is assigned to the color variable
-    
     """
 
-    if gate is None:
-        raise TypeError("A Gate has to be provided")
-   
-    if groupby:
-        warnings.warn("Groupby parameter is deprecated. Use the color parameter",
-                      DeprecationWarning)
-        if not color:
-            color = groupby
- 
-    data = _get_uns_dataframe(adata = adata,
-                              gate = gate,
-                              table_identifier = f"{data_metric}_{data_group}_{layer}")
-
-    if return_dataframe:
-        return data
-    
-    return _samplewise_dr_plot(adata = adata,
+    return _samplewise_dr_plot(reduction = "TSNE",
+                               adata = adata,
+                               gate = gate,
                                layer = layer,
-                               dataframe = data,
-                               reduction = "TSNE",
                                color = color,
+                               data_metric = data_metric,
+                               data_group = data_group,
+                               color_scale = color_scale,
                                cmap = cmap,
                                vmin = vmin,
                                vmax = vmax,
-                               color_scale = color_scale,
-                               return_fig = return_fig,
+                               figsize = figsize,
                                ax = ax,
+                               return_dataframe = return_dataframe,
+                               return_fig = return_fig,
                                save = save,
                                show = show)

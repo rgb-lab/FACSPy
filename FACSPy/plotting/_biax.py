@@ -20,8 +20,8 @@ from ._utils import (savefig_or_show,
                      _transform_data_to_scale,
                      _transform_color_to_scale)
 from .._utils import (subset_gate,
-                      is_valid_filename,
-                      is_valid_sample_ID,
+                      _is_valid_filename,
+                      _is_valid_sample_ID,
                       _default_layer)
 
 def _generate_scale_kwargs(channel,
@@ -142,7 +142,7 @@ def biax(adata: AnnData,
     title
         sets the figure title. Optional
     show
-        whether to show the fig
+        whether to show the figure
     save
         expects a file path and a file name. saves the figure to the indicated path
     return_dataframe
@@ -171,9 +171,9 @@ def biax(adata: AnnData,
     
     adata = subset_gate(adata, gate = gate, as_view = True)
     if sample_identifier is not None:
-        if is_valid_sample_ID(adata, sample_identifier):
+        if _is_valid_sample_ID(adata, sample_identifier):
             adata = adata[adata.obs["sample_ID"] == str(sample_identifier),:]
-        elif is_valid_filename(adata, sample_identifier):
+        elif _is_valid_filename(adata, sample_identifier):
             adata = adata[adata.obs["file_name"] == str(sample_identifier),:]
         else:
             raise ValueError(f"{sample_identifier} not found")
@@ -286,7 +286,7 @@ def biax(adata: AnnData,
         cbar.ax.set_ylabel(f"{layer} expression\n{color}",
                            rotation = 270,
                            labelpad = 30)
-    plt.tight_layout()
+    #plt.tight_layout()
 
     if return_fig:
         return ax

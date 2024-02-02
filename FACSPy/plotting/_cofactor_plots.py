@@ -17,8 +17,8 @@ from typing import Optional, Union, Literal
 from ..dataset._utils import (find_corresponding_control_samples,
                               get_histogram_curve)
 from .._utils import (subset_gate,
-                      is_valid_sample_ID,
-                      is_valid_filename,
+                      _is_valid_sample_ID,
+                      _is_valid_filename,
                       _default_gate)
 
 
@@ -213,7 +213,7 @@ def transformation_plot(adata: AnnData,
     
     """
 
-    if not is_valid_sample_ID(adata, sample_identifier) and not is_valid_filename(adata, sample_identifier):
+    if not _is_valid_sample_ID(adata, sample_identifier) and not _is_valid_filename(adata, sample_identifier):
         raise ValueError(f"{sample_identifier} not found")
   
     if gate:
@@ -222,7 +222,7 @@ def transformation_plot(adata: AnnData,
                             as_view = True)
        
     stained_sample, control_samples = prepare_data_subsets(adata,
-                                                           by = "sample_ID" if is_valid_sample_ID(adata, sample_identifier) else "file_name",
+                                                           by = "sample_ID" if _is_valid_sample_ID(adata, sample_identifier) else "file_name",
                                                            sample_identifier = sample_identifier,
                                                            marker = marker,
                                                            scatter = scatter,

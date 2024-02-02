@@ -207,7 +207,12 @@ def marker_density(adata: AnnData,
             ax.set_xlabel(f"{layer} expression")
 
             #plt.tight_layout()
+
         if return_fig:
             return fig
+
         savefig_or_show(show = show, save = save)
+
+        if show is False:
+            return ax if not ridge else fig
         
