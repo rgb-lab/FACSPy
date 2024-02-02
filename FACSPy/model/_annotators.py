@@ -20,9 +20,9 @@ from ._utils import (cap_data,
                     scale_data,
                     )
 
-from .._utils import (transform_gates_according_to_gate_transform,
-                      transform_vertices_according_to_gate_transform,
-                      find_parent_gate,
+from .._utils import (_transform_gates_according_to_gate_transform,
+                      _transform_vertices_according_to_gate_transform,
+                      _find_parent_gate,
                       GATE_SEPARATOR)
 
 from ..tools._leiden import leiden
@@ -32,13 +32,13 @@ from ..tools._flowsom import flowsom
 
 from .._utils import (subset_gate,
                       get_idx_loc,
-                      find_gate_indices,
-                      create_gate_lut,
+                      _find_gate_indices,
+                      _create_gate_lut,
                       _find_parents_recursively,
-                      find_current_population,
-                      find_gate_path_of_gate,
-                      is_valid_filename,
-                      is_valid_sample_ID)
+                      _find_current_population,
+                      _find_gate_path_of_gate,
+                      _is_valid_filename,
+                      _is_valid_sample_ID)
 
 from ..exceptions._exceptions import (ClassifierNotImplementedError,
                                       ParentGateNotFoundError,
@@ -137,16 +137,16 @@ class ManualGating(BaseGating):
         if sample_identifier is None:
             return subset
 
-        if is_valid_sample_ID(subset, sample_identifier):
+        if _is_valid_sample_ID(subset, sample_identifier):
             subset = subset[subset.obs["sample_ID"] == str(sample_identifier),:]
-        elif is_valid_filename(subset, sample_identifier):
+        elif _is_valid_filename(subset, sample_identifier):
             subset = subset[subset.obs["file_name"] == str(sample_identifier),:]
         else:
             raise ValueError(f"{sample_identifier} not found")
         return subset 
 
     def _create_gate_path(self):
-        parent_path = find_gate_path_of_gate(self.adata, self.parent_population)
+        parent_path = _find_gate_path_of_gate(self.adata, self.parent_population)
         return GATE_SEPARATOR.join([parent_path, self.gate_name])
 
     def _preprocess_gate_coordinates(self,
@@ -175,7 +175,7 @@ class ManualGating(BaseGating):
         gating_result = self._points_in_gate()
         
         self._append_gate_column_to_adata(self.gating_path)
-        gate_index = find_gate_indices(self.adata, self.gating_path)
+        gate_index = _find_gate_indices(self.adata, self.gating_path)
         
         self._add_gating_to_input_dataset(self.subset,
                                           predictions = gating_result,
@@ -360,8 +360,8 @@ class supervisedGating(BaseGating):
              
         adata_subset = self._subset_anndata_by_sample(samples)
         assert adata_subset.is_view ##TODO: delete later
-        gate_indices = find_gate_indices(self.adata,
-                                         gate_columns)
+        gate_indices = _find_gate_indices(self.adata,
+                                          gate_columns)
         X = adata_subset.layers[self.on]
         y = adata_subset.obsm["gating"][:, gate_indices].toarray()
         X = self.preprocess_data(X,
@@ -382,8 +382,8 @@ class supervisedGating(BaseGating):
                                           reference_gates: list[dict]) -> list[dict]:
         merged_gates = []
         for gate in current_gates:
-            gate_name = find_current_population(gate)
-            parent_gate = find_parent_gate(gate)
+            gate_name = _find_current_population(gate)
+            parent_gate = _find_parent_gate(gate)
             split_gate_path = tuple(parent_gate.split(GATE_SEPARATOR))
             merged_gates.extend(
                 ref_gate
@@ -405,7 +405,7 @@ class supervisedGating(BaseGating):
         for gate in gate_template:
             gate_path = GATE_SEPARATOR.join(list(gate["gate_path"]))
             full_gate_path = GATE_SEPARATOR.join([gate_path, gate["gate"].gate_name])
-            gate_index = find_gate_indices(adata, full_gate_path)
+            gate_index = _find_gate_indices(adata, full_gate_path)
             gate_information = adata.obsm["gating"][:, gate_index].toarray()
             dimensions = [gate["gate"].dimensions[i].id for i, _ in enumerate(gate["gate"].dimensions)]
             dimensions_indices = [adata.var.loc[adata.var["pnn"] == dim, "pns"].iloc[0] for dim in dimensions]
@@ -420,16 +420,16 @@ class supervisedGating(BaseGating):
                 print("WARNING NO HULL")
                 vertices = np.zeros(shape = (2,2))
             if gate["gate"].gate_type == "PolygonGate":
-                gate["gate"].vertices = transform_vertices_according_to_gate_transform(vertices,
-                                                                                       transforms = transformations,
-                                                                                       gate_channels = dimensions)
+                gate["gate"].vertices = _transform_vertices_according_to_gate_transform(vertices,
+                                                                                        transforms = transformations,
+                                                                                        gate_channels = dimensions)
             if gate["gate"].gate_type == "RectangleGate":
                 gate_dimensions = np.array([[np.min(vertices[:,0]), np.max(vertices[:,0])],
                                             [np.min(vertices[:,1]), np.max(vertices[:,1])]])
                 print(gate, "\n", vertices,"\n", gate_dimensions, "\n", dimensions, "\n", dimensions_indices)
-                gate_dimensions = transform_gates_according_to_gate_transform(gate_dimensions,
-                                                                              transforms = transformations,
-                                                                              gate_channels = dimensions)
+                gate_dimensions = _transform_gates_according_to_gate_transform(gate_dimensions,
+                                                                               transforms = transformations,
+                                                                               gate_channels = dimensions)
                 gate["gate"].dimensions[0].min = gate_dimensions[0,0]
                 gate["gate"].dimensions[0].max = gate_dimensions[0,1]
                 gate["gate"].dimensions[1].min = gate_dimensions[1,0]
@@ -442,8 +442,8 @@ class supervisedGating(BaseGating):
             print(f"Gating gates {self.training_groups[gate_group]}")
             non_gated_samples = [sample for sample in self.adata.obs["file_name"].unique()
                                  if sample not in self.training_groups[gate_group]["samples"]]
-            gate_indices = find_gate_indices(self.adata,
-                                             gate_columns = self.training_groups[gate_group]["gates"])
+            gate_indices = _find_gate_indices(self.adata,
+                                              gate_columns = self.training_groups[gate_group]["gates"])
             for sample in non_gated_samples:
                 print(f"Gating sample {sample}...")
                 sample_view = self._subset_anndata_by_sample(samples = sample, copy = False)
@@ -505,7 +505,7 @@ class supervisedGating(BaseGating):
         gate lookup table in format dict[str, dict]
         """
         workspace_subset = self.adata.uns["workspace"][self.wsp_group]
-        return create_gate_lut(workspace_subset)
+        return _create_gate_lut(workspace_subset)
 
     def gather_gate_paths(self,
                            gate_lut: dict[str: dict],
@@ -555,7 +555,7 @@ class supervisedGating(BaseGating):
         """
         reverse_lut = {}
         for gate in training_gate_paths:
-            gate_name = find_current_population(gate)
+            gate_name = _find_current_population(gate)
             parents = [parent for parent in _find_parents_recursively(gate) if parent != "root"]
             reverse_lut[gate] = {
                 "dimensions": training_gate_paths[gate],
@@ -740,7 +740,7 @@ class unsupervisedGating(BaseGating):
 
     def _population_is_already_a_gate(self,
                                       parent_population) -> bool:
-        return parent_population in [find_current_population(gate)
+        return parent_population in [_find_current_population(gate)
                                      for gate in self.adata.uns["gating_cols"]]
     
     def _process_markers(self,
@@ -800,7 +800,7 @@ class unsupervisedGating(BaseGating):
             for population_list in self.gating_strategy[population_to_cluster]:
                 population_name: str = population_list[0]
                 print(f"... gating population {population_name}")
-                parent_gate_path = find_gate_path_of_gate(file_subset, population_to_cluster)
+                parent_gate_path = _find_gate_path_of_gate(file_subset, population_to_cluster)
                 population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
 
                 if not self._population_is_already_a_gate(population_name):
@@ -808,7 +808,7 @@ class unsupervisedGating(BaseGating):
 
         else:
             gate_subset = subset_gate(self.adata, gate = population_to_cluster, as_view = True)
-            if gate_subset.shape[0] > 1:
+            if gate_subset.shape[0] >= 1:
                 self.cutoffs = self._generate_cutoff_table(gate_subset,
                                                            layer = self.layer,
                                                            sensitivity = self.sensitivity,
@@ -828,7 +828,7 @@ class unsupervisedGating(BaseGating):
                     for population_list in self.gating_strategy[population_to_cluster]:
                         population_name: str = population_list[0]
                         print(f"... gating population {population_name}")
-                        parent_gate_path = find_gate_path_of_gate(file_subset, population_to_cluster)
+                        parent_gate_path = _find_gate_path_of_gate(file_subset, population_to_cluster)
                         population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
 
                         if not self._population_is_already_a_gate(population_name):
@@ -845,14 +845,14 @@ class unsupervisedGating(BaseGating):
                     print(f"     ... gating population {population_name}")
                     
                     ## each entry is a list with the structure [population_name, [marker1, marker2, marker3]]
-                    parent_gate_path = find_gate_path_of_gate(file_subset, population_to_cluster)
+                    parent_gate_path = _find_gate_path_of_gate(file_subset, population_to_cluster)
                     population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
 
                     if not self._population_is_already_a_gate(population_name):
                         self._append_gate_column_to_adata(population_gate_path)
                     
-                    gate_index: list[int] = find_gate_indices(self.adata,
-                                                              population_gate_path)
+                    gate_index: list[int] = _find_gate_indices(self.adata,
+                                                               population_gate_path)
 
                     markers: list[str] = population_list[1]
                     markers_of_interest = self._process_markers(markers)
