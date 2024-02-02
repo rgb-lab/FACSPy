@@ -48,12 +48,18 @@ def _preprocess_adata(adata: AnnData,
                       use_only_fluo: bool = True,
                       exclude: Optional[list[str]] = None,
                       scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None) -> AnnData:
-    #adata = adata.copy()
+    """
+    Preprocessing of an AnnData object to select the correct gate and channels,
+    select the correct data matrix and scale the data, if necessary.
+
+    Parameters
+    ----------
+
     
+    
+    """
     # hacky way to ensure that everything else will be an anndata view
     # modifying X in scaling when X is None is not possible.
-    # To save memory, we set it to an empty lil_matrix
-    # lil_matrix is used to avoid a sparse efficiency warning
     adata.X = np.zeros(adata.shape, dtype = adata.layers[layer].dtype)
     
     adata = subset_gate(adata = adata,
