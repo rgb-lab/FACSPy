@@ -77,6 +77,9 @@ class DatasetAssembler:
                                                         metadata,
                                                         subsample_fcs_to)
         
+        self._append_comp_matrices(file_list,
+                                   workspace)
+        
         gates = self.gate_samples(file_list,
                                   workspace)
 
@@ -276,7 +279,6 @@ class DatasetAssembler:
                                        metadata: Metadata,
                                        panel: Panel) -> list[AnnData]:
         return [self.create_anndata_representation(file, metadata, panel) for file in file_list]
-        
 
     def construct_dataset(self,
                           file_list: list[FCSFile],
@@ -309,15 +311,30 @@ class DatasetAssembler:
         """Returns compensation matrix. If matrix is within the workspace,
         this matrix is used preferentially. Otherwise use the compensation matrix
         from the FCS file"""
+        return workspace.wsp_dict["All Samples"][file.original_filename]["compensation"]
+
+    def _append_comp_matrices(self,
+                              file_list: list[FCSFile],
+                              workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> None:
+        """loops through files and appends the comp matrix"""
+        for file in file_list:
+            self._append_comp_matrix(file, workspace)
+
+    def _append_comp_matrix(self,
+                            file: FCSFile,
+                            workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> None:
+        """
+        If matrix is within the workspace, this matrix is used preferentially.
+        Otherwise use the compensation matrix from the FCS file."""
+
         if not self.comp_matrix_within_workspace(file, workspace):
             workspace.wsp_dict["All Samples"][file.original_filename]["compensation"] = file.fcs_compensation
-        return workspace.wsp_dict["All Samples"][file.original_filename]["compensation"]
+        return
 
     def comp_matrix_within_workspace(self,
                                      file: FCSFile,
                                      workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> bool:
         return isinstance(workspace.wsp_dict["All Samples"][file.original_filename]["compensation"], Matrix)
-    
 
     def convert_fcs_to_FCSFile(self,
                                input_directory: str,
@@ -325,7 +342,6 @@ class DatasetAssembler:
                                subsample_fcs_to: Optional[int]) -> list[FCSFile]:
         return [FCSFile(input_directory, file_name, subsample = subsample_fcs_to) for file_name in metadata_fcs_files]
         
-    
     def fetch_fcs_files(self,
                         input_directory: str,
                         metadata: Metadata,
