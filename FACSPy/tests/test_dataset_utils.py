@@ -10,9 +10,8 @@ from FACSPy.dataset._utils import (asinh,
                                    create_sample_subset_with_controls,
                                    find_corresponding_control_samples)
 
-from FACSPy.dataset._supplements import Metadata, Panel, CofactorTable
+from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
-
 
 def test_transform_data_array():
     cofactors = np.array([1,1,1], dtype = np.float64)
