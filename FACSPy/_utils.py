@@ -534,14 +534,14 @@ def _create_comparisons(data: pd.DataFrame,
                         splitby: Optional[str],
                         n: int = 2) -> list[tuple[str, str]]:
     groupby_values = data[groupby].unique()
-    from itertools import product
     if splitby:
         splitby_values = data[splitby].unique()
-        return [
-            tuple(zip(groupby_values, element))
-            for element in product(splitby_values, repeat = len(groupby_values))
-        ]
-    return list(combinations(data[groupby].unique(), n))
+        vals = [(g, s)
+                for g in groupby_values
+                for s in splitby_values]
+    else:
+        vals = groupby_values
+    return list(combinations(vals, n))
 
 def convert_cluster_to_gate(adata: AnnData,
                             obs_column: str,
