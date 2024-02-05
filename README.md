@@ -178,8 +178,8 @@ fp.pl.cell_counts(
 )
 ```
 <p float="left" align="center" width = 400>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" width = 300 alt="gate frequency plot"/>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts_split.png" width = 450 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" height = 300 width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts_split.png" height = 300 width = 250 alt="gate frequency plot"/>
 </p>
 
 
