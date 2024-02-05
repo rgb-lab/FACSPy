@@ -2,7 +2,7 @@ from anndata import AnnData
 import pandas as pd
 
 from typing import Optional
-from ._utils import _concat_gate_info_and_obs
+from ._utils import _concat_gate_info_and_sample_ID
 from .._utils import _find_parents_recursively, _flatten_nested_list
 
 def _calculate_gate_freq_per_parent(df: pd.DataFrame,
@@ -29,7 +29,7 @@ def gate_frequencies(adata: AnnData,
     adata = adata.copy() if copy else adata
     gates = adata.uns["gating_cols"].tolist()
     
-    data = _concat_gate_info_and_obs(adata)
+    data = _concat_gate_info_and_sample_ID(adata)
     data["root"] = True
     unique_gates = list(
         set(
