@@ -26,6 +26,14 @@ def _concat_gate_info_and_obs(adata: AnnData) -> pd.DataFrame:
                          index = obs.index)
     return pd.concat([gates, obs], axis = 1)
 
+def _concat_gate_info_and_sample_ID(adata: AnnData) -> pd.DataFrame:
+    sample_IDs = adata.obs[["sample_ID"]]
+    gates = pd.DataFrame(data = adata.obsm["gating"].todense(),
+                         columns = adata.uns["gating_cols"].tolist(),
+                         index = sample_IDs.index)
+    return pd.concat([gates, sample_IDs], axis = 1)
+
+
 def _scale_adata(adata: AnnData,
                  layer: Literal["compensated", "transformed"] = "transformed",
                  scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler") -> AnnData:
