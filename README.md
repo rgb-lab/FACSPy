@@ -299,8 +299,8 @@ fp.pl.fop(
 ```
 
 <p float="left" align="center" width = 400>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/mfi_plot.png" width = 200 alt="gate frequency plot"/>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/fop_plot.png" width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/mfi_plot.png" height = 300 width = 200 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/fop_plot.png" height = 300 width = 200 alt="gate frequency plot"/>
 </p>
 
 
