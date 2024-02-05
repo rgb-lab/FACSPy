@@ -206,8 +206,8 @@ fp.pl.gate_frequency(
 )
 ```
 <p float="left" align="center" width = 400>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 300 alt="gate frequency plot"/>
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency_split.png" width = 300 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" height = 600 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency_split.png" height = 600 alt="gate frequency plot"/>
 </p>
 
 
