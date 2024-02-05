@@ -28,7 +28,9 @@ from ..exceptions._exceptions import (AnalysisNotPerformedError,
                                       InvalidScalingError,
                                       MetaclusterOverwriteWarning,
                                       CofactorNotFoundWarning)
-from .._utils import _find_gate_path_of_gate, scatter_channels
+from .._utils import (_find_gate_path_of_gate,
+                      scatter_channels,
+                      _fetch_fluo_channels)
 
 from .._settings import settings
 
@@ -45,6 +47,49 @@ CATEGORICAL_BOXPLOT_PARAMS = {
     "boxprops": dict(facecolor = "white"),
     "whis": (0,100)
 }
+
+def _scale_heatmap_data(adata: AnnData,
+                        raw_data: pd.DataFrame,
+                        copy: bool,
+                        scaling: str) -> pd.DataFrame:
+    plot_data = raw_data.copy() if copy else raw_data
+    channels = [col for col in raw_data.columns if col in adata.var_names]
+ 
+    if scaling is not None:
+        plot_data[channels] = _scale_data(plot_data[channels], scaling)
+ 
+    return plot_data
+
+def _prepare_heatmap_data(adata: AnnData,
+                          gate: str,
+                          layer: str,
+                          data_metric: str,
+                          data_group: str,
+                          include_technical_channels: bool,
+                          scaling: str,
+                          return_raw_data: bool = False) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
+    raw_data = _get_uns_dataframe(adata = adata,
+                                  gate = gate,
+                                  table_identifier = f"{data_metric}_{data_group}_{layer}")
+    
+    if not include_technical_channels:
+        raw_data = _remove_technical_channels(adata,
+                                              raw_data)
+
+    plot_data = _scale_heatmap_data(adata = adata,
+                                    raw_data = raw_data,
+                                    copy = True,
+                                    scaling = scaling)
+    if return_raw_data:
+        return raw_data, plot_data
+    return plot_data
+
+def _remove_technical_channels(adata: AnnData,
+                               df: pd.DataFrame) -> pd.DataFrame:
+    fluo_channels = _fetch_fluo_channels(adata)
+    technical_channels = [ch for ch in adata.var_names
+                          if ch not in fluo_channels]
+    return df.drop(technical_channels, axis = 1)
 
 def _remove_ticks(ax: Axes,
                   which: Literal["x", "y", "both"]) -> None:
@@ -418,9 +463,9 @@ def _continous_color_vector(df: pd.DataFrame,
                             vmin: Optional[float],
                             vmax: Optional[float]):
     color_vector = df[color_col].values.copy()
-    if vmin:
+    if vmin is not None:
         color_vector[np.where(color_vector < vmin)] = vmin
-    if vmax:
+    if vmax is not None:
         color_vector[np.where(color_vector > vmax)] = vmax
     return color_vector
 

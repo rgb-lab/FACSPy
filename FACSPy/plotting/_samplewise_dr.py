@@ -1,5 +1,3 @@
-import warnings
-import pandas as pd
 from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -26,7 +24,6 @@ def _samplewise_dr_plot(adata: AnnData,
                         data_metric: str,
                         data_group: str,
                         layer: str,
-                        dataframe: pd.DataFrame,
                         color: Optional[Union[str, list[str]]],
                         reduction: Literal["PCA", "MDS", "TSNE", "UMAP"],
                         color_scale: Literal["biex", "log", "linear"],
@@ -48,14 +45,14 @@ def _samplewise_dr_plot(adata: AnnData,
         return data
     
     plotting_dimensions = _get_plotting_dimensions(reduction)
-    categorical_color = _color_var_is_categorical(dataframe[color])
+    categorical_color = _color_var_is_categorical(data[color])
     if not categorical_color:
         if color in adata.var_names and color_scale == "biex":
             color_cofactor = _retrieve_cofactor_or_set_to_default(adata,
                                                                   color)
         else:
             color_cofactor = None
-        color_vector = _continous_color_vector(dataframe,
+        color_vector = _continous_color_vector(data,
                                                color,
                                                vmin,
                                                vmax)
@@ -68,8 +65,8 @@ def _samplewise_dr_plot(adata: AnnData,
     plot_params = {
         "x": plotting_dimensions[0],
         "y": plotting_dimensions[1],
-        "data": dataframe,
-        "hue": dataframe[color] if categorical_color else None,
+        "data": data,
+        "hue": data[color] if categorical_color else None,
         "palette": cmap or settings.default_categorical_cmap,
         "c": transformed_color_vector if not categorical_color else None,
         "cmap": continous_cmap,

@@ -10,7 +10,6 @@ from ._categorical_stripplot import _categorical_strip_box_plot
 from ._utils import savefig_or_show
 
 from .._utils import (subset_gate,
-                      convert_gate_to_obs,
                       _find_gate_path_of_gate,
                       _find_parent_gate,
                       _find_grandparent_gate,
@@ -71,12 +70,10 @@ def _prepare_dataframe_cell_counts(adata: AnnData,
         groupings = ["sample_ID"]
     else:
         groupings = ["sample_ID", groupby]
-    #groupings = ["sample_ID"] + copy.copy(groupby) if "sample_ID" not in groupby else copy.copy(groupby)
+    
     if splitby is not None:
         groupings.append(splitby)
     groupings = list(set(groupings)) ## in case the user chooses groupby and splitby as the same
-    #if groupby == None:
-    #    return adata.obs["sample_ID"].value_counts().to_frame(name = "counts").reset_index(names = "sample_ID")
 
     return adata.obs[groupings].value_counts().to_frame(name = "counts").reset_index()
 
@@ -235,13 +232,10 @@ def cell_counts(adata: AnnData,
     
     """
 
-    if gate is not None:
-        if gate not in adata.obs.columns:
-            convert_gate_to_obs(adata, gate)
-        adata = subset_gate(adata,
-                            gate = gate,
-                            copy = False,
-                            as_view = True)
+    adata = subset_gate(adata,
+                        gate = gate,
+                        copy = False,
+                        as_view = True)
 
     data = _prepare_dataframe_cell_counts(adata,
                                           groupby,
@@ -257,7 +251,6 @@ def cell_counts(adata: AnnData,
         "hue": splitby,
         "palette": cmap or settings.default_categorical_cmap if splitby else None,
         "order": order
-
     }
 
     fig, ax = _categorical_strip_box_plot(ax = ax,

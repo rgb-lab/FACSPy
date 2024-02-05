@@ -6,6 +6,8 @@ from typing import Literal, Optional, Union
 
 from ._utils import (_scale_data,
                      _get_uns_dataframe,
+                     _remove_technical_channels,
+                     _prepare_heatmap_data,
                      _remove_ticklabels,
                      _remove_ticks,
                      _scale_cbar_to_heatmap,
@@ -16,16 +18,11 @@ from ._clustermap import create_clustermap
 
 from .._utils import _default_gate_and_default_layer
 
-def _prepare_plot_data(adata: AnnData,
-                       raw_data: pd.DataFrame,
-                       scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]],
-                       corr_method: Literal["pearson", "kendall", "spearman"],
-                       copy: bool = False
-                       ) -> pd.DataFrame:
-    plot_data = raw_data.copy() if copy else raw_data
-    fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
-    if scaling is not None:
-        plot_data[fluo_columns] = _scale_data(plot_data[fluo_columns], scaling)
+def _calculate_correlations(adata: AnnData,
+                            plot_data: pd.DataFrame,
+                            corr_method: Literal["pearson", "kendall", "spearman"],
+                            ) -> pd.DataFrame:
+    fluo_columns = [col for col in plot_data.columns if col in adata.var_names]
     correlations = _calculate_correlation_data(plot_data[fluo_columns],
                                                corr_method = corr_method)
     correlations = correlations.fillna(0)
@@ -40,6 +37,7 @@ def marker_correlation(adata: AnnData,
                        gate: str = None,
                        layer: str = None,
                        scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
+                       include_technical_channels: bool = False,
                        data_group: Optional[Union[str, list[str]]] = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
@@ -100,17 +98,19 @@ def marker_correlation(adata: AnnData,
     if `show==False` a :class:`~seaborn.ClusterGrid`
 
     """
+
+    plot_data = _prepare_heatmap_data(adata = adata,
+                                      gate = gate,
+                                      layer = layer,
+                                      data_metric = data_metric,
+                                      data_group = data_group,
+                                      include_technical_channels = include_technical_channels,
+                                      scaling = scaling)
+    
+    plot_data = _calculate_correlations(adata = adata,
+                                        plot_data = plot_data,
+                                        corr_method = corr_method)
  
-    raw_data = _get_uns_dataframe(adata = adata,
-                                  gate = gate,
-                                  table_identifier = f"{data_metric}_{data_group}_{layer}")
-    
-    plot_data = _prepare_plot_data(adata = adata,
-                                   raw_data = raw_data,
-                                   copy = False,
-                                   scaling = scaling,
-                                   corr_method = corr_method)
-    
     if return_dataframe:
         return plot_data
 
@@ -127,8 +127,8 @@ def marker_correlation(adata: AnnData,
     heatmap_position = ax.get_position()
     
     _scale_cbar_to_heatmap(clustermap,
-                          heatmap_position = heatmap_position,
-                          cbar_padding = 0.8)
+                           heatmap_position = heatmap_position,
+                           cbar_padding = 0.8)
     _remove_ticklabels(ax, which = "x")
     _remove_ticks(ax, which = "x")
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)

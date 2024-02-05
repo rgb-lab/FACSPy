@@ -10,6 +10,8 @@ from ._utils import (_scale_data,
                      _map_obs_to_cmap,
                      _calculate_sample_distance,
                      _calculate_linkage,
+                     _remove_technical_channels,
+                     _prepare_heatmap_data,
                      _remove_dendrogram,
                      _add_metaclusters,
                      _remove_ticklabels,
@@ -23,7 +25,8 @@ from ._utils import (_scale_data,
                      savefig_or_show)
 from ._clustermap import create_clustermap
 
-from .._utils import _default_gate_and_default_layer
+from .._utils import (_default_gate_and_default_layer,
+                      _fetch_fluo_channels)
 
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,
@@ -40,8 +43,9 @@ def prepare_plot_data(adata: AnnData,
 def expression_heatmap(adata: AnnData,
                        gate: str = None,
                        layer: str = None,
-                       annotate: Optional[Union[str, list[str]]] = None,
-                       plot_annotate: Optional[str] = None,
+                       metadata_annotation: Optional[Union[str, list[str]]] = None,
+                       marker_annotation: Optional[str] = None,
+                       include_technical_channels: bool = False,
                        data_group: Optional[Union[str, list[str]]] = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
@@ -125,30 +129,40 @@ def expression_heatmap(adata: AnnData,
 
     """
 
-    if not isinstance(annotate, list):
-        annotate = [annotate]    
+    if not isinstance(metadata_annotation, list) and metadata_annotation is not None:
+        metadata_annotation = [metadata_annotation]
+    elif metadata_annotation is None:
+        metadata_annotation = []
+
+    raw_data, plot_data = _prepare_heatmap_data(adata = adata,
+                                                gate = gate,
+                                                layer = layer,
+                                                data_metric = data_metric,
+                                                data_group = data_group,
+                                                include_technical_channels = include_technical_channels,
+                                                scaling = scaling,
+                                                return_raw_data = True)
     
-    raw_data = _get_uns_dataframe(adata = adata,
-                                  gate = gate,
-                                  table_identifier = f"{data_metric}_{data_group}_{layer}")
-    ### QUICK FIX FOR MISSING SAMPLES! CHECK CHECK CHECK!
-    raw_data = raw_data.dropna(axis = 0, how = "any")
-    fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
-    plot_data = prepare_plot_data(adata = adata,
-                                  raw_data = raw_data,
-                                  copy = True,
-                                  scaling = scaling)
-    ### QUICK FIX FOR MISSING SAMPLES! CHECK CHECK CHECK!
     plot_data = plot_data.dropna(axis = 0, how = "any")
+
+    cols_to_plot = _fetch_fluo_channels(adata) if not include_technical_channels else adata.var_names.tolist()
     
     if cluster_method == "correlation":
-        col_linkage = _calculate_linkage(_calculate_correlation_data(plot_data[fluo_columns].T, corr_method))
+        col_linkage = _calculate_linkage(
+            _calculate_correlation_data(
+                plot_data[cols_to_plot].T, corr_method
+                )
+            )
     
     elif cluster_method == "distance":
-        col_linkage = _calculate_linkage(_calculate_sample_distance(plot_data[fluo_columns]))
+        col_linkage = _calculate_linkage(
+            _calculate_sample_distance(
+                plot_data[cols_to_plot]
+                )
+            )
 
     if metaclusters is not None:
-        annotate += ["metacluster"]
+        metadata_annotation += ["metacluster"]
         plot_data = _add_metaclusters(adata = adata,
                                       data = plot_data,
                                       row_linkage = col_linkage,
@@ -157,15 +171,22 @@ def expression_heatmap(adata: AnnData,
                                       label_metaclusters = label_metaclusters_in_dataset,
                                       label_metaclusters_key = label_metaclusters_key)
 
-    plot_data = plot_data.set_index(data_group)
     if return_dataframe:
         return plot_data
+
+    plot_data = plot_data.set_index(data_group)
+    
+    if metadata_annotation:
+        col_colors = [
+            _map_obs_to_cmap(plot_data, group, ANNOTATION_CMAPS[i])
+            for i, group in enumerate(metadata_annotation)
+        ]
+    else:
+        col_colors = None
+
     ### for the heatmap, the dataframe is transposed so that sample_IDs are the columns
-    clustermap = create_clustermap(data = plot_data[fluo_columns].T,
-                                   col_colors = [
-                                       _map_obs_to_cmap(plot_data, group, ANNOTATION_CMAPS[i])
-                                       for i, group in enumerate(annotate)
-                                   ],
+    clustermap = create_clustermap(data = plot_data[cols_to_plot].T,
+                                   col_colors = col_colors,
                                    row_cluster = True,
                                    col_linkage = col_linkage,
                                    cmap = cmap,
@@ -190,18 +211,19 @@ def expression_heatmap(adata: AnnData,
     ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_label_fontsize)
     clustermap.ax_row_dendrogram.set_visible(False)
 
-    _add_categorical_legend_to_clustermap(clustermap,
-                                          heatmap = ax,
-                                          data = plot_data,
-                                          annotate = annotate)
+    if metadata_annotation:
+        _add_categorical_legend_to_clustermap(clustermap,
+                                              heatmap = ax,
+                                              data = plot_data,
+                                              annotate = metadata_annotation)
 
-    if plot_annotate is not None:
-        if plot_annotate in adata.var_names:
+    if marker_annotation is not None:
+        if marker_annotation in adata.var_names:
             raw_data = raw_data.set_index(data_group)
-            annot_frame = raw_data[plot_annotate]
+            annot_frame = raw_data[marker_annotation]
 
         add_annotation_plot(adata = adata,
-                            annotate = plot_annotate,
+                            annotate = marker_annotation,
                             annot_frame = annot_frame,
                             indices = indices,
                             clustermap = clustermap,

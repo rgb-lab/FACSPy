@@ -232,7 +232,6 @@ def _mfi_fop_baseplot(adata: AnnData,
         "order": order
     }
 
-
     fig, ax = _categorical_strip_box_plot(ax = ax,
                                           data = data,
                                           plot_params = plot_params,

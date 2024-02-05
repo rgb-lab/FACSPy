@@ -12,7 +12,8 @@ from typing import Literal, Union, Optional
 
 from ._utils import savefig_or_show
 from ..tools._fold_change import _calculate_fold_changes
-from .._utils import _default_gate_and_default_layer
+from .._utils import (_default_gate_and_default_layer,
+                      _fetch_fluo_channels)
 
 
 def _create_custom_cbar(cmap: str,
@@ -49,6 +50,7 @@ def fold_change(adata: AnnData,
                 group2: Union[str, list[Union[str, int]]] = None,
                 data_group: Optional[Union[str, list[str]]] = "sample_ID",
                 data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                include_technical_channels: bool = False,
                 stat: Literal["p", "p_adj"] = "p",
                 cmap: str = "Reds_r",
                 test: Literal["Kruskal", "Wilcoxon"] = "Kruskal",
@@ -140,6 +142,10 @@ def fold_change(adata: AnnData,
                                            test = test)
     fold_changes = fold_changes.sort_values("asinh_fc", ascending = False)
     fold_changes = fold_changes.reset_index()
+
+    if not include_technical_channels:
+         fluo_channels = _fetch_fluo_channels(adata)
+         fold_changes = fold_changes[fold_changes["index"].isin(fluo_channels)]
 
     if return_dataframe:
         return fold_changes

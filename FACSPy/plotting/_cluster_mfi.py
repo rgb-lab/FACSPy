@@ -10,6 +10,7 @@ from typing import Literal, Optional, Union
 from ._utils import (_scale_data,
                      _calculate_sample_distance,
                      _calculate_linkage,
+                     _prepare_heatmap_data,
                      _get_uns_dataframe,
                      _scale_cbar_to_heatmap,
                      _calculate_correlation_data,
@@ -17,11 +18,136 @@ from ._utils import (_scale_data,
                      add_annotation_plot,
                      savefig_or_show)
 from ._clustermap import create_clustermap
-from ._frequency_plots import _prep_dataframe_cluster_freq
+from ._frequency_plots import _prep_cluster_abundance
+from ._categorical_stripplot import _categorical_strip_box_plot
 
-from .._utils import _default_gate_and_default_layer
+from .._utils import (_default_gate_and_default_layer,
+                      _fetch_fluo_channels)
+from .._settings import settings
 
-def cluster_mfi(): return None
+def _cluster_mfi_fop_baseplot(data_metric: str,
+                              adata: AnnData,
+                              gate: str,
+                              layer: str,
+                              cluster_key: str,
+                              marker: str,
+                              splitby: Optional[str],
+                              cmap: str,
+                              order: list[str],
+                              stat_test: str,
+                              figsize: tuple[float, float],
+                              return_dataframe: bool,
+                              return_fig: bool,
+                              ax: Axes,
+                              save: bool,
+                              show: bool):
+
+    data = _get_uns_dataframe(adata = adata,
+                              gate = gate,
+                              table_identifier = f"{data_metric}_{cluster_key}_{layer}")
+
+    if "sample_ID" not in data.columns and "sample_ID" not in data.index.names:
+        raise TypeError(f"Please rerun cluster MFI analysis fp.tl.{data_metric} without aggregate set to True")
+    
+    if return_dataframe:
+        return data
+    
+    plot_params = {
+        "data": data,
+        "x": cluster_key,
+        "y": marker,
+        "hue": splitby,
+        "palette": cmap or settings.default_categorical_cmap if splitby else None,
+        "order": order
+    }
+
+    fig, ax = _categorical_strip_box_plot(ax = ax,
+                                          data = data,
+                                          plot_params = plot_params,
+                                          groupby = cluster_key,
+                                          splitby = splitby,
+                                          stat_test = stat_test,
+                                          figsize = figsize)
+
+    ax.set_title(f"{marker}\ngrouped by {cluster_key}")
+    ax.set_xlabel("")
+    ax.set_ylabel(f"{marker} {data_metric.upper()} " +
+                  f"[{'AFU' if data_metric == 'mfi' else 'dec.'}]")
+
+    if return_fig:
+        return fig
+
+    savefig_or_show(save = save, show = show)
+    
+    if show is False:
+        return ax
+
+def cluster_fop(adata: AnnData,
+                gate: str = None,
+                layer: str = None,
+                cluster_key: str = None,
+                marker: str = None,
+                splitby: Optional[str] = None,
+                cmap: str = None,
+                order: list[str] = None,
+                stat_test: str = "Kruskal",
+                figsize: tuple[float, float] = (3,3),
+                return_dataframe: bool = False,
+                return_fig: bool = False,
+                ax: Axes = None,
+                save: bool = None,
+                show: bool = None):
+    
+    return _cluster_mfi_fop_baseplot(data_metric = "fop",
+                                     adata = adata,
+                                     gate = gate,
+                                     layer = layer,
+                                     cluster_key = cluster_key,
+                                     marker = marker,
+                                     splitby = splitby,
+                                     cmap = cmap,
+                                     order = order,
+                                     stat_test = stat_test,
+                                     figsize = figsize,
+                                     return_dataframe = return_dataframe,
+                                     return_fig = return_fig,
+                                     ax = ax,
+                                     save = save,
+                                     show = show)
+
+
+def cluster_mfi(adata: AnnData,
+                gate: str = None,
+                layer: str = None,
+                cluster_key: str = None,
+                marker: str = None,
+                splitby: Optional[str] = None,
+                cmap: str = None,
+                order: list[str] = None,
+                stat_test: str = "Kruskal",
+                figsize: tuple[float, float] = (3,3),
+                return_dataframe: bool = False,
+                return_fig: bool = False,
+                ax: Axes = None,
+                save: bool = None,
+                show: bool = None):
+
+    return _cluster_mfi_fop_baseplot(data_metric = "mfi",
+                                     adata = adata,
+                                     gate = gate,
+                                     layer = layer,
+                                     cluster_key = cluster_key,
+                                     marker = marker,
+                                     splitby = splitby,
+                                     cmap = cmap,
+                                     order = order,
+                                     stat_test = stat_test,
+                                     figsize = figsize,
+                                     return_dataframe = return_dataframe,
+                                     return_fig = return_fig,
+                                     ax = ax,
+                                     save = save,
+                                     show = show)
 
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,
@@ -38,8 +164,9 @@ def prepare_plot_data(adata: AnnData,
 def cluster_heatmap(adata: AnnData,
                     gate: str = None,
                     layer: str = None,
-                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    cluster_key: Optional[Union[str, list[str]]] = None,
                     data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    include_technical_channels: bool = False,
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                     cluster_method: Literal["correlation", "distance"] = "distance",
@@ -114,27 +241,36 @@ def cluster_heatmap(adata: AnnData,
     if `show==False` a :class:`~seaborn.ClusterGrid`
  
     """
+    raw_data, plot_data = _prepare_heatmap_data(adata = adata,
+                                                gate = gate,
+                                                layer = layer,
+                                                data_metric = data_metric,
+                                                data_group = cluster_key,
+                                                include_technical_channels = include_technical_channels,
+                                                scaling = scaling,
+                                                return_raw_data = True)
     
-    raw_data = _get_uns_dataframe(adata = adata,
-                                  gate = gate,
-                                  table_identifier = f"{data_metric}_{data_group}_{layer}")
-    
-    fluo_columns = [col for col in raw_data.columns if col in adata.var_names]
-    plot_data = prepare_plot_data(adata = adata,
-                                  raw_data = raw_data,
-                                  copy = True,
-                                  scaling = scaling)
-    plot_data = plot_data.set_index(data_group)
     if return_dataframe:
         return plot_data
 
+    cols_to_plot = _fetch_fluo_channels(adata) if not include_technical_channels else adata.var_names.tolist()
+    plot_data = plot_data.set_index(cluster_key)
+
     if cluster_method == "correlation":
-        col_linkage = _calculate_linkage(_calculate_correlation_data(plot_data[fluo_columns].T, corr_method))
+        col_linkage = _calculate_linkage(
+            _calculate_correlation_data(
+                plot_data[cols_to_plot].T, corr_method
+            )
+        )
 
     elif cluster_method == "distance":
-        col_linkage = _calculate_linkage(_calculate_sample_distance(plot_data[fluo_columns]))
+        col_linkage = _calculate_linkage(
+            _calculate_sample_distance(
+                plot_data[cols_to_plot]
+                )
+            )
 
-    clustermap = create_clustermap(data = plot_data[fluo_columns].T,
+    clustermap = create_clustermap(data = plot_data[cols_to_plot].T,
                                    row_cluster = True,
                                    col_linkage = col_linkage,
                                    cmap = cmap,
@@ -162,14 +298,14 @@ def cluster_heatmap(adata: AnnData,
 
     if annotate is not None:
         if annotate == "frequency":
-            annot_frame = _prep_dataframe_cluster_freq(
+            annot_frame = _prep_cluster_abundance(
                 adata,
                 groupby = annotation_kwargs.get("groupby", "sample_ID"),
-                cluster_key = annotation_kwargs.get("cluster_key", "leiden"),
+                cluster_key = annotation_kwargs.get("cluster_key", cluster_key),
                 normalize = annotation_kwargs.get("normalize", True),
             )
         elif annotate in adata.var_names:
-            raw_data = raw_data.set_index(data_group)
+            raw_data = raw_data.set_index(cluster_key)
             annot_frame = raw_data[annotate]
 
         add_annotation_plot(adata = adata,
