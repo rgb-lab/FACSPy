@@ -165,13 +165,23 @@ fp.pl.cell_counts(
     dataset,
     gate = "live",
     groupby = "diag_main",
-    colorby = "organ",
-    figsize = (4,4)
+    figsize = (2,4)
+)
+
+fp.pl.cell_counts(
+    dataset,
+    gate = "live",
+    groupby = "diag_main",
+    splitby = "organ",
+    stat_test = False,
+    figsize = (2,4)
 )
 ```
-<p align="center">
-<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" width = 300 alt="gate frequency plot">
+<p float="left" align="center" width = 400>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts.png" width = 300 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/cell_counts_split.png" width = 450 alt="gate frequency plot"/>
 </p>
+
 
 ### Gate Frequency Analysis
 
@@ -182,11 +192,24 @@ fp.pl.gate_frequency(
     dataset,
     gate = "CD45+",
     groupby = "diag_main",
-    colorby = "organ",
     freq_of = "parent",
-    figsize = (4,4)
+    figsize = (2,4)
+)
+
+fp.pl.gate_frequency(
+    dataset,
+    gate = "CD45+",
+    groupby = "diag_main",
+    splitby = "organ",
+    freq_of = "parent",
+    figsize = (2,4)
 )
 ```
+<p float="left" align="center" width = 400>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 300 alt="gate frequency plot"/>
+<img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency_split.png" width = 450 alt="gate frequency plot"/>
+</p>
+
 <p align="center">
 <img src="https://github.com/TarikExner/FACSPy/blob/main/FACSPy/img/gate_frequency.png" width = 300 alt="gate frequency plot">
 </p>
@@ -266,7 +289,7 @@ fp.pl.mfi(
     groupby = "organ",
     marker = "PD-1_(CD279)",
     colorby = "diag_main",
-    figsize = (4,4)
+    figsize = (2,4)
 )
 
 fp.pl.fop(
@@ -274,7 +297,7 @@ fp.pl.fop(
     groupby = "organ",
     marker = "PD-1_(CD279)",
     colorby = "diag_main",
-    figsize = (4,4)
+    figsize = (2,4)
 )
 ```
 
@@ -410,7 +433,7 @@ FACSPy implements heatmap visualizations for expression data as well as correlat
 
 fp.pl.expression_heatmap(
     dataset,
-    annotate = ["organ", "diag_main", "diag_fine"],
+    metadata_annotation = ["organ", "diag_main", "diag_fine"],
     plot_annotate = "HLA_DR",
     figsize = (5,8)
 )
@@ -438,7 +461,7 @@ fp.pl.marker_correlation(
 ```python
 fp.pl.sample_correlation(
     dataset,
-    annotate = ["organ", "diag_main", "diag_fine"],
+    metadata_annotation = ["organ", "diag_main", "diag_fine"],
     metaclusters = 2,
     corr_method = "spearman",
     label_metaclusters_in_dataset = True,
@@ -454,7 +477,7 @@ fp.pl.sample_correlation(
 ```python
 fp.pl.sample_distance(
     dataset,
-    annotate = ["organ", "diag_main", "diag_fine"],
+    metadata_annotation = ["organ", "diag_main", "diag_fine"],
     metaclusters = 2,
     corr_method = "spearman",
     label_metaclusters_in_dataset = True,
@@ -478,6 +501,7 @@ fp.pl.fold_change(
     groupby  = "organ",
     group1 = "PB",
     group2 = "organ2",
+    figsize = (2,6)
 )
 ```
 
