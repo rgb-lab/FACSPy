@@ -298,7 +298,7 @@ class GateSampler:
 
             idxs = np.where(np.isin(y_mapped, above_k_neighbors_gates))[0]
             if idxs.shape[0] > 0:
-                if np.unique(y_mapped[idxs]).size > 1 or self.oversampler.__class__.__name__ not in ["SMOTE", "SVMSMOTE"]:
+                if np.unique(y_mapped[idxs]).size > 1 or self.oversampler().__class__.__name__ not in ["SMOTE", "SVMSMOTE"]:
                     oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_thresholds.items()
                                                                                          if k in above_k_neighbors_frequencies},
                                                                     **oversampler_kwargs)
@@ -337,7 +337,7 @@ class GateSampler:
 
             idxs = np.where(np.isin(y_mapped, above_k_neighbors_gates))[0]
             if idxs.shape[0] > 0:
-                if np.unique(y_mapped[idxs]).size > 1 or self.oversampler.__class__.__name__ not in ["SMOTE", "SVMSMOTE"]:
+                if np.unique(y_mapped[idxs]).size > 1 or self.oversampler().__class__.__name__ not in ["SMOTE", "SVMSMOTE"]:
                     oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_cutoff.items()
                                                                                          if k in above_k_neighbors_frequencies},
                                                                     **oversampler_kwargs)
