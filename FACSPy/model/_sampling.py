@@ -228,7 +228,6 @@ class GateSampler:
             self.rare_cells_target_size_per_gate = int(np.ceil(self.rare_cells_target_size / rare_cells))
             rare_cells_total = rare_cells * self.rare_cells_target_size_per_gate
             total -= rare_cells_total
-        
 
         return int(np.ceil(total / other_cells))
 
@@ -268,7 +267,7 @@ class GateSampler:
                 above_thresholds[bin_class] = self.target_size_per_gate
             elif self.rare_cell_cutoff < count <= self.target_size_per_gate:
                 below_thresholds[bin_class] = self.target_size_per_gate
-            elif count <= self.rare_cell_cutoff:
+            elif count <= self.rare_cell_cutoff and self.oversample_rare_cells:
                 if count > self.rare_cells_target_size_per_gate:
                     if self.oversample_rare_cells:
                         above_thresholds[bin_class] = self.rare_cells_target_size_per_gate
@@ -292,6 +291,7 @@ class GateSampler:
         if below_cutoff:
             idxs = np.where(np.isin(y_mapped, list(below_cutoff.keys())))[0]
             oversampler: BaseOverSampler = self.oversampler(sampling_strategy = below_cutoff)
+            # probably unnecessary check as below_cutoff shouldnt be filled anyway
             if self.oversample_rare_cells:
                 X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
                 y_ = y_.reshape(y_.shape[0], 1)
