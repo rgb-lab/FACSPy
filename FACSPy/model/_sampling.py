@@ -338,7 +338,6 @@ class GateSampler:
                                                                                      if k in above_k_neighbors_frequencies},
                                                                 **oversampler_kwargs)
 
-
                 X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
                 y_ = y_.reshape(y_.shape[0], 1)
                 X_sampled = np.vstack([X_sampled, X_])
