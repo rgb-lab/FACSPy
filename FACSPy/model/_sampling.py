@@ -298,13 +298,16 @@ class GateSampler:
 
             idxs = np.where(np.isin(y_mapped, above_k_neighbors_gates))[0]
             if idxs.shape[0] > 0:
-                oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_thresholds.items()
-                                                                                     if k in above_k_neighbors_frequencies},
-                                                                **oversampler_kwargs)
-                X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
-                y_ = y_.reshape(y_.shape[0], 1)
-                X_sampled = np.vstack([X_sampled, X_])
-                y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+                if np.unique(idxs).size > 1 or self.oversampler.__class__.__name__ not in ["SMOTE", "SVMSMOTE"]:
+                    oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_thresholds.items()
+                                                                                         if k in above_k_neighbors_frequencies},
+                                                                    **oversampler_kwargs)
+                    X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+                    y_ = y_.reshape(y_.shape[0], 1)
+                    X_sampled = np.vstack([X_sampled, X_])
+                    y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+                else:
+                    print("Warning... Omitting class because it was the only one")
 
             idxs = np.where(np.isin(y_mapped, below_k_neighbors_gates))[0]
             if idxs.shape[0] > 0:
@@ -334,14 +337,17 @@ class GateSampler:
 
             idxs = np.where(np.isin(y_mapped, above_k_neighbors_gates))[0]
             if idxs.shape[0] > 0:
-                oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_cutoff.items()
-                                                                                     if k in above_k_neighbors_frequencies},
-                                                                **oversampler_kwargs)
+                if np.unique(idxs).size > 1 or self.oversampler.__class__.__name__ not in ["SMOTE", "SVMSMOTE"]:
+                    oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_cutoff.items()
+                                                                                         if k in above_k_neighbors_frequencies},
+                                                                    **oversampler_kwargs)
 
-                X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
-                y_ = y_.reshape(y_.shape[0], 1)
-                X_sampled = np.vstack([X_sampled, X_])
-                y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+                    X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+                    y_ = y_.reshape(y_.shape[0], 1)
+                    X_sampled = np.vstack([X_sampled, X_])
+                    y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+                else:
+                    print("Warning... Omitting class because it was the only one")
 
             idxs = np.where(np.isin(y_mapped, below_k_neighbors_gates))[0]
             if idxs.shape[0] > 0:
