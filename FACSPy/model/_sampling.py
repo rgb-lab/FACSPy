@@ -98,9 +98,8 @@ IMPLEMENTED_UNDERSAMPLERS = {
 }
 
 class GateSampler:
-
+        
     def __init__(self,
-                 adata: AnnData,
                  target_size: [int] = None,
                  target_size_per_gate: Optional[int] = None,
                  oversampler: str = "Gaussian",
@@ -110,56 +109,58 @@ class GateSampler:
                  rare_cells_target_size_per_gate: Optional[int] = None,
                  rare_cells_target_fraction: Optional[float] = None) -> None:
         
-        self.adata = adata
-        
-        self._validate_input_parameters(oversampler,
-                                        undersampler)
-        
-        self.rare_cell_cutoff = rare_cells_cutoff or 50
-        self.oversample_rare_cells = oversample_rare_cells
-
-        if target_size and target_size_per_gate:
-            raise TypeError("Please provide a target size or a target size per gate")
-        if not target_size and not target_size_per_gate:
-            raise TypeError("Please provide target size or target_size_per_gate")
         self.target_size = target_size
         self.target_size_per_gate = target_size_per_gate
+        
+        self._rare_cell_cutoff = rare_cells_cutoff
+        if self._rare_cell_cutoff is None:
+            self.rare_cell_cutoff = 50
+        else:
+            self.rare_cell_cutoff = self._rare_cell_cutoff
+        self.oversample_rare_cells = oversample_rare_cells
 
-        if rare_cells_target_fraction and rare_cells_target_size_per_gate:
-            raise TypeError("Please provide a target size or a target size for rare cells")
-        if rare_cells_target_fraction is None and rare_cells_target_size_per_gate is None:
-            raise TypeError("Please provide target size or target_size_per_gate for rare cells")
-        
-        if target_size_per_gate and rare_cells_target_fraction:
-            raise TypeError("Invalid combination!")
-        
         self.rare_cells_target_fraction = rare_cells_target_fraction
+        self.rare_cells_target_size_per_gate = rare_cells_target_size_per_gate
+
+        self._oversampler = oversampler
+        self._undersampler = undersampler
+
+        self._validate_input_parameters()
+        
         if self.rare_cells_target_fraction:
             self.rare_cells_target_size = int(np.ceil(self.target_size * self.rare_cells_target_fraction))
         else:
             self.rare_cells_target_size_per_gate = int(rare_cells_target_size_per_gate)
 
         if isinstance(oversampler, str):
-            self.oversampler = IMPLEMENTED_OVERSAMPLERS[oversampler]
+            self.oversampler = IMPLEMENTED_OVERSAMPLERS[self._oversampler]
         else:
-            self.oversampler = oversampler
+            self.oversampler = self._oversampler
 
         if isinstance(undersampler, str):
-            self.undersampler = IMPLEMENTED_UNDERSAMPLERS[undersampler]
+            self.undersampler = IMPLEMENTED_UNDERSAMPLERS[self._undersampler]
         else:
-            self.undersampler = undersampler
+            self.undersampler = self._undersampler
         
         self.random_oversampler = IMPLEMENTED_OVERSAMPLERS["RandomOverSampler"]
 
         self._bit_ranges = None
 
-    def _validate_input_parameters(self,
-                                   oversampler,
-                                   undersampler) -> None:
-        if oversampler not in IMPLEMENTED_OVERSAMPLERS:
-            raise NotImplementedError(f"{oversampler} is not implemented. Please choose from {list(IMPLEMENTED_OVERSAMPLERS.keys())}")
-        if undersampler not in IMPLEMENTED_UNDERSAMPLERS:
-            raise NotImplementedError(f"{undersampler} is not implemented. Please choose from {list(IMPLEMENTED_UNDERSAMPLERS.keys())}")
+    def _validate_input_parameters(self):
+        if self._oversampler not in IMPLEMENTED_OVERSAMPLERS and isinstance(self._oversampler, str):
+            raise NotImplementedError(f"{self._oversampler} is not implemented. Please choose from {list(IMPLEMENTED_OVERSAMPLERS.keys())}")
+        if self._undersampler not in IMPLEMENTED_UNDERSAMPLERS and isinstance(self._undersampler, str):
+            raise NotImplementedError(f"{self._undersampler} is not implemented. Please choose from {list(IMPLEMENTED_UNDERSAMPLERS.keys())}")
+        if self.target_size_per_gate and self.target_size:
+            raise TypeError("Please provide a target size or a target size per gate")
+        if not self.target_size and not self.target_size_per_gate:
+            raise TypeError("Please provide target size or target_size_per_gate")
+        if self.rare_cells_target_fraction and self.rare_cells_target_size_per_gate:
+            raise TypeError("Please provide a target size or a target size for rare cells")
+        if self.rare_cells_target_fraction is None and self.rare_cells_target_size_per_gate is None:
+            raise TypeError("Please provide target size or target_size_per_gate for rare cells")
+        if self.target_size_per_gate and self.rare_cells_target_fraction:
+            raise TypeError("Invalid combination!")
         return
 
     def _subset_arrays_by_idx(self,
@@ -281,27 +282,82 @@ class GateSampler:
             y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
         
         if below_thresholds:
-            idxs = np.where(np.isin(y_mapped, list(below_thresholds.keys())))[0]
-            oversampler: BaseOverSampler = self.oversampler(sampling_strategy = below_thresholds)
-            X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
-            y_ = y_.reshape(y_.shape[0], 1)
-            X_sampled = np.vstack([X_sampled, X_])
-            y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+            below_threshold_gates = list(below_thresholds.keys())
 
-        if below_cutoff:
-            idxs = np.where(np.isin(y_mapped, list(below_cutoff.keys())))[0]
-            oversampler: BaseOverSampler = self.oversampler(sampling_strategy = below_cutoff)
-            # probably unnecessary check as below_cutoff shouldnt be filled anyway
-            if self.oversample_rare_cells:
+            below_k_neighbors_frequencies = {_class: _freq
+                                             for _class, _freq
+                                             in zip(binary_classes, binary_classes_frequency)
+                                             if (_class in below_threshold_gates) and (_freq <= 6)}
+            below_k_neighbors_gates = list(below_k_neighbors_frequencies.keys())
+
+            above_k_neighbors_frequencies = {_class: _freq
+                                             for _class, _freq
+                                             in zip(binary_classes, binary_classes_frequency)
+                                             if (_class in below_threshold_gates) and (_freq > 6)}
+            above_k_neighbors_gates = list(above_k_neighbors_frequencies.keys())
+
+            idxs = np.where(np.isin(y_mapped, above_k_neighbors_gates))[0]
+            if idxs.shape[0] > 0:
+                oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_thresholds.items()
+                                                                                     if k in above_k_neighbors_frequencies},
+                                                                **oversampler_kwargs)
                 X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
                 y_ = y_.reshape(y_.shape[0], 1)
                 X_sampled = np.vstack([X_sampled, X_])
                 y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
 
-        if self.target_size and X.shape[0] > self.target_size:
-            X_sampled, y_mapped_sampled = self._random_subsample(X_sampled,
-                                                                 y_mapped_sampled,
-                                                                 self.target_size)
+            idxs = np.where(np.isin(y_mapped, below_k_neighbors_gates))[0]
+            if idxs.shape[0] > 0:
+                oversampler: BaseOverSampler = GaussianOverSampler(sampling_strategy = {k: v for k, v in below_thresholds.items()
+                                                                                        if k in below_k_neighbors_frequencies})
+
+                X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+                y_ = y_.reshape(y_.shape[0], 1)
+                X_sampled = np.vstack([X_sampled, X_])
+                y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+
+        if below_cutoff:
+            below_cutoff_gates = list(below_cutoff.keys())
+
+            # for less than k_neighbors cells we have to use Gaussian sampling
+            below_k_neighbors_frequencies = {_class: _freq
+                                             for _class, _freq
+                                             in zip(binary_classes, binary_classes_frequency)
+                                             if (_class in below_cutoff_gates) and (_freq <= 6)}
+            below_k_neighbors_gates = list(below_k_neighbors_frequencies.keys())
+
+            above_k_neighbors_frequencies = {_class: _freq
+                                             for _class, _freq
+                                             in zip(binary_classes, binary_classes_frequency)
+                                             if (_class in below_cutoff_gates) and (_freq > 6)}
+            above_k_neighbors_gates = list(above_k_neighbors_frequencies.keys())
+
+            idxs = np.where(np.isin(y_mapped, above_k_neighbors_gates))[0]
+            if idxs.shape[0] > 0:
+                oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_cutoff.items()
+                                                                                     if k in above_k_neighbors_frequencies},
+                                                                **oversampler_kwargs)
+
+
+                X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+                y_ = y_.reshape(y_.shape[0], 1)
+                X_sampled = np.vstack([X_sampled, X_])
+                y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+
+            idxs = np.where(np.isin(y_mapped, below_k_neighbors_gates))[0]
+            if idxs.shape[0] > 0:
+                oversampler: BaseOverSampler = GaussianOverSampler(sampling_strategy = {k: v for k, v in below_cutoff.items()
+                                                                                        if k in below_k_neighbors_frequencies})
+
+                X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+                y_ = y_.reshape(y_.shape[0], 1)
+                X_sampled = np.vstack([X_sampled, X_])
+                y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+
+        #if self.target_size and X.shape[0] > self.target_size:
+        #    X_sampled, y_mapped_sampled = self._random_subsample(X_sampled,
+        #                                                         y_mapped_sampled,
+        #                                                         self.target_size)
 
         y_binary_sampled = self._apply_gate_map(y_mapped_sampled, reverse_gate_map)
         y_sampled = self._convert_binary_to_gate_matrix(y_binary_sampled.astype(np.int64).reshape(y_binary_sampled.shape[0], y_binary.shape[1]))
