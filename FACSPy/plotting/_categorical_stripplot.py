@@ -26,6 +26,7 @@ def _add_statistic(ax: Axes,
     annotator.apply_and_annotate()
 
     return ax
+
 def _categorical_strip_box_plot(ax: Optional[Axes],
                                 data: pd.DataFrame,
                                 plot_params: dict,
@@ -62,7 +63,7 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
                                     plot_params = plot_params)
             except ValueError as e:
                 if str(e) != "All numbers are identical in kruskal":
-                    raise ValueError from e
+                    raise ValueError(str(e)) from e
                 else:
                     print("warning... Values were uniform, no statistics to plot.")
 
