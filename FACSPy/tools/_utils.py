@@ -28,7 +28,7 @@ def _concat_gate_info_and_obs(adata: AnnData) -> pd.DataFrame:
 
 def _concat_gate_info_and_sample_ID(adata: AnnData) -> pd.DataFrame:
     sample_IDs = adata.obs[["sample_ID"]]
-    gates = pd.DataFrame(data = adata.obsm["gating"].todense(),
+    gates = pd.DataFrame(data = adata.obsm["gating"].toarray(),
                          columns = adata.uns["gating_cols"].tolist(),
                          index = sample_IDs.index)
     return pd.concat([gates, sample_IDs], axis = 1)
