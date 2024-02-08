@@ -1,4 +1,3 @@
-from anndata import AnnData
 import numpy as np
 
 from imblearn.over_sampling import BorderlineSMOTE, RandomOverSampler
@@ -231,13 +230,114 @@ class GateSampler:
             total -= rare_cells_total
 
         return int(np.ceil(total / other_cells))
-
+    
     def fit_resample(self,
                      X: np.ndarray,
                      y: np.ndarray,
                      shuffle: bool = True,
                      oversampler_kwargs: Optional[dict] = None,
                      undersampler_kwargs: Optional[dict] = None) -> tuple[np.ndarray, np.ndarray]:
+
+        if oversampler_kwargs is None:
+            oversampler_kwargs = {}
+        if undersampler_kwargs is None:
+            undersampler_kwargs = {}
+
+        y_binary = self._convert_gate_matrix_to_binary(y)
+        gate_map, reverse_gate_map = self._map_gate_matrix(y_binary)
+
+        y_mapped = self._apply_gate_map(y_binary, gate_map)
+        y_mapped = y_mapped.reshape(y_mapped.shape[0], 1)
+        
+        binary_classes, binary_classes_frequency = self._calculate_gate_frequencies(y_mapped)
+
+        X_sampled = np.empty(shape = (0, X.shape[1]),
+                             dtype = np.float64)
+        y_mapped_sampled = np.empty(shape = (0, y_mapped.shape[1]),
+                                    dtype = np.int64)
+
+        if self.target_size_per_gate is None:
+            self.target_size_per_gate = self._find_optimal_gate_sample_size(binary_classes_frequency)
+
+        rare_cell_classes = [cls for
+                             cls, count in zip(binary_classes, binary_classes_frequency)
+                             if count <= self.rare_cell_cutoff]
+        above_thresholds = {}
+        below_thresholds = {}
+        for bin_class, count in zip(binary_classes, binary_classes_frequency):
+            if bin_class in rare_cell_classes:
+                if count > self.rare_cells_target_size_per_gate:
+                    above_thresholds[bin_class] = self.rare_cells_target_size_per_gate
+                else:
+                    below_thresholds[bin_class] = self.rare_cells_target_size_per_gate
+            else:
+                if count > self.target_size_per_gate:
+                    above_thresholds[bin_class] = self.target_size_per_gate
+                else:
+                    below_thresholds[bin_class] = self.target_size_per_gate
+
+        for bin_class, count in above_thresholds.items():
+            idxs = np.where(y_mapped == bin_class)[0]
+            X_, y_ = self._random_subsample(X[idxs], y_mapped[idxs], min(self.target_size_per_gate, count))
+            X_sampled = np.vstack([X_sampled, X_])
+            y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+        
+        if below_thresholds:
+            below_threshold_gates = list(below_thresholds.keys())
+
+            below_k_neighbors_frequencies = {_class: _freq
+                                             for _class, _freq
+                                             in zip(binary_classes, binary_classes_frequency)
+                                             if (_class in below_threshold_gates) and (_freq <= 6)}
+            below_k_neighbors_gates = list(below_k_neighbors_frequencies.keys())
+
+            above_k_neighbors_frequencies = {_class: _freq
+                                             for _class, _freq
+                                             in zip(binary_classes, binary_classes_frequency)
+                                             if (_class in below_threshold_gates) and (_freq > 6)}
+            above_k_neighbors_gates = list(above_k_neighbors_frequencies.keys())
+
+            idxs = np.where(np.isin(y_mapped, above_k_neighbors_gates))[0]
+            if idxs.shape[0] > 0:
+                if np.unique(y_mapped[idxs]).size > 1 or self.oversampler().__class__.__name__ not in ["SMOTE", "SVMSMOTE"]:
+                    oversampler: BaseOverSampler = self.oversampler(sampling_strategy = {k: v for k, v in below_thresholds.items()
+                                                                                         if k in above_k_neighbors_frequencies},
+                                                                    **oversampler_kwargs)
+                    X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+                    y_ = y_.reshape(y_.shape[0], 1)
+                    X_sampled = np.vstack([X_sampled, X_])
+                    y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+                else:
+                    print("Warning... Omitting class because it was the only one")
+
+            idxs = np.where(np.isin(y_mapped, below_k_neighbors_gates))[0]
+            if idxs.shape[0] > 0:
+                oversampler: BaseOverSampler = GaussianOverSampler(sampling_strategy = {k: v for k, v in below_thresholds.items()
+                                                                                        if k in below_k_neighbors_frequencies})
+
+                X_, y_ = oversampler.fit_resample(X[idxs], y_mapped[idxs])
+                y_ = y_.reshape(y_.shape[0], 1)
+                X_sampled = np.vstack([X_sampled, X_])
+                y_mapped_sampled = np.vstack([y_mapped_sampled, y_])
+
+
+        #if self.target_size and X.shape[0] > self.target_size:
+        #    X_sampled, y_mapped_sampled = self._random_subsample(X_sampled,
+        #                                                         y_mapped_sampled,
+        #                                                         self.target_size)
+
+        y_binary_sampled = self._apply_gate_map(y_mapped_sampled, reverse_gate_map)
+        y_sampled = self._convert_binary_to_gate_matrix(y_binary_sampled.astype(np.int64).reshape(y_binary_sampled.shape[0], y_binary.shape[1]))
+
+        return self._shuffle(X_sampled, y_sampled) if shuffle else (X_sampled, y_sampled)
+
+
+    def fit_resample_safety(self,
+                            X: np.ndarray,
+                            y: np.ndarray,
+                            shuffle: bool = True,
+                            oversampler_kwargs: Optional[dict] = None,
+                            undersampler_kwargs: Optional[dict] = None) -> tuple[np.ndarray, np.ndarray]:
     
         if oversampler_kwargs is None:
             oversampler_kwargs = {}
@@ -259,6 +359,7 @@ class GateSampler:
 
         if self.target_size_per_gate is None:
             self.target_size_per_gate = self._find_optimal_gate_sample_size(binary_classes_frequency)
+
 
         above_thresholds = {}
         below_thresholds = {}
