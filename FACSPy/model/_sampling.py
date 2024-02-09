@@ -16,10 +16,11 @@ from typing import Optional
 class GaussianOverSampler:
 
     def __init__(self,
-                 sampling_strategy: dict,
+                 sampling_strategy: dict = None,
                  standard_deviation: float = 0.01,
                  random_state: int = 187) -> None:
-        
+        if sampling_strategy is None:
+            sampling_strategy = {}
         self.sampling_strategy = sampling_strategy
         self.sd = standard_deviation
         np.random.seed(random_state)
