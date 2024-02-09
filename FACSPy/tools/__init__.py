@@ -1,7 +1,7 @@
 from ._deg import *
 from ._fop import fop
 from ._mfi import mfi
-from ._gate_freq import gate_frequencies
+from ._gate_freq import gate_frequencies, gate_frequencies_mem
 from ._mst import *
 from ._dr import umap, tsne, diffmap, pca
 from ._parc import parc
