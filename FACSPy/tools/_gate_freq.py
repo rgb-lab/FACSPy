@@ -1,13 +1,13 @@
 from anndata import AnnData
 import pandas as pd
 import numpy as np
-
-from typing import Optional
-from ._utils import _concat_gate_info_and_sample_ID
-from .._utils import _find_parents_recursively, _flatten_nested_list
 from scipy.sparse import csr_matrix, hstack
 
-from typing import Any
+from typing import Optional
+
+from ._utils import _concat_gate_info_and_sample_ID
+from .._utils import _find_parents_recursively, _flatten_nested_list
+
 
 def gate_frequencies_mem(adata: AnnData,
                          copy: bool = False) -> Optional[AnnData]:
@@ -54,7 +54,7 @@ def _calculate_gate_freq_per_parent_mem(gate_mtx: csr_matrix,
                                         gate: str,
                                         gates: list[str],
                                         sample_IDs: list[str],
-                                        sample_ID_int_map: dict) -> Any:
+                                        sample_ID_int_map: dict) -> pd.DataFrame:
     parents = _find_parents_recursively(gate) if gate != "root" else []
     gates_of_interest = [
         goi for goi in gates if goi not in parents and goi != gate
