@@ -17,6 +17,7 @@ from .._utils import (subset_gate,
                       _find_grandparent_population,
                       _find_current_population,
                       _default_gate,
+                      _is_parent,
                       GATE_SEPARATOR)
 from ..exceptions._exceptions import AnalysisNotPerformedError, HierarchyError
 from .._settings import settings
@@ -43,16 +44,15 @@ def _prepare_dataframe_gate_frequency(adata: AnnData,
     
     gate = _find_gate_path_of_gate(adata, gate)
 
-    if freq_of not in gate.split(GATE_SEPARATOR)[:-1] and freq_of not in [None, "parent", "grandparent", "all"]:
-        raise HierarchyError
-    
     if freq_of == "parent":
         freq_of = _find_parent_gate(gate)
-    elif freq_of is None or freq_of == "all":
-        freq_of = "root"
     elif freq_of == "grandparent":
         freq_of = _find_grandparent_gate(gate)
-    elif GATE_SEPARATOR not in freq_of:
+    elif freq_of is None or freq_of == "all":
+        freq_of = "root"
+    else: 
+        if not _is_parent(adata, gate, freq_of):
+            raise HierarchyError
         freq_of = _find_gate_path_of_gate(adata, freq_of)
 
     df = df.loc[(df["gate"] == gate) & (df["freq_of"] == freq_of)]
