@@ -4,29 +4,20 @@ import os
 import pickle
 
 import pandas as pd
-from pandas import DatetimeIndex
 
 from ..synchronization._synchronize import _hash_dataset
-
-def _make_var_valid(adata: AnnData) -> bool:
-    for col in adata.var.columns:
-        if adata.var[col].dtype != "category":
-            adata.var[col] = adata.var[col].astype("str")
-            continue
-        if isinstance(adata.var[col].cat.categories, DatetimeIndex):
-            adata.var[col] = adata.var[col].astype("str").astype("category")
-            ### add warning!
-    return adata
-
-def _make_obs_valid(adata: AnnData) -> bool:
-    for col in adata.obs.columns:
-        if adata.obs[col].dtype != "category":
-            continue
-        if isinstance(adata.obs[col].cat.categories, DatetimeIndex):
-            adata.obs[col] = adata.obs[col].astype("str").astype("category")
-            ### add warning!
-    
-    return adata
+from ._utils import (_make_obs_valid,
+                     _make_obsm_valid,
+                     _make_obsp_valid,
+                     _make_var_valid,
+                     _make_varm_valid,
+                     _make_varp_valid,
+                     _make_layers_valid,
+                     _restore_obsm_keys,
+                     _restore_obsp_keys,
+                     _restore_varm_keys,
+                     _restore_varp_keys,
+                     _restore_layers_keys)
 
 def save_dataset(adata: AnnData,
                  output_dir: str,
@@ -40,14 +31,33 @@ def save_dataset(adata: AnnData,
     try:
         uns = adata.uns.copy()
         del adata.uns
-        adata = _make_obs_valid(adata)
-        adata = _make_var_valid(adata) 
+        _make_obs_valid(adata)
+        _make_var_valid(adata) 
+        _make_obsm_valid(adata)
+        _make_varm_valid(adata)
+        _make_obsp_valid(adata)
+        _make_varp_valid(adata)
+        _make_layers_valid(adata)
+
         adata.write(os.path.join(output_dir, f"{file_name}.h5ad"))
         with open(os.path.join(output_dir, f"{file_name}.uns"), "wb") as uns_metadata:
             pickle.dump(uns, uns_metadata)
+
+        _restore_obsm_keys(adata)
+        _restore_obsp_keys(adata)
+        _restore_varm_keys(adata)
+        _restore_varp_keys(adata)
+        _restore_layers_keys(adata)
+
     except Exception as e:
         ## if something fails, the adata object gets the uns slot back
         ## so that the user does not have to create the dataset again
+        ## no harm done for the obs and var, but we have to restore the other slot names
+        _restore_obsm_keys(adata)
+        _restore_obsp_keys(adata)
+        _restore_varm_keys(adata)
+        _restore_varp_keys(adata)
+        _restore_layers_keys(adata)
         adata.uns = uns
         raise e
 
@@ -61,6 +71,12 @@ def read_dataset(input_dir: str,
     
     import scanpy as sc
     adata = sc.read_h5ad(os.path.join(input_dir, f"{file_name}.h5ad"))
+    _restore_obsm_keys(adata)
+    _restore_obsp_keys(adata)
+    _restore_varm_keys(adata)
+    _restore_varp_keys(adata)
+    _restore_layers_keys(adata)
+
     with open(os.path.join(input_dir, f"{file_name}.uns"), "rb") as uns_metadata:
         uns = pd.read_pickle(uns_metadata)
     adata.uns = uns
