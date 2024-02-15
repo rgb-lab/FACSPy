@@ -50,6 +50,9 @@ def _check_gate_path(gate_path):
     if not GATE_SEPARATOR in gate_path:
         raise PopulationAsGateError(gate_path)
 
+def _is_parent(adata, gate, parent) -> bool:
+    """Substring analysis to see if these are actually children"""
+    return _find_gate_path_of_gate(adata, parent) in _find_gate_path_of_gate(adata, gate)
 
 def _find_current_population(gate: str) -> str:
     """Finds current population of a specified gating path
