@@ -5,6 +5,9 @@ from anndata import AnnData
 import anndata as ad
 import FACSPy as fp
 from FACSPy._utils import (GATE_SEPARATOR,
+                           _check_gate_name,
+                           _check_gate_path,
+                           _is_parent,
                            _find_gate_path_of_gate,
                            _extract_partial_gate_path_end,
                            _extract_partial_gate_path_start,
@@ -76,6 +79,96 @@ def mock_anndata_gating() -> AnnData:
         f"root{GATE_SEPARATOR}singlets{GATE_SEPARATOR}T_cells{GATE_SEPARATOR}subset"
     ])}
     return concatenated
+
+def test_check_gate_name_valid():
+    # Test valid gate names
+    assert _check_gate_name("valid_gate_name") is None
+    assert _check_gate_name("another_valid_gate") is None
+    assert _check_gate_name("root/singlets") is None
+
+def test_check_gate_name_invalid_start():
+    # Test gate names starting with GATE_SEPARATOR
+    with pytest.raises(GateNameError):
+        _check_gate_name("/invalid_start")
+
+def test_check_gate_name_invalid_end():
+    # Test gate names ending with GATE_SEPARATOR
+    with pytest.raises(GateNameError):
+        _check_gate_name("invalid_end/")
+
+def test_check_gate_name_empty():
+    # Test empty gate name
+    with pytest.raises(GateNotProvidedError):
+        _check_gate_name("")
+
+def test_check_gate_name_whitespace():
+    # Test gate name with only whitespace
+    assert _check_gate_name("   ") is None
+
+def test_check_gate_name_whitespace_start():
+    # Test gate name starting with whitespace
+    assert _check_gate_name("   gate") is None
+
+def test_check_gate_name_whitespace_end():
+    # Test gate name ending with whitespace
+    assert _check_gate_name("gate   ") is None
+
+def test_check_gate_name_whitespace_both_ends():
+    # Test gate name with whitespace both ends
+    assert _check_gate_name("   gate   ") is None
+
+def test_check_gate_path_valid():
+    # Test valid gate paths
+    assert _check_gate_path("root/singlets/T_cells") is None
+    assert _check_gate_path("root/singlets") is None
+
+def test_check_gate_path_invalid_name():
+    # Test invalid gate name
+    with pytest.raises(GateNameError):
+        _check_gate_path("/invalid_name")
+
+def test_check_gate_path_population_as_gate():
+    # Test gate path with population as gate
+    with pytest.raises(PopulationAsGateError):
+        _check_gate_path("population_as_gate")
+
+def test_check_gate_path_empty():
+    # Test empty gate path
+    with pytest.raises(GateNotProvidedError):
+        _check_gate_path("")
+
+def test_check_gate_path_whitespace():
+    # Test gate path with only whitespace
+    with pytest.raises(PopulationAsGateError):
+        _check_gate_path("   ")
+
+def test_check_gate_path_whitespace_start():
+    # Test gate path starting with whitespace
+    with pytest.raises(PopulationAsGateError):
+        _check_gate_path("   gate")
+
+def test_check_gate_path_whitespace_end():
+    # Test gate path ending with whitespace
+    with pytest.raises(PopulationAsGateError):
+        _check_gate_path("gate   ")
+
+def test_check_gate_path_whitespace_both_ends():
+    # Test gate path with whitespace both ends
+    with pytest.raises(PopulationAsGateError):
+       _check_gate_path("   gate   ")
+
+def test_is_parent_true():
+    # Test when gate is parent
+    adata = AnnData(uns={"gating_cols": pd.Index(["root/singlets", "root/singlets/T_cells"])})
+    assert _is_parent(adata, "root/singlets/T_cells", "root/singlets")
+    assert _is_parent(adata, "T_cells", "singlets")
+
+def test_is_parent_false():
+    # Test when gate is not parent
+    adata = AnnData(uns={"gating_cols": pd.Index(["root/singlets", "root/singlets/T_cells"])})
+    assert not _is_parent(adata, "root/singlets", "root/singlets/T_cells")
+    assert not _is_parent(adata, "singlets", "T_cells")
+    assert not _is_parent(adata, "T_cells", "T_cells")
 
 def test_extract_partial_gate_path_start():
     test_string1 = f"root{GATE_SEPARATOR}singlets"
