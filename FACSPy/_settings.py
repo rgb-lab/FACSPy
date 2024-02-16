@@ -12,14 +12,33 @@ class FACSPyConfig:
                  layer = "compensated",
                  gate = "",
                  tight_layout = False,
-                 default_categorical_cmap = "Set1"
+                 default_categorical_cmap = "Set1",
+                 gate_aliases = None
                  ):
         self.n_jobs = n_jobs
         self.default_layer = layer
         self.default_gate = gate
         self.tight_layout = tight_layout
         self.default_categorical_cmap = default_categorical_cmap
+        if gate_aliases is None:
+            self.gate_aliases = dict()
+        else:
+            self.gate_aliases = gate_aliases
 
+    @property
+    def gate_aliases(self):
+        return self._gate_aliases
+    
+    @gate_aliases.setter
+    def gate_aliases(self,
+                     gate_aliases):
+        self._gate_aliases = gate_aliases
+
+    def add_new_alias(self,
+                      gate_name,
+                      gate_alias) -> None:
+        self.gate_aliases[gate_alias] = gate_name
+    
     @property
     def n_jobs(self):
         return self._n_jobs
