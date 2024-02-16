@@ -3,6 +3,7 @@ from typing import Optional, Union
 import warnings
 import numpy as np
 import pandas as pd
+from itertools import combinations
 
 from .exceptions._exceptions import (ChannelSubsetError,
                                      GateNotFoundError,
@@ -11,10 +12,6 @@ from .exceptions._exceptions import (ChannelSubsetError,
                                      ExhaustedGatePathError,
                                      GateNameError)
 from .exceptions._utils import GateNotProvidedError, ExhaustedHierarchyError
-from itertools import combinations
-
-import inspect
-
 
 reduction_names = {
     reduction: [f"{reduction}{i}" for i in range(1,50)] for reduction in ["PCA", "MDS", "UMAP", "TSNE"]
@@ -652,86 +649,120 @@ def convert_var_to_panel(adata: AnnData,
     
     return adata if copy else None
 
-
 def _default_layer(func):
-    argspec = inspect.getfullargspec(func)
-    position_count = len(argspec.args) - len(argspec.defaults)
-
-    def add_default_layer(*args, **kwargs):
-        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
-
-        used_kwargs = kwargs.copy()
-        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
-        
-        # we delete every default that is overwritten by the user
-        defaults = {
-            k: v for (k,v) in defaults.items()
-            if k not in used_kwargs
-        }
-
-        # if its still in defaults, its not set by the user 
-        # and we can set the settings default
-        from . import settings
-        if "layer" in defaults: 
-            defaults["layer"] = settings.default_layer
-        kwargs = {**used_kwargs, **defaults}
+    def __add_default_layer(*args, **kwargs):
+        if "layer" in kwargs and kwargs["layer"] is None or "layer" not in kwargs:
+            from ._settings import settings
+            kwargs["layer"] = settings.default_layer
         return func(*args, **kwargs)
-    return add_default_layer
+    return __add_default_layer
 
 def _default_gate(func):
-    argspec = inspect.getfullargspec(func)
-    position_count = len(argspec.args) - len(argspec.defaults)
-
-    def add_default_gate(*args, **kwargs):
-        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
-
-        used_kwargs = kwargs.copy()
-        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
-        
-        # we delete every default that is overwritten by the user
-        defaults = {
-            k: v for (k,v) in defaults.items()
-            if k not in used_kwargs
-        }
-
-        # if its still in defaults, its not set by the user 
-        # and we can set the settings default
-        from . import settings
-        if "gate" in defaults: 
-            defaults["gate"] = settings.default_gate
-        kwargs = {**used_kwargs, **defaults}
+    def __add_default_gate(*args, **kwargs):
+        if "gate" in kwargs and kwargs["gate"] is None or "gate" not in kwargs:
+            from ._settings import settings
+            kwargs["gate"] = settings._default_gate
         return func(*args, **kwargs)
-    return add_default_gate
+    return __add_default_gate
 
 def _default_gate_and_default_layer(func):
-    """
-    combines the functionality of _default_gate and _default_layer
-    until we fix this to be a chained decorator we have to live with code duplication...
-    """
-    argspec = inspect.getfullargspec(func)
-    position_count = len(argspec.args) - len(argspec.defaults)
-
-    def add_default_gate(*args, **kwargs):
-        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
-
-        used_kwargs = kwargs.copy()
-        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
-        
-        # we delete every default that is overwritten by the user
-        defaults = {
-            k: v for (k,v) in defaults.items()
-            if k not in used_kwargs
-        }
-
-        # if its still in defaults, its not set by the user 
-        # and we can set the settings default
-        from . import settings
-        if "gate" in defaults: 
-            defaults["gate"] = settings.default_gate
-        if "layer" in defaults: 
-            defaults["layer"] = settings.default_layer
-        kwargs = {**used_kwargs, **defaults}
+    @_default_gate
+    @_default_layer
+    def __add_default_gate_and_default_layer(*args, **kwargs):
         return func(*args, **kwargs)
-    return add_default_gate
+    return __add_default_gate_and_default_layer
 
+def _enable_gate_aliases(func):
+    def __allow_gate_aliases(*args, **kwargs):
+        if "gate" in kwargs:
+            gate = kwargs["gate"]
+            from ._settings import settings
+            if gate in settings.gate_aliases:
+                kwargs["gate"] = settings.gate_aliases[gate]
+                print(f"Using the provided gate alias {gate} for gate {kwargs['gate']}")
+        return func(*args, **kwargs)
+    return __allow_gate_aliases
 
+#def _default_layer(func):
+#    argspec = inspect.getfullargspec(func)
+#    position_count = len(argspec.args) - len(argspec.defaults)
+#
+#    def add_default_layer(*args, **kwargs):
+#        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
+#
+#        used_kwargs = kwargs.copy()
+#        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
+#        
+#        # we delete every default that is overwritten by the user
+#        defaults = {
+#            k: v for (k,v) in defaults.items()
+#            if k not in used_kwargs
+#        }
+#
+#        # if its still in defaults, its not set by the user 
+#        # and we can set the settings default
+#        from . import settings
+#        if "layer" in defaults: 
+#            defaults["layer"] = settings.default_layer
+#        kwargs = {**used_kwargs, **defaults}
+#        return func(*args, **kwargs)
+#    return add_default_layer
+#
+#def _default_gate(func):
+#    argspec = inspect.getfullargspec(func)
+#    position_count = len(argspec.args) - len(argspec.defaults)
+#
+#    def add_default_gate(*args, **kwargs):
+#        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
+#
+#        used_kwargs = kwargs.copy()
+#        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
+#        
+#        # we delete every default that is overwritten by the user
+#        defaults = {
+#            k: v for (k,v) in defaults.items()
+#            if k not in used_kwargs
+#        }
+#
+#        # if its still in defaults, its not set by the user 
+#        # and we can set the settings default
+#        from . import settings
+#        if "gate" in defaults: 
+#            defaults["gate"] = settings.default_gate
+#        kwargs = {**used_kwargs, **defaults}
+#        return func(*args, **kwargs)
+#    return add_default_gate
+#
+#def _default_gate_and_default_layer(func):
+#    """
+#    combines the functionality of _default_gate and _default_layer
+#    until we fix this to be a chained decorator we have to live with code duplication...
+#    """
+#    argspec = inspect.getfullargspec(func)
+#    position_count = len(argspec.args) - len(argspec.defaults)
+#
+#    def add_default_gate(*args, **kwargs):
+#        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
+#
+#        used_kwargs = kwargs.copy()
+#        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
+#        
+#        # we delete every default that is overwritten by the user
+#        defaults = {
+#            k: v for (k,v) in defaults.items()
+#            if k not in used_kwargs
+#        }
+#
+#        # if its still in defaults, its not set by the user 
+#        # and we can set the settings default
+#        from . import settings
+#        if "gate" in defaults: 
+#            defaults["gate"] = settings.default_gate
+#        if "layer" in defaults: 
+#            defaults["layer"] = settings.default_layer
+#        kwargs = {**used_kwargs, **defaults}
+#        return func(*args, **kwargs)
+#    return add_default_gate
+#
+#
+#
