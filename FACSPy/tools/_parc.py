@@ -15,10 +15,12 @@ from ._pca import _pca
 from ._neighbors import _neighbors
 
 from .._utils import (_default_gate_and_default_layer,
+                      _enable_gate_aliases,
                       IMPLEMENTED_SCALERS)
 from ..exceptions._exceptions import InvalidScalingError
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def parc(adata: AnnData,
          gate: str = None,
          layer: str = None,

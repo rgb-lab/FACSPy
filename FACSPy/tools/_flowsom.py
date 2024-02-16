@@ -9,10 +9,14 @@ from ._utils import (_preprocess_adata,
                      _save_cluster_settings)
 
 from .._utils import (_default_gate_and_default_layer,
+                      _default_gate,
+                      _default_layer,
+                      _enable_gate_aliases,
                       IMPLEMENTED_SCALERS)
 from ..exceptions._exceptions import InvalidScalingError
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def flowsom(adata: AnnData,
             gate: str = None,
             layer: str = None,

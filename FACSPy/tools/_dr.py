@@ -16,10 +16,12 @@ from ._utils import (_preprocess_adata,
                      _recreate_preprocessed_view)
 
 from .._utils import (_default_gate_and_default_layer,
+                      _enable_gate_aliases,
                       IMPLEMENTED_SCALERS)
 from ..exceptions._exceptions import InvalidScalingError
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def pca(adata: AnnData,
         gate: str = None,
         layer: str = None,
@@ -137,6 +139,7 @@ def pca(adata: AnnData,
     return adata if copy else None
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def diffmap(adata: AnnData,
             gate: str = None,
             layer: str = None,
@@ -288,6 +291,7 @@ def diffmap(adata: AnnData,
     return adata if copy else None
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def umap(adata: AnnData,
          gate: str = None,
          layer: str = None,
@@ -372,6 +376,7 @@ def umap(adata: AnnData,
     return adata if copy else None
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def tsne(adata: AnnData,
          gate: str = None,
          layer: str = None,
