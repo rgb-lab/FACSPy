@@ -16,7 +16,8 @@ from ._cofactor_plots import calculate_histogram_data
 
 from .._utils import (_flatten_nested_list,
                       subset_gate,
-                      _default_gate_and_default_layer)
+                      _default_gate_and_default_layer,
+                      _enable_gate_aliases)
 
 def _map_pal_to_groupby(pal: dict,
                         data: pd.DataFrame,
@@ -66,6 +67,7 @@ def _append_colorby_variable(adata: AnnData,
 
 #TODO: check if mapping is possible: either the colorby is not in metadata or the grouping by sampleID leads to multiple outputs, not mappable.
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def marker_density(adata: AnnData,
                    gate: str = None,
                    layer: str = None,

@@ -9,10 +9,11 @@ from ._categorical_stripplot import _categorical_strip_box_plot
 from ._utils import (_get_uns_dataframe,
                      savefig_or_show)
 
-from .._utils import _default_gate_and_default_layer
+from .._utils import _default_gate_and_default_layer, _enable_gate_aliases
 from .._settings import settings
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def fop(adata: AnnData,
         gate: str = None,
         layer: str = None,
@@ -104,6 +105,7 @@ def fop(adata: AnnData,
 
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def mfi(adata: AnnData,
         gate: str = None,
         layer: str = None,

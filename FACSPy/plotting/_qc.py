@@ -17,6 +17,7 @@ from .._utils import (subset_gate,
                       _find_grandparent_population,
                       _find_current_population,
                       _default_gate,
+                      _enable_gate_aliases,
                       _is_parent,
                       GATE_SEPARATOR)
 from ..exceptions._exceptions import AnalysisNotPerformedError, HierarchyError
@@ -78,6 +79,7 @@ def _prepare_dataframe_cell_counts(adata: AnnData,
     return adata.obs[groupings].value_counts().to_frame(name = "counts").reset_index()
 
 @_default_gate
+@_enable_gate_aliases
 def gate_frequency(adata: AnnData,
                    gate: Union[str, list[str]] = None,
                    freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent", "all"]]] = None,
@@ -177,6 +179,7 @@ def gate_frequency(adata: AnnData,
 
 
 @_default_gate
+@_enable_gate_aliases
 def cell_counts(adata: AnnData,
                 gate: str = None,
                 groupby: Optional[Union[str, list[str]]] = None,

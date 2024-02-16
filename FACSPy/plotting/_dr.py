@@ -10,7 +10,7 @@ from typing import Optional
 
 from ._utils import savefig_or_show
 
-from .._utils import _default_gate_and_default_layer
+from .._utils import _default_gate_and_default_layer, _enable_gate_aliases
 
 ## BIG TODO!: check for dataset hash before assuming that PCA has been calculated!
 def _create_dimred_dataframe(adata: AnnData,
@@ -60,6 +60,7 @@ def _create_dimred_plot(adata: AnnData,
     return axs
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def diffmap(adata: AnnData,
             gate: str = None,
             layer: str = None,
@@ -146,6 +147,7 @@ def diffmap(adata: AnnData,
         return fig
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def pca(adata: AnnData,
         gate: str = None,
         layer: str = None,
@@ -232,6 +234,7 @@ def pca(adata: AnnData,
         return fig
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def tsne(adata: AnnData,
          gate: str = None,
          layer: str = None,
@@ -319,6 +322,7 @@ def tsne(adata: AnnData,
         return fig
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def umap(adata: AnnData,
          gate: str = None,
          layer: str = None,

@@ -22,7 +22,8 @@ from ._frequency_plots import _prep_cluster_abundance
 from ._categorical_stripplot import _categorical_strip_box_plot
 
 from .._utils import (_default_gate_and_default_layer,
-                      _fetch_fluo_channels)
+                      _fetch_fluo_channels,
+                      _enable_gate_aliases)
 from .._settings import settings
 
 def _cluster_mfi_fop_baseplot(data_metric: str,
@@ -82,6 +83,7 @@ def _cluster_mfi_fop_baseplot(data_metric: str,
     if show is False:
         return ax
 
+@_enable_gate_aliases
 def cluster_fop(adata: AnnData,
                 gate: str = None,
                 layer: str = None,
@@ -115,7 +117,7 @@ def cluster_fop(adata: AnnData,
                                      save = save,
                                      show = show)
 
-
+@_enable_gate_aliases
 def cluster_mfi(adata: AnnData,
                 gate: str = None,
                 layer: str = None,
@@ -161,6 +163,7 @@ def prepare_plot_data(adata: AnnData,
     return plot_data
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def cluster_heatmap(adata: AnnData,
                     gate: str = None,
                     layer: str = None,

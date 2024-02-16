@@ -19,7 +19,8 @@ from ..dataset._utils import (find_corresponding_control_samples,
 from .._utils import (subset_gate,
                       _is_valid_sample_ID,
                       _is_valid_filename,
-                      _default_gate)
+                      _default_gate,
+                      _enable_gate_aliases)
 
 
 def prepare_data_subsets(adata: AnnData,
@@ -159,6 +160,7 @@ def transformation_histogram_plot(type: Literal["compensated", "transformed"],
     return ax
 
 @_default_gate
+@_enable_gate_aliases
 def transformation_plot(adata: AnnData,
                         gate: Optional[str] = None,
                         sample_identifier: str = None,

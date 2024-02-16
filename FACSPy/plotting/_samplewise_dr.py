@@ -15,7 +15,9 @@ from ._utils import (_get_uns_dataframe,
                      _generate_continous_color_scale,
                      _transform_color_to_scale)
 
-from .._utils import _default_gate_and_default_layer, reduction_names
+from .._utils import (_default_gate_and_default_layer,
+                      _enable_gate_aliases,
+                      reduction_names)
 
 from .._settings import settings
 
@@ -106,6 +108,7 @@ def _get_plotting_dimensions(reduction: str):
     return reduction_names[reduction][:2]
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def pca_samplewise(adata: AnnData,
                    gate: str = None,
                    layer: str = None,
@@ -196,6 +199,7 @@ def pca_samplewise(adata: AnnData,
 
 
 @_default_gate_and_default_layer 
+@_enable_gate_aliases
 def mds_samplewise(adata: AnnData,
                    gate: str = None, 
                    layer: str = None,
@@ -285,6 +289,7 @@ def mds_samplewise(adata: AnnData,
                                show = show)
 
 @_default_gate_and_default_layer 
+@_enable_gate_aliases
 def umap_samplewise(adata: AnnData,
                     gate: str = None, 
                     layer: str = None,
@@ -375,6 +380,7 @@ def umap_samplewise(adata: AnnData,
 
 
 @_default_gate_and_default_layer 
+@_enable_gate_aliases
 def tsne_samplewise(adata: AnnData,
                     gate: str = None, 
                     layer: str = None,

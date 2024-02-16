@@ -12,7 +12,9 @@ from typing import Optional
 from ._utils import savefig_or_show
 from ._categorical_stripplot import _categorical_strip_box_plot
 
-from .._utils import _default_gate_and_default_layer, subset_gate
+from .._utils import (_default_gate_and_default_layer,
+                      subset_gate,
+                      _enable_gate_aliases)
 from .._settings import settings
 
 def _prep_cluster_abundance(adata: AnnData,
@@ -60,6 +62,7 @@ def _prepare_cluster_frequencies(adata: AnnData,
 
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def cluster_frequency(adata: AnnData,
                       gate: str = None,
                       layer: str = None,

@@ -21,7 +21,7 @@ from ._utils import (_map_obs_to_cmap,
 
 from ._clustermap import create_clustermap
 
-from .._utils import _default_gate_and_default_layer
+from .._utils import _default_gate_and_default_layer, _enable_gate_aliases
 
 def _calculate_distances(adata: AnnData,
                          plot_data: pd.DataFrame) -> pd.DataFrame:
@@ -39,6 +39,7 @@ def _calculate_distances(adata: AnnData,
     return plot_data
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def sample_distance(adata: AnnData,
                     gate: str = None,
                     layer: str = None,

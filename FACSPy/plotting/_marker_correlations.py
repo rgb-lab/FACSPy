@@ -16,7 +16,7 @@ from ._utils import (_scale_data,
 
 from ._clustermap import create_clustermap
 
-from .._utils import _default_gate_and_default_layer
+from .._utils import _default_gate_and_default_layer, _enable_gate_aliases
 
 def _calculate_correlations(adata: AnnData,
                             plot_data: pd.DataFrame,
@@ -33,6 +33,7 @@ def _calculate_correlations(adata: AnnData,
     return plot_data
 
 @_default_gate_and_default_layer
+@_enable_gate_aliases
 def marker_correlation(adata: AnnData,
                        gate: str = None,
                        layer: str = None,

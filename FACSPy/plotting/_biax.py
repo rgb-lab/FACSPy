@@ -22,7 +22,8 @@ from ._utils import (savefig_or_show,
 from .._utils import (subset_gate,
                       _is_valid_filename,
                       _is_valid_sample_ID,
-                      _default_layer)
+                      _default_layer,
+                      _enable_gate_aliases)
 
 def _generate_scale_kwargs(channel,
                            channel_scale,
@@ -64,6 +65,7 @@ def _calculate_density(x: np.ndarray,
     return z
 
 @_default_layer
+@_enable_gate_aliases
 def biax(adata: AnnData,
          gate: str,
          layer: Optional[str] = None,
