@@ -41,7 +41,7 @@ def test_make_var_valid(mock_dataset: AnnData):
     assert not isinstance(mock_dataset.var["some_floats"].dtype, pd.CategoricalDtype)
     
 
-    mock_dataset = _make_var_valid(mock_dataset)
+    _make_var_valid(mock_dataset)
     assert mock_dataset.var["some_floats"].dtype == "O"
     assert mock_dataset.var["datetimes"].cat.categories.dtype == "O"
 
@@ -54,7 +54,7 @@ def test_make_obs_valid(mock_dataset: AnnData):
     assert not isinstance(mock_dataset.obs["some_floats"].dtype, pd.CategoricalDtype)
     
 
-    mock_dataset = _make_obs_valid(mock_dataset)
+    _make_obs_valid(mock_dataset)
     assert mock_dataset.obs["some_floats"].dtype == "float64"
     assert mock_dataset.obs["datetimes"].cat.categories.dtype == "O"
 
