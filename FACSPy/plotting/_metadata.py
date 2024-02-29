@@ -65,5 +65,3 @@ def metadata(adata: AnnData,
 
     if show is False:
         return ax
-
-    
