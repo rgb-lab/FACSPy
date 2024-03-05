@@ -122,6 +122,10 @@ class BaseSupplement:
         if isinstance(self, CofactorTable):
             self.dataframe = self.dataframe.loc[self.dataframe["fcs_colname"].isin(channels)]
 
+    def _remove_unnamed_columns(self):
+        unnamed_columns = [col for col in self.dataframe.columns if "Unnamed:" in col]
+        self.dataframe = self.dataframe.drop(unnamed_columns, axis = 1)
+
 class Panel(BaseSupplement):
     
     """
@@ -143,6 +147,7 @@ class Panel(BaseSupplement):
         
         self.dataframe = self.validate_user_supplied_table(self.dataframe,
                                                            ["fcs_colname", "antigens"])
+        self._remove_unnamed_columns()
         self.dataframe = self.strip_prefixes(self.dataframe)
     
     def __repr__(self):
@@ -180,6 +185,7 @@ class Metadata(BaseSupplement):
                          from_fcs = from_fcs)
         self.dataframe: pd.DataFrame = self.validate_user_supplied_table(self.dataframe,
                                                                          ["sample_ID", "file_name"])
+        self._remove_unnamed_columns()
         self.factors = self._extract_metadata_factors()
         self._manage_dtypes()
         self._make_dataframe_categorical()
@@ -271,6 +277,7 @@ class CofactorTable(BaseSupplement):
         
         self.dataframe = self.validate_user_supplied_table(self.dataframe,
                                                            ["fcs_colname", "cofactors"])
+        self._remove_unnamed_columns()
         self.dataframe = self.strip_prefixes(self.dataframe)
     
     def __repr__(self):
