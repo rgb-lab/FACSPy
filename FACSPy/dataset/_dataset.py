@@ -71,11 +71,13 @@ class DatasetAssembler:
                  panel: Panel,
                  workspace: Union[FlowJoWorkspace, DivaWorkspace],
                  subsample_fcs_to: Optional[int] = None,
+                 truncate_max_range: bool = False,
                  keep_raw: bool = False) -> AnnData:
 
         file_list: list[FCSFile] = self.fetch_fcs_files(input_directory,
                                                         metadata,
-                                                        subsample_fcs_to)
+                                                        subsample_fcs_to,
+                                                        truncate_max_range)
         
         self._append_comp_matrices(file_list,
                                    workspace)
@@ -339,19 +341,30 @@ class DatasetAssembler:
     def convert_fcs_to_FCSFile(self,
                                input_directory: str,
                                metadata_fcs_files: list[str],
-                               subsample_fcs_to: Optional[int]) -> list[FCSFile]:
-        return [FCSFile(input_directory, file_name, subsample = subsample_fcs_to) for file_name in metadata_fcs_files]
+                               subsample_fcs_to: Optional[int],
+                               truncate_max_range) -> list[FCSFile]:
+        return [
+            FCSFile(input_directory,
+                    file_name,
+                    subsample = subsample_fcs_to,
+                    truncate_max_range = truncate_max_range)
+            for file_name in metadata_fcs_files
+        ]
         
     def fetch_fcs_files(self,
                         input_directory: str,
                         metadata: Metadata,
-                        subsample_fcs_to: Optional[int]) -> list[FCSFile]:
+                        subsample_fcs_to: Optional[int],
+                        truncate_max_range) -> list[FCSFile]:
         
         # sourcery skip: use-named-expression
         metadata_fcs_files = metadata.dataframe["file_name"].to_list()
         
         if metadata_fcs_files:
-            return self.convert_fcs_to_FCSFile(input_directory, metadata_fcs_files, subsample_fcs_to)   
+            return self.convert_fcs_to_FCSFile(input_directory,
+                                               metadata_fcs_files,
+                                               subsample_fcs_to,
+                                               truncate_max_range)   
         
         available_fcs_files = [file for file in os.listdir(input_directory)
                                 if file.endswith(".fcs")]
@@ -359,7 +372,8 @@ class DatasetAssembler:
                                               available_fcs_files)
         return self.convert_fcs_to_FCSFile(input_directory,
                                            available_fcs_files,
-                                           subsample_fcs_to)
+                                           subsample_fcs_to,
+                                           truncate_max_range)
     
     def append_empty_metadata(self,
                               metadata: Metadata,
