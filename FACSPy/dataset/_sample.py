@@ -9,7 +9,8 @@ from typing import Optional
 from ..transforms._matrix import Matrix
 from ..exceptions._exceptions import (NotCompensatedError,
                                       InfRemovalWarning,
-                                      NaNRemovalWarning)
+                                      NaNRemovalWarning,
+                                      TruncationWarning)
 
 class FCSFile:
     """
@@ -19,7 +20,8 @@ class FCSFile:
     def __init__(self,
                  input_directory: str,
                  file_name: str,
-                 subsample: Optional[int] = None
+                 subsample: Optional[int] = None,
+                 truncate_max_range: bool = True
                  ) -> None:
         
         self.original_filename = file_name
@@ -37,7 +39,8 @@ class FCSFile:
         self.fcs_metadata = self._parse_fcs_metadata(raw_data)
         self.channels = self._parse_channel_information(raw_data)
         self.original_events = self._parse_and_process_original_events(raw_data,
-                                                                       subsample)
+                                                                       subsample,
+                                                                       truncate_max_range)
         self.event_count = self.original_events.shape[0]
         self.compensated_events: Optional[np.ndarray] = None
         self.fcs_compensation = self._parse_compensation_matrix_from_fcs()
@@ -120,26 +123,44 @@ class FCSFile:
 
     def _parse_and_process_original_events(self,
                                            fcs_data: FlowData,
-                                           subsample: Optional[int]) -> np.ndarray:
+                                           subsample: Optional[int],
+                                           truncate_max_range: bool) -> np.ndarray:
         """parses and processes the original events"""
         tmp_orig_events = self._parse_original_events(fcs_data)
         if subsample is not None:
             tmp_orig_events = self._subsample_events(tmp_orig_events,
                                                      subsample)
-        tmp_orig_events = self._process_original_events(tmp_orig_events)
+        tmp_orig_events = self._process_original_events(tmp_orig_events,
+                                                        truncate_max_range)
         return tmp_orig_events
 
     def _process_original_events(self,
-                                 tmp_orig_events: np.ndarray) -> np.ndarray:
+                                 tmp_orig_events: np.ndarray,
+                                 truncate_max_range: bool) -> np.ndarray:
         """
         processes the original events by convolving the channel gains
         the decades and the time channel
         """
+        if truncate_max_range:
+            tmp_orig_events = self._adjust_range(tmp_orig_events)
         tmp_orig_events = self._remove_nans_from_events(tmp_orig_events)
         tmp_orig_events = self._adjust_time_channel(tmp_orig_events)
         tmp_orig_events = self._adjust_decades(tmp_orig_events)
         tmp_orig_events = self._adjust_channel_gain(tmp_orig_events)
         return tmp_orig_events
+
+    def _adjust_range(self,
+                      arr: np.ndarray):
+        channel_ranges = self.channels["pnr"].to_numpy()
+        range_exceeded_cells = (arr > channel_ranges)
+        range_exceeded_channels = range_exceeded_cells.any(axis = 0)
+        if any(range_exceeded_channels):
+            exceeded_channels = self.channels[range_exceeded_channels].index.tolist()
+            number_of_exceeded_cells = range_exceeded_cells.sum(axis = 0)
+            TruncationWarning(exceeded_channels, number_of_exceeded_cells)
+            array_mins = np.min(arr, axis = 0)
+            return np.clip(arr, array_mins, channel_ranges)
+        return arr
 
     def _remove_nans_from_events(self,
                                  arr: np.ndarray):
@@ -150,7 +171,6 @@ class FCSFile:
             warning_message = f"{idxs.shape[0]} cells were removed from " + \
                               f"{self.original_filename} due to " + \
                                "the presence of Infinity values"
-            print(warning_message)
             InfRemovalWarning(warning_message)
         if np.isnan(arr).any():
             idxs = np.argwhere(np.isnan(arr))[:,0]
