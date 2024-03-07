@@ -7,7 +7,9 @@ from flowio.exceptions import FCSParsingError
 from typing import Optional
 
 from ..transforms._matrix import Matrix
-from ..exceptions._exceptions import NotCompensatedError
+from ..exceptions._exceptions import (NotCompensatedError,
+                                      InfRemovalWarning,
+                                      NaNRemovalWarning)
 
 class FCSFile:
     """
@@ -133,10 +135,28 @@ class FCSFile:
         processes the original events by convolving the channel gains
         the decades and the time channel
         """
+        tmp_orig_events = self._remove_nans_from_events(tmp_orig_events)
         tmp_orig_events = self._adjust_time_channel(tmp_orig_events)
         tmp_orig_events = self._adjust_decades(tmp_orig_events)
         tmp_orig_events = self._adjust_channel_gain(tmp_orig_events)
         return tmp_orig_events
+
+    def _remove_nans_from_events(self,
+                                 arr: np.ndarray):
+        """Function to remove rows with NaN, inf and -inf"""
+        if np.isinf(arr).any():
+            idxs = np.argwhere(np.isinf(arr))[:,0]
+            arr = arr[~np.in1d(np.arange(arr.shape[0]), idxs)]
+            raise InfRemovalWarning(f"{idxs.shape[0]} cells were removed from \
+                                      {self.original_filename} \
+                                      due to the presence of infinity values")
+        if np.isnan(arr).any():
+            idxs = np.argwhere(np.isnan(arr))[:,0]
+            arr = arr[~np.in1d(np.arange(arr.shape[0]), idxs)]
+            raise NaNRemovalWarning(f"{idxs.shape[0]} cells were removed from \
+                                      {self.original_filename} \
+                                      due to the presence of NaN values")
+        return arr
 
     def _adjust_channel_gain(self,
                              events: np.ndarray) -> np.ndarray:
