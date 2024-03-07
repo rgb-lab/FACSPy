@@ -147,9 +147,10 @@ class FCSFile:
         if np.isinf(arr).any():
             idxs = np.argwhere(np.isinf(arr))[:,0]
             arr = arr[~np.in1d(np.arange(arr.shape[0]), idxs)]
-            warning_message = (f"{idxs.shape[0]} cells were removed from " + 
-                               f"{self.original_filename} due to " + 
-                                "the presence of Infinity values")
+            warning_message = f"{idxs.shape[0]} cells were removed from " + \
+                              f"{self.original_filename} due to " + \
+                               "the presence of Infinity values"
+            print(warning_message)
             InfRemovalWarning(warning_message)
         if np.isnan(arr).any():
             idxs = np.argwhere(np.isnan(arr))[:,0]
