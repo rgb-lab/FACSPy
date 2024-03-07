@@ -155,9 +155,9 @@ class FCSFile:
         if np.isnan(arr).any():
             idxs = np.argwhere(np.isnan(arr))[:,0]
             arr = arr[~np.in1d(np.arange(arr.shape[0]), idxs)]
-            warning_message = (f"{idxs.shape[0]} cells were removed from " + 
-                               f"{self.original_filename} due to " + 
-                                "the presence of NaN values")
+            warning_message = f"{idxs.shape[0]} cells were removed from " + \
+                              f"{self.original_filename} due to " + \
+                               "the presence of NaN values"
             NaNRemovalWarning(warning_message)
         return arr
 
