@@ -147,15 +147,15 @@ class FCSFile:
         if np.isinf(arr).any():
             idxs = np.argwhere(np.isinf(arr))[:,0]
             arr = arr[~np.in1d(np.arange(arr.shape[0]), idxs)]
-            raise InfRemovalWarning(f"{idxs.shape[0]} cells were removed from \
-                                      {self.original_filename} \
-                                      due to the presence of infinity values")
+            InfRemovalWarning(f"{idxs.shape[0]} cells were removed from \
+                                {self.original_filename} \
+                                due to the presence of infinity values")
         if np.isnan(arr).any():
             idxs = np.argwhere(np.isnan(arr))[:,0]
             arr = arr[~np.in1d(np.arange(arr.shape[0]), idxs)]
-            raise NaNRemovalWarning(f"{idxs.shape[0]} cells were removed from \
-                                      {self.original_filename} \
-                                      due to the presence of NaN values")
+            NaNRemovalWarning(f"{idxs.shape[0]} cells were removed from \
+                                {self.original_filename} \
+                                due to the presence of NaN values")
         return arr
 
     def _adjust_channel_gain(self,

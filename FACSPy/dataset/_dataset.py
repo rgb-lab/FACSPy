@@ -35,7 +35,7 @@ def create_dataset(input_directory: str,
                    metadata: Metadata,
                    panel: Panel,
                    workspace: Union[FlowJoWorkspace, DivaWorkspace],
-                   subsample_fcs_to: [Optional[int]] = None,
+                   subsample_fcs_to: Optional[int] = None,
                    keep_raw: bool = False) -> AnnData:
     if not os.path.exists(input_directory):
         raise InputDirectoryNotFoundError()

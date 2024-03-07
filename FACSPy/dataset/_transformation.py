@@ -90,7 +90,7 @@ def transform(adata: AnnData,
         adata.uns["raw_cofactors"] = raw_cofactor_table
 
     if cofactor_table:
-        adata.uns["cofactor_table"] = cofactor_table
+        adata.uns["cofactors"] = cofactor_table
         adata.var = _merge_cofactors_into_dataset_var(adata, cofactor_table)
         adata.var = _replace_missing_cofactors(adata.var)
         cofactors = adata.var["cofactors"].values
