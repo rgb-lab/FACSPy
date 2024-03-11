@@ -14,3 +14,34 @@ from ._cluster_mfi import cluster_heatmap, cluster_mfi, cluster_fop
 from ._marker_correlations import marker_correlation
 from ._metadata import metadata
 from ._dr import umap, pca, diffmap, tsne
+
+__all__ = [
+    "biax",
+    "fold_change",
+    "cluster_frequency",
+    "cluster_abundance",
+    "marker_density",
+    "mfi",
+    "fop",
+    "sample_correlation",
+    "sample_distance",
+    "pca_samplewise",
+    "mds_samplewise",
+    "tsne_samplewise",
+    "umap_samplewise",
+    "cofactor_distribution",
+    "transformation_plot",
+    "gating_strategy",
+    "cell_counts",
+    "gate_frequency",
+    "expression_heatmap",
+    "cluster_heatmap",
+    "cluster_mfi",
+    "cluster_fop",
+    "marker_correlation",
+    "metadata",
+    "umap",
+    "pca",
+    "diffmap",
+    "tsne"
+]
