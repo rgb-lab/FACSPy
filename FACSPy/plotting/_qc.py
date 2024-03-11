@@ -94,12 +94,11 @@ def gate_frequency(adata: AnnData,
                    ax: Axes = None,
                    save: bool = None,
                    show: bool = None):
-    """
+    """\
     Plots the gate frequency in comparison to a defined gate.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -134,7 +133,6 @@ def gate_frequency(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """

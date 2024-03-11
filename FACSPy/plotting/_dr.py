@@ -72,12 +72,11 @@ def diffmap(adata: AnnData,
             ax: Axes = None,
             *args,
             **kwargs):
-    """
+    """\
     Plots the diffusion embedding.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -111,7 +110,6 @@ def diffmap(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """
@@ -159,12 +157,11 @@ def pca(adata: AnnData,
         ax: Axes = None,
         *args,
         **kwargs):
-    """
+    """\
     Plots the PCA embedding.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -198,7 +195,6 @@ def pca(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """
@@ -246,12 +242,11 @@ def tsne(adata: AnnData,
          ax: Axes = None,
          *args,
          **kwargs):
-    """
+    """\
     Plots the TSNE embedding.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -285,7 +280,6 @@ def tsne(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """
@@ -334,12 +328,11 @@ def umap(adata: AnnData,
          ax: Axes = None,
          *args,
          **kwargs):
-    """
+    """\
     Plots the UMAP embedding.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -373,7 +366,6 @@ def umap(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """

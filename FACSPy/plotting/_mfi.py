@@ -31,12 +31,11 @@ def fop(adata: AnnData,
         ax: Axes = None,
         save: bool = None,
         show: bool = None):
-    """
+    """\
     Plots the fop values as calculated by fp.tl.fop
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -80,7 +79,6 @@ def fop(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """
