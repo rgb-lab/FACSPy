@@ -4,7 +4,7 @@ FACSPy is a versatile API embedding and automating common analysis tasks for cyt
 
 ```{toctree}
 :hidden: true
-:maxdepth: 1
+:maxdepth: 2
 
-api
+api/index
 ```
