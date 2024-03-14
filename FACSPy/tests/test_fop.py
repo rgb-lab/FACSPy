@@ -25,7 +25,8 @@ def mock_dataset() -> AnnData:
     adata = fp.create_dataset(input_directory = input_directory,
                               panel = panel,
                               metadata = metadata,
-                              workspace = workspace)
+                              workspace = workspace,
+                              subsample_fcs_to = 100)
     cofactors = CofactorTable(os.path.join(input_directory, "cofactors_test_suite.txt"))
     adata.uns["cofactors"] = cofactors
     adata.layers["transformed"] = adata.layers["compensated"].copy()
