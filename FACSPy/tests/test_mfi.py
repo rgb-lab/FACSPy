@@ -27,7 +27,8 @@ def mock_dataset() -> AnnData:
     adata = fp.create_dataset(input_directory = input_directory,
                               panel = panel,
                               metadata = metadata,
-                              workspace = workspace)
+                              workspace = workspace,
+                              subsample_fcs_to = 100)
     adata.layers["transformed"] = adata.layers["compensated"].copy()
     return adata
 
