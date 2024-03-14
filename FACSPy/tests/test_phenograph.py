@@ -31,7 +31,8 @@ def mock_dataset() -> AnnData:
     adata = fp.create_dataset(input_directory = input_directory,
                               panel = panel,
                               metadata = metadata,
-                              workspace = workspace)
+                              workspace = workspace,
+                              subsample_fcs_to = 100)
     sc.pp.subsample(adata, n_obs = 200, random_state = 187)
     return adata
 
