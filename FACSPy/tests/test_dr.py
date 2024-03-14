@@ -21,15 +21,14 @@ def create_supplement_objects():
     workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
     return INPUT_DIRECTORY, panel, metadata, workspace
 
-
-
 @pytest.fixture
 def mock_dataset() -> AnnData:
     input_directory, panel, metadata, workspace = create_supplement_objects()
     adata = fp.create_dataset(input_directory = input_directory,
                               panel = panel,
                               metadata = metadata,
-                              workspace = workspace)
+                              workspace = workspace,
+                              subsample_fcs_to = 100)
     sc.pp.subsample(adata, n_obs = 200, random_state = 187)
     return adata
 
