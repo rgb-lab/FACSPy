@@ -51,7 +51,8 @@ def mock_dataset() -> AnnData:
     adata = fp.create_dataset(input_directory = input_directory,
                               panel = panel,
                               metadata = metadata,
-                              workspace = workspace)
+                              workspace = workspace,
+                              subsample_fcs_to = 100)
     return adata
 
 def test_save_settings_function_dr(mock_dataset: AnnData):
