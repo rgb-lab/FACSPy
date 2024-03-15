@@ -1,7 +1,110 @@
 import pandas as pd
 from anndata import AnnData
-from typing import Optional
+from typing import Optional, Literal
 from .._utils import IMPLEMENTED_SAMPLEWISE_DIMREDS
+from ._hash_generation import HASH_FUNCTION_DICT
+
+def _reset_hash(adata: AnnData,
+                metric: Literal["adata_obs_names",
+                                "adata_sample_ids",
+                                "adata_var_names",
+                                "panel_var_names",
+                                "metadata_sample_ids",
+                                "metadata_columns",
+                                "adata_obs_columns"]) -> None:
+    """function that creates a current hash for the indicated metric"""
+    adata.uns["dataset_status_hash"][metric] = HASH_FUNCTION_DICT[metric](adata)
+    return
+
+def _sync_uns_frames(adata: AnnData,
+                     recalculate: bool = False) -> None:
+    """
+    Samples are synchronized so that only samples are kept that
+    are the current dataset sample_IDs.
+
+    First, the metadata are subset for the unique sampleIDs in
+    adata.obs["sample_ID"]
+
+    Args:
+        adata (AnnData): the anndata object
+        recalculate (bool): whether or not to recalculate the mfi/fop/samplewise dr frames
+        
+    """
+
+    current_obs_sample_IDs = adata.obs["sample_ID"].unique().tolist()
+    current_var_names = adata.var_names.tolist()
+
+    mfi_frames = [key for key in adata.uns if "mfi" in key]
+    fop_frames = [key for key in adata.uns if "fop" in key]
+
+    for frame_id in mfi_frames + fop_frames:
+        calculated_dimreds = _get_present_samplewise_dimreds(adata.uns[frame_id])
+        if recalculate:
+            if "mfi" in frame_id:
+                _recalculate_mfi(adata = adata,
+                                 frame_id = frame_id)
+            if "fop" in frame_id:
+                _recalculate_fop(adata = adata,
+                                 frame_id = frame_id)
+            _recalculate_samplewise_dimreds(adata, frame_id, calculated_dimreds)
+
+        _synchronize_uns_frame(adata = adata,
+                               identifier = frame_id,
+                               sample_IDs = current_obs_sample_IDs,
+                               var_names = current_var_names,
+                               calculated_dimreds = calculated_dimreds)
+        print(f"     ... synchronized frame {frame_id}")
+
+def _recalculate_mfi(adata: AnnData,
+                     frame_id: str) -> None:
+    from ..tools._mfi import mfi
+    _, data_origin, data_group = _get_frame_metrics(frame_id)
+    settings_dict = adata.uns["settings"][f"_mfi_{data_group}_{data_origin}"]
+    mfi(adata,
+        **settings_dict)
+
+def _recalculate_fop(adata: AnnData,
+                     frame_id: str) -> None:
+    from ..tools._fop import fop
+    _, data_origin, data_group = _get_frame_metrics(frame_id)
+    settings_dict = adata.uns["settings"][f"_fop_{data_group}_{data_origin}"]
+    fop(adata,
+        **settings_dict)
+
+def _append_calculated_dimred_dimensions(calculated_dimreds: list[str],
+                                         uns_frame: pd.DataFrame):
+    dimred_dimensions = []
+    for dimred in calculated_dimreds:
+        for col in uns_frame.columns:
+            if dimred in col:
+                dimred_dimensions.append(col)
+    
+    return dimred_dimensions
+
+def _synchronize_uns_frame(adata: AnnData,
+                           identifier: str,
+                           sample_IDs: list[str],
+                           var_names: list[str],
+                           calculated_dimreds: list[str]) -> None:
+    """
+    synchronizes uns frame using the sample_IDs and var_names
+    and calculated samplewise dimreds
+    """
+    print(f"... synchronizing dataframe: {identifier}")
+    uns_frame: pd.DataFrame = adata.uns[identifier]
+    dimred_dimensions = _append_calculated_dimred_dimensions(calculated_dimreds = calculated_dimreds,
+                                                             uns_frame = uns_frame)
+    if "sample_ID" in uns_frame.index.names:
+        adata.uns[identifier] = uns_frame.loc[
+            uns_frame.index.get_level_values("sample_ID").isin(sample_IDs),
+            var_names + dimred_dimensions
+        ]
+    else:
+        adata.uns[identifier] = uns_frame.loc[
+            :,
+            var_names + dimred_dimensions
+        ]
+    return
 
 def _get_frame_metrics(frame_id: str) -> tuple[str]:
     split_frame_id = frame_id.split("_")

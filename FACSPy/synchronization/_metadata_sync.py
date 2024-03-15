@@ -43,6 +43,11 @@ def sync_metadata_from_uns(adata: AnnData,
     adata = adata.copy() if copy else adata
     metadata, adata_obs = _get_metadata_from_dataset(adata,
                                                      copy = True)
+    
+    sid_idxs = adata_obs[adata_obs["sample_ID"].isin(metadata.dataframe["sample_ID"].unique())].index
+    adata._inplace_subset_obs(sid_idxs)
+    adata_obs = adata_obs.loc[sid_idxs,:]
+
     user_defined_metadata = metadata.dataframe.columns
     for col in user_defined_metadata:
         if col not in adata_obs.columns:
