@@ -49,7 +49,9 @@ def _check_gate_path(gate_path):
 
 def _is_parent(adata, gate, parent) -> bool:
     """Substring analysis to see if these are actually children"""
-    return _find_gate_path_of_gate(adata, parent) in _find_gate_path_of_gate(adata, gate)
+    parent_gate = _find_gate_path_of_gate(adata, parent)
+    child_gate = _find_gate_path_of_gate(adata, gate) 
+    return parent_gate in child_gate and parent_gate != child_gate
 
 def _find_current_population(gate: str) -> str:
     """Finds current population of a specified gating path
@@ -463,7 +465,7 @@ def equalize_groups(data: AnnData,
                     fraction: Optional[float] = None,
                     n_obs: Optional[int] = None,
                     on: Union[str, list[str]] = None, 
-                    random_state:int = 0,
+                    random_state: int = 187,
                     copy: bool = False
                     ) -> Optional[AnnData]:
     #TODO: add "min" as a parameter
