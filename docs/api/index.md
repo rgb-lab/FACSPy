@@ -9,8 +9,10 @@ import FACSPy as fp
 Specific tasks have been divided into the following modules.
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
+tools
 plotting
-transformation
+model
+dataset
 ```
