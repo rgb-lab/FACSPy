@@ -30,14 +30,13 @@ def pca(adata: AnnData,
         scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
         copy: bool = False,
         **kwargs) -> Optional[AnnData]:
-    """
+    """\
     Principal component analysis
 
     Computes PCA coordinates, loadings and variance decomposition
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where Rows correspond to cells and columns to the channels
@@ -62,28 +61,9 @@ def pca(adata: AnnData,
         "StandardScaler" or "RobustScaler".
     copy
         Return a copy of adata instead of modifying inplace
-    kwargs
-        keyword arguments that are passed directly to the _compute_pca
-        function. Valid kwargs contain:
-        n_comps
-            Number of principal components to be computed. Defaults to
-            the channel count minus one
-        zero_center
-            If `True`, compute standard PCA from covariance matrix
-            If `False`, omit zero-centering variables
-            Defaults to True
-        svd_solver
-            defaults to `arpack`
-        random_state
-            sets the seed for randomness functions
-        chunked
-            If `True`, perform an incrementa PCA on segments of
-            `chunk_size`. The incremental PCA automatically zero-centers
-            and ignores settings of `random_state` and `svd_solver`.
-            If `False`, perform a full PCA.
-        chunk_size
-            Number of observations to include in each chunk. Required if
-            `chunked = True` was passed.
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `_compute_pca`
+        function. Please refer to its documentation.
     
     Returns
     -------
@@ -149,7 +129,7 @@ def diffmap(adata: AnnData,
             scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
             copy: bool = False,
             **kwargs) -> Optional[AnnData]:
-    """
+    """\
     Diffusion Map Embedding calculation
 
     If PCA and neighbors have not been calculated for this gate and layer,
@@ -174,7 +154,6 @@ def diffmap(adata: AnnData,
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where Rows correspond to cells and columns to the channels
@@ -199,18 +178,9 @@ def diffmap(adata: AnnData,
         "StandardScaler" or "RobustScaler".
     copy
         Return a copy of adata instead of modifying inplace
-    kwargs
-        keyword arguments that are passed directly to the _compute_diffmap
-        function. Valid kwargs contain:
-        n_comps
-            Number of principal components to be computed. Defaults to
-            the channel count minus one
-        neighbors_key
-            If not specified, diffmap looks into .obsp['neighbors_{gate}_{layer}_connectivities]
-        random_state
-            seed for control of randomness functions
-        copy
-            Return a copy of adata instead of modifying inplace
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `_compute_diffmap`
+        function. Please refer to its documentation.
     
     Returns
     -------
@@ -220,7 +190,7 @@ def diffmap(adata: AnnData,
 
         `.obsm['X_diffmap_{gate}_{layer}]`
             DiffusionMap embedding of the data
-        `.uns['diffmap_evals'_{gate}_{layer}]
+        `.uns['diffmap_evals'_{gate}_{layer}]`
             Array of size (number of eigen vectors).
             Eigenvalues of transition matrix
         `.uns['settings']['_pca_{gate}_{layer}]`
