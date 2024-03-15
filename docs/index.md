@@ -7,4 +7,5 @@ FACSPy is a versatile API embedding and automating common analysis tasks for cyt
 :maxdepth: 2
 
 api/index
+references
 ```

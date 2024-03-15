@@ -18,6 +18,7 @@ author = 'Tarik Exner'
 sys.path.insert(0, os.path.abspath('../../FACSPy/'))
 
 extensions = [
+    "sphinxcontrib.bibtex",
     "myst_parser",
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
@@ -27,6 +28,7 @@ extensions = [
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+bibtex_bibfiles = ['references.bib']
 
 # Generate the API documentation when building
 autosummary_generate = True

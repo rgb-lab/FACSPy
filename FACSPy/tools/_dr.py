@@ -136,9 +136,9 @@ def diffmap(adata: AnnData,
     the function will compute it automatically.
 
     From the scanpy docs:
-    Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell
-    data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested
-    by [Haghverdi16]_ in the implementation of [Wolf18]_.
+    Diffusion maps :cite:p:`coifman2005` has been proposed for visualizing single-cell
+    data by :cite:p:`haghverdi2015`. The tool uses the adapted Gaussian kernel suggested
+    by :cite:p:`haghverdi2016` in the implementation of :cite:p:`wolf2018`.
 
     The width ("sigma") of the connectivity kernel is implicitly determined by
     the number of neighbors used to compute the single-cell graph in
@@ -195,6 +195,7 @@ def diffmap(adata: AnnData,
             Eigenvalues of transition matrix
         `.uns['settings']['_pca_{gate}_{layer}]`
             Settings that were used for PCA calculation
+    
     """
 
 
