@@ -124,6 +124,15 @@ def test_subsample_parameter():
                            subsample_fcs_to = 20_000)
     assert adata.shape[0] == 120_000
 
+def test_subsample_parameter_ValueError():
+    input_directory, panel, metadata, workspace = create_supplement_objects()
+    with pytest.raises(ValueError):
+        adata = create_dataset(input_directory = input_directory,
+                               panel = panel,
+                               metadata = metadata,
+                               workspace = workspace,
+                               subsample_fcs_to = "something")
+
 def test_dataset_size(mock_dataset: AnnData):
     assert mock_dataset.shape == (284937, 21)
 
