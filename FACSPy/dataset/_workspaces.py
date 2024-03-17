@@ -8,7 +8,10 @@ import itertools
 import copy
 import re
 
-from ..gates._gml_gates import GMLRectangleGate, GMLBooleanGate, GMLPolygonGate, GMLQuadrantGate
+from ..gates._gml_gates import (GMLRectangleGate,
+                                GMLBooleanGate,
+                                GMLPolygonGate,
+                                GMLQuadrantGate)
 from ..gates._gates import PolygonGate, RectangleGate
 from ..gates._wsp_gates import WSPEllipsoidGate
 from ..gates._gate_utils import find_attribute_value
