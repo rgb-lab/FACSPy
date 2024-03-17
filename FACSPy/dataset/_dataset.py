@@ -65,14 +65,21 @@ def create_dataset(metadata: Metadata,
 
     import FACSPy as fp
 
-    metadata = fp.dt.Metadata("metadata.csv")
-    panel = fp.dt.Panel("metadata.csv")
-    workspace = fp.dt.FlowJoWorkspace("workspace.wsp")
+    metadata = fp.dt.Metadata("metadata.csv") # creates the Metadata object
+
+    panel = fp.dt.Panel("panel.csv") # creates the Panel object
+
+    # alternatively, if the panel is stored in the FCS files:
+    panel = fp.create_panel_from_fcs() # assumes that FCS files are in the current working directory
+
+    workspace = fp.dt.FlowJoWorkspace("workspace.wsp") # creates the FlowJoWorkspace object
+
     dataset = fp.create_dataset(
         panel = panel,
         metadata = metadata,
         workspace = workspace,
-        subsample_fcs_to = 1_000_000
+        subsample_fcs_to = 10_000,
+        truncate_max_range = True
     )
 
     """
