@@ -19,7 +19,6 @@ from .._utils import _fetch_fluo_channels
 from ..exceptions._exceptions import InvalidTransformationError
 from ..exceptions._supplements import SupplementFormatError
 
-
 IMPLEMENTED_TRANSFORMS = ["asinh", "logicle", "hyperlog", "log"]
 
 def _transform_array(data: np.ndarray,
@@ -104,7 +103,7 @@ def transform(adata: AnnData,
     
     return adata if copy else None
 
-def calculate_cofactors(adata,
+def calculate_cofactors(adata: AnnData,
                         add_to_adata: bool = True,
                         return_dataframe: bool = False,
                         copy: bool = False) -> Optional[AnnData]:
