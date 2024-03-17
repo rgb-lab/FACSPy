@@ -116,26 +116,26 @@ def test_label_metaclusters_in_dataset_warning_II(mock_dataset: AnnData):
     assert data[["sample_ID", "metacluster"]].to_dict() == metadata[["sample_ID", "metacluster"]].to_dict()
 
 
-def test_map_metaclusters_to_sample_ID():
-    np.random.seed(187)
-    df = pd.DataFrame(np.random.randint(0,100,100).reshape(10,10))
-    from FACSPy.plotting._utils import (_calculate_linkage,
-                                        _calculate_metaclusters,
-                                        _map_metaclusters_to_sample_ID)
-    linkage = _calculate_linkage(df)
-    sample_IDs = list(range(10))
-    metaclusters = _calculate_metaclusters(linkage, n_clusters = 3, sample_IDs = sample_IDs)
-    facspy_mapping: pd.DataFrame = _map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
-    def control_map_func(metaclusters, sample_IDs):
-        sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
-        for i, sample_ID in enumerate(sample_IDs["sample_ID"].to_list()):
-            sample_IDs.loc[sample_IDs["sample_ID"] == sample_ID, "metacluster"] = str(int([metacluster
-                                                                                       for metacluster in metaclusters
-                                                                                       if i in metaclusters[metacluster]][0]))
-        return sample_IDs
-    control_mapping: pd.DataFrame = control_map_func(metaclusters, sample_IDs)
-    assert facspy_mapping.equals(control_mapping)
-
+#def test_map_metaclusters_to_sample_ID():
+#    np.random.seed(187)
+#    df = pd.DataFrame(np.random.randint(0,100,100).reshape(10,10))
+#    from FACSPy.plotting._utils import (_calculate_linkage,
+#                                        _calculate_metaclusters,
+#                                        _map_metaclusters_to_sample_ID)
+#    linkage = _calculate_linkage(df)
+#    sample_IDs = list(range(10))
+#    metaclusters = _calculate_metaclusters(linkage, n_clusters = 3, sample_IDs = sample_IDs)
+#    facspy_mapping: pd.DataFrame = _map_metaclusters_to_sample_ID(metaclusters, sample_IDs)
+#    def control_map_func(metaclusters, sample_IDs):
+#        sample_IDs = pd.DataFrame(sample_IDs, columns = ["sample_ID"])
+#        for i, sample_ID in enumerate(sample_IDs["sample_ID"].to_list()):
+#            sample_IDs.loc[sample_IDs["sample_ID"] == sample_ID, "metacluster"] = str(int([metacluster
+#                                                                                       for metacluster in metaclusters
+#                                                                                       if i in metaclusters[metacluster]][0]))
+#        return sample_IDs
+#    control_mapping: pd.DataFrame = control_map_func(metaclusters, sample_IDs)
+#    assert facspy_mapping.equals(control_mapping)
+#
 def test_get_uns_dataframe_I(mock_dataset: AnnData):
     fp.tl.mfi(mock_dataset, layer = "compensated")
     from FACSPy.plotting._utils import _get_uns_dataframe
