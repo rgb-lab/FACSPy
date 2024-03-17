@@ -63,24 +63,32 @@ def create_dataset(metadata: Metadata,
     Examples
     --------
 
-    import FACSPy as fp
+    >>> import FACSPy as fp
+    >>> metadata = fp.dt.Metadata("metadata.csv") # creates the Metadata object
 
-    metadata = fp.dt.Metadata("metadata.csv") # creates the Metadata object
+    >>> panel = fp.dt.Panel("panel.csv") # creates the Panel object
 
-    panel = fp.dt.Panel("panel.csv") # creates the Panel object
+    >>> # alternatively, if the panel is stored in the FCS files:
+    >>> panel = fp.create_panel_from_fcs() # assumes that FCS files are in the current working directory
 
-    # alternatively, if the panel is stored in the FCS files:
-    panel = fp.create_panel_from_fcs() # assumes that FCS files are in the current working directory
+    >>> workspace = fp.dt.FlowJoWorkspace("workspace.wsp") # creates the FlowJoWorkspace object
 
-    workspace = fp.dt.FlowJoWorkspace("workspace.wsp") # creates the FlowJoWorkspace object
+    >>> dataset = fp.create_dataset(
+    ...    panel = panel,
+    ...    metadata = metadata,
+    ...    workspace = workspace,
+    ...    subsample_fcs_to = 10_000,
+    ...    truncate_max_range = True,
+    ...    keep_raw = False
+    ... )
 
-    dataset = fp.create_dataset(
-        panel = panel,
-        metadata = metadata,
-        workspace = workspace,
-        subsample_fcs_to = 10_000,
-        truncate_max_range = True
-    )
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated'
 
     """
 
