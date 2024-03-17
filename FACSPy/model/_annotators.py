@@ -197,32 +197,8 @@ class ManualGating(BaseGating):
 
 
 class supervisedGating(BaseGating):
-    """
-    Class to unify functionality for supervised gating approaches.
-
-    The user inputs the anndata object containing the data as well 
-    as the workspace group (corresponding to the FlowJo groups) that
-    contains the gates.
-    This is meant to account for the fact that the same sample can
-    have multiple gating strategies, based on the experiment (which)
-    is potentially stored in different workspace groups.
-    The train sets (using .setup_anndata()) are created using the following logic:
-        - First, all different available gates are stored in a dictionary
-        - For each gate, a list is stored with samples that have already been
-          assigned a gate with that name (~ training samples)
-        - In general, as a presumption, one classifier is used for one gate
-        - Multiple gates can be unified into one classifier (which leads to
-          a multioutput-situation) if the training samples for two gates are 
-          the same. That way, one sample can contain multiple gating strategies
-          but multiple samples do not have to share all gating strategies
-        - 
-
-    Parameters
-    ----------
-
-    Examples
-    --------
-
+    """\
+    Currently experimental.
     """
     def __init__(self,
                  adata: AnnData,
