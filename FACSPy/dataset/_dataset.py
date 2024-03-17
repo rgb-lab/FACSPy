@@ -7,62 +7,117 @@ from scipy.sparse import csr_matrix
 import anndata as ad
 import numpy as np
 import pandas as pd
-import scipy.signal as scs
 
 import gc
 
-from ._supplements import Panel, Metadata, CofactorTable
-from ._workspaces import FlowJoWorkspace, DivaWorkspace
 from ._sample import FCSFile
-from ._utils import (find_corresponding_control_samples,
-                     get_histogram_curve,
-                     transform_data_array,
-                     create_sample_subset_with_controls)
+from ._supplements import Panel, Metadata
+from ._workspaces import FlowJoWorkspace, DivaWorkspace
 
-from ..transforms._matrix import Matrix
 from ..exceptions._exceptions import InputDirectoryNotFoundError
 from ..exceptions._supplements import SupplementDataTypeError, PanelMatchWarning
 from ..gates.gating_strategy import GatingStrategy, GateTreeError
-from .._utils import (_fetch_fluo_channels,
-                      scatter_channels,
+from ..synchronization._synchronize import _hash_dataset
+from ..transforms._matrix import Matrix
+from .._utils import (scatter_channels,
                       time_channels,
                       cytof_technical_channels,
                       spectral_flow_technical_channels)
-from ..synchronization._synchronize import _hash_dataset
 
-
-def create_dataset(input_directory: str,
-                   metadata: Metadata,
+def create_dataset(metadata: Metadata,
                    panel: Panel,
                    workspace: Union[FlowJoWorkspace, DivaWorkspace],
+                   input_directory: Optional[str] = None,
                    subsample_fcs_to: Optional[int] = None,
+                   truncate_max_range: bool = True,
                    keep_raw: bool = False) -> AnnData:
+    """
+    Creates the dataset.
+
+    Parameters
+    ----------
+
+    metadata
+        The metadata object of :class:`~FACSPy.Metadata` 
+    panel
+        The panel object of :class:`~FACSPy.Panel` 
+    workspace
+        The accompanying workspace of :class:`~FACSPy.FlowJoWorkspace`
+    input_directory
+        path that points to the FCS files. If no input directory is
+        specified, the current working directory is assumed.
+    subsample_fcs_to
+        Parameter that specifies how many cells of an FCS file are
+        read. Per default, all cells are read in
+    truncate_max_range
+        Parameter that controls if the FCS-File data should be truncated
+        to their pnr value. Defaults to True.
+    keep_raw
+        Whether to keep the raw, uncompensated events. Defaults to False.
+
+    Returns
+    -------
+
+    The dataset object of :class:`~anndata.AnnData`
+
+    Examples
+    --------
+
+    import FACSPy as fp
+
+    metadata = fp.dt.Metadata("metadata.csv")
+    panel = fp.dt.Panel("metadata.csv")
+    workspace = fp.dt.FlowJoWorkspace("workspace.wsp")
+    dataset = fp.create_dataset(
+        panel = panel,
+        metadata = metadata,
+        workspace = workspace,
+        subsample_fcs_to = 1_000_000
+    )
+
+    """
+
+    if input_directory is None:
+        input_directory = os.getcwd()
+    
     if not os.path.exists(input_directory):
         raise InputDirectoryNotFoundError()
+
     if not isinstance(metadata, Metadata):
         raise SupplementDataTypeError(data_type = type(metadata),
                                       class_name = "Metadata")
+
     if not isinstance(panel, Panel):
         raise SupplementDataTypeError(data_type = type(panel),
                                       class_name = "Panel")
+
     if not isinstance(workspace, FlowJoWorkspace) or isinstance(workspace, DivaWorkspace):
         raise SupplementDataTypeError(data_type = type(workspace),
                                       class_name = "FlowJoWorkspace")
+
     if subsample_fcs_to is not None:
         if not isinstance(subsample_fcs_to, int) or isinstance(subsample_fcs_to, float):
-            raise ValueError(f"Please provide the subsample_fcs_to parameter as a number, it was {type(subsample_fcs_to)}")
+            raise ValueError(
+                (
+                    "Please provide the subsample_fcs_to parameter as a number, " + 
+                    f"it was {type(subsample_fcs_to)}"
+                )
+            )
+
     return DatasetAssembler(input_directory = input_directory,
                             metadata = metadata,
                             panel = panel,
                             workspace = workspace,
                             subsample_fcs_to = subsample_fcs_to,
+                            truncate_max_range = truncate_max_range,
                             keep_raw = keep_raw).get_dataset()
 
 class DatasetAssembler:
 
     """
-    Class to assemble the initial dataset
-    containing the compensated data.
+    Class to assemble the initial dataset containing the FCS data.
+    Class is not meant to be used by the user and is only called
+    internally by fp.create_dataset.
     """
 
     def __init__(self,
@@ -73,75 +128,87 @@ class DatasetAssembler:
                  subsample_fcs_to: Optional[int] = None,
                  truncate_max_range: bool = False,
                  keep_raw: bool = False) -> AnnData:
+        """automatically creates the dataset"""
 
-        file_list: list[FCSFile] = self.fetch_fcs_files(input_directory,
-                                                        metadata,
-                                                        subsample_fcs_to,
-                                                        truncate_max_range)
+        file_list: list[FCSFile] = self._fetch_fcs_files(input_directory,
+                                                         metadata,
+                                                         subsample_fcs_to,
+                                                         truncate_max_range)
         
         self._append_comp_matrices(file_list,
                                    workspace)
         
-        gates = self.gate_samples(file_list,
-                                  workspace)
+        gates = self._gate_samples(file_list,
+                                   workspace)
 
-        file_list: list[FCSFile] = self.compensate_samples(file_list,
-                                                           workspace,
-                                                           keep_raw)
+        file_list: list[FCSFile] = self._compensate_samples(file_list,
+                                                            workspace,
+                                                            keep_raw)
 
-        gates = self.fill_empty_gates(file_list, gates)
+        gates = self._fill_empty_gates(file_list, gates)
 
-        dataset_list = self.construct_dataset(file_list,
-                                              metadata,
-                                              panel)
+        dataset_list = self._construct_dataset(file_list,
+                                               metadata,
+                                               panel)
         
-        dataset = self.concatenate_dataset(dataset_list)
+        dataset = self._concatenate_dataset(dataset_list)
 
-        dataset = self.append_supplements(dataset,
-                                          metadata,
-                                          panel,
-                                          workspace)
+        dataset = self._append_supplements(dataset,
+                                           metadata,
+                                           panel,
+                                           workspace)
         
-        self.dataset = self.append_gates(dataset,
-                                         gates)
+        self.dataset = self._append_gates(dataset,
+                                          gates)
 
         _hash_dataset(self.dataset)
 
         gc.collect()
 
-    def fill_empty_gates(self,
-                         file_list: list[FCSFile],
-                         gates: list[pd.DataFrame]) -> list[pd.DataFrame]:
+    def _fill_empty_gates(self,
+                          file_list: list[FCSFile],
+                          gates: list[pd.DataFrame]) -> list[pd.DataFrame]:
         """function that looks for ungated samples and appends DataFrames with pd.NA"""
         for i, (file, gate_table) in enumerate(zip(file_list, gates)):
             if gate_table.shape[0] == 0:
                 gates[i] = pd.DataFrame(index = range(file.event_count))
         return gates
 
-    def append_gates(self,
-                     dataset: AnnData,
-                     gates: list[pd.DataFrame]) -> AnnData:
+    def _append_gates(self,
+                      dataset: AnnData,
+                      gates: list[pd.DataFrame]) -> AnnData:
+        """\
+        function fills the .obsm["gating"] slot with the gating information
+        and the .uns["gating_cols"] with the gate names
+        """
         gatings = pd.concat(gates, axis = 0).fillna(0).astype("bool")
         dataset.obsm["gating"] = csr_matrix(gatings.values)
         dataset.uns["gating_cols"] = gatings.columns
         return dataset
 
-    def append_supplements(self,
-                           dataset: AnnData,
-                           metadata: Metadata,
-                           panel: Panel,
-                           workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> AnnData:
+    def _append_supplements(self,
+                            dataset: AnnData,
+                            metadata: Metadata,
+                            panel: Panel,
+                            workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> AnnData:
+        """
+        function fills the .uns["metadata"] slot with the Metadata object,
+        the .uns["panel"] slot with the Panel object and
+        the .uns["workspace"] slot with the workspace object
+        """
         dataset.uns["metadata"] = metadata
         dataset.uns["panel"] = panel
         dataset.uns["workspace"] = workspace.wsp_dict
         return dataset
 
     def get_dataset(self) -> AnnData:
+        """returns the dataset"""
         return self.dataset
 
-    def create_gating_strategy(self,
-                               file: FCSFile,
-                               workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> GatingStrategy:
+    def _create_gating_strategy(self,
+                                file: FCSFile,
+                                workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> GatingStrategy:
+        """creates a gating strategy from the workspace groups"""
         gating_strategy = GatingStrategy()
         file_containing_workspace_groups = [group for group in workspace.wsp_dict.keys()
                                             if file.original_filename in workspace.wsp_dict[group].keys()]
@@ -158,11 +225,12 @@ class DatasetAssembler:
 
         return gating_strategy
 
-    def gate_sample(self,
-                    file: FCSFile,
-                    workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> pd.DataFrame:
+    def _gate_sample(self,
+                     file: FCSFile,
+                     workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> pd.DataFrame:
+        """gates a specific sample"""
         print(f"... gating sample {file.original_filename}")
-        gating_strategy: GatingStrategy = self.create_gating_strategy(file, workspace)
+        gating_strategy: GatingStrategy = self._create_gating_strategy(file, workspace)
         gating_results = gating_strategy.gate_sample(file)
         gate_table = pd.DataFrame(columns = ["/".join([path, gate]) for gate, path in gating_results._raw_results.keys()])
         for gate, path in gating_results._raw_results.keys():
@@ -171,23 +239,25 @@ class DatasetAssembler:
 
         return gate_table
 
-    def gate_samples(self,
-                     file_list: list[FCSFile],
-                     workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> list[pd.DataFrame]:
-        
-        return [self.gate_sample(file, workspace) for file in file_list]
+    def _gate_samples(self,
+                      file_list: list[FCSFile],
+                      workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> list[pd.DataFrame]:
+        """gates all samples"""
+        return [self._gate_sample(file, workspace) for file in file_list]
 
-    def concatenate_dataset(self,
-                            file_list: list[AnnData]):
+    def _concatenate_dataset(self,
+                             file_list: list[AnnData]):
+        """concatenates all singular anndata representations into the dataset"""
         return ad.concat(file_list,
                          merge = "same",
                          index_unique = "-",
                          keys = range(len(file_list))
                          )
     
-    def create_obs_from_metadata(self,
-                                 file: FCSFile,
-                                 metadata: Metadata) -> pd.DataFrame:
+    def _create_obs_from_metadata(self,
+                                  file: FCSFile,
+                                  metadata: Metadata) -> pd.DataFrame:
+        """creates .obs dataframe from the Metadata object"""
         metadata_df = metadata.to_df()
         file_row = metadata_df.loc[metadata_df["file_name"] == file.original_filename]
         cell_number = file.event_count
@@ -199,19 +269,26 @@ class DatasetAssembler:
         metadata_frame.index = metadata_frame.index.astype("str")
         return metadata_frame
 
-    def fetch_panel_antigen(self,
-                            panel_channels: pd.Series,
-                            channel: str,
-                            panel_df: pd.DataFrame) -> Optional[str]:
+    def _fetch_panel_antigen(self,
+                             panel_channels: pd.Series,
+                             channel: str,
+                             panel_df: pd.DataFrame) -> Optional[str]:
+        """retrieves the antigens from the panel"""
         if channel in panel_channels:
             return panel_df.loc[panel_df["fcs_colname"] == channel, "antigens"].item()
         else:
             return None
     
-    def get_final_antigen(self,
-                          fcs_antigen: Optional[str],
-                          panel_antigen: Optional[str],
-                          channel: str) -> str:
+    def _get_final_antigen(self,
+                           fcs_antigen: Optional[str],
+                           panel_antigen: Optional[str],
+                           channel: str) -> str:
+        """\
+        decides with antigen to use. If both an antigen
+        was provided by the user via the Panel object as well
+        as from the FCS file, a warning is raised and the user
+        supplied antigen is kept.
+        """
         
         if not panel_antigen:
             return fcs_antigen or channel
@@ -222,27 +299,27 @@ class DatasetAssembler:
         
         return panel_antigen
 
-    def fetch_fcs_antigen(self,
-                          fcs_panel_df: pd.DataFrame,
-                          channel: str):
+    def _fetch_fcs_antigen(self,
+                           fcs_panel_df: pd.DataFrame,
+                           channel: str):
+        """retrieves the antigen as supplied by the FCS file"""
         return fcs_panel_df.loc[fcs_panel_df.index == channel, "pns"].item()
     
-    def create_var_from_panel(self,
-                              file: FCSFile,
-                              panel: Panel) -> pd.DataFrame:
-        
-        """Logic to compare FCS metadata and the provided panel"""
+    def _create_var_from_panel(self,
+                               file: FCSFile,
+                               panel: Panel) -> pd.DataFrame:
+        """fills the .var slot by using the FCS data and the user supplied panel"""
         panel_df = panel.to_df()
         fcs_panel_df = file.channels
         panel_channels = panel_df["fcs_colname"].to_list()
         for channel in fcs_panel_df.index:
-            fcs_antigen = self.fetch_fcs_antigen(fcs_panel_df, channel)
-            panel_antigen = self.fetch_panel_antigen(panel_channels,
-                                                     channel,
-                                                     panel_df)
-            fcs_panel_df.loc[fcs_panel_df.index == channel, "pns"] = self.get_final_antigen(fcs_antigen,
-                                                                                            panel_antigen,
-                                                                                            channel)
+            fcs_antigen = self._fetch_fcs_antigen(fcs_panel_df, channel)
+            panel_antigen = self._fetch_panel_antigen(panel_channels,
+                                                      channel,
+                                                      panel_df)
+            fcs_panel_df.loc[fcs_panel_df.index == channel, "pns"] = self._get_final_antigen(fcs_antigen,
+                                                                                             panel_antigen,
+                                                                                             channel)
             
         fcs_panel_df = fcs_panel_df.drop("channel_numbers", axis = 1)
         fcs_panel_df.index = fcs_panel_df.index.astype("str")
@@ -257,14 +334,18 @@ class DatasetAssembler:
         fcs_panel_df.index = fcs_panel_df["pns"].to_list()
         return fcs_panel_df
 
-    def create_anndata_representation(self,
-                                      file: FCSFile,
-                                      metadata: Metadata,
-                                      panel: Panel) -> AnnData:
-        obs = self.create_obs_from_metadata(file,
-                                            metadata)
-        var = self.create_var_from_panel(file,
-                                         panel)
+    def _create_anndata_representation(self,
+                                       file: FCSFile,
+                                       metadata: Metadata,
+                                       panel: Panel) -> AnnData:
+        """\
+        creates an AnnData representation from the FCS data,
+        the metadata and the panel
+        """
+        obs = self._create_obs_from_metadata(file,
+                                             metadata)
+        var = self._create_var_from_panel(file,
+                                          panel)
         if file.original_events is not None:
             layers = {"raw": file.original_events.astype(np.float32),
                       "compensated": file.compensated_events.astype(np.float32)}
@@ -276,73 +357,83 @@ class DatasetAssembler:
                        var = var,
                        layers = layers)
 
-    def create_anndata_representations(self,
-                                       file_list: list[FCSFile],
-                                       metadata: Metadata,
-                                       panel: Panel) -> list[AnnData]:
-        return [self.create_anndata_representation(file, metadata, panel) for file in file_list]
+    def _create_anndata_representations(self,
+                                        file_list: list[FCSFile],
+                                        metadata: Metadata,
+                                        panel: Panel) -> list[AnnData]:
+        """creates AnnData representations for all files"""
+        return [self._create_anndata_representation(file, metadata, panel) for file in file_list]
 
-    def construct_dataset(self,
-                          file_list: list[FCSFile],
-                          metadata: Metadata,
-                          panel: Panel) -> AnnData:
-        return self.create_anndata_representations(file_list, metadata, panel)
-
-    def compensate_samples(self,
+    def _construct_dataset(self,
                            file_list: list[FCSFile],
-                           workspace: Union[FlowJoWorkspace, DivaWorkspace],
-                           keep_raw: bool) -> list[FCSFile]:
-        return [self.compensate_sample(sample, workspace, keep_raw) for sample in file_list]
+                           metadata: Metadata,
+                           panel: Panel) -> AnnData:
+        """constructs a list of AnnData representations for all FCS data"""
+        return self._create_anndata_representations(file_list, metadata, panel)
 
-    def compensate_sample(self,
-                          sample: FCSFile,
-                          workspace: Union[FlowJoWorkspace, DivaWorkspace],
-                          keep_raw: bool) -> FCSFile:
+    def _compensate_samples(self,
+                            file_list: list[FCSFile],
+                            workspace: Union[FlowJoWorkspace, DivaWorkspace],
+                            keep_raw: bool) -> list[FCSFile]:
+        """compensates all available samples"""
+        return [self._compensate_sample(sample, workspace, keep_raw) for sample in file_list]
+
+    def _compensate_sample(self,
+                           sample: FCSFile,
+                           workspace: Union[FlowJoWorkspace, DivaWorkspace],
+                           keep_raw: bool) -> FCSFile:
         """Function finds compensation matrix and applies it to raw data"""
         print(f"... compensating sample {sample.original_filename}")
-        comp_matrix = self.find_comp_matrix(sample, workspace)
+        comp_matrix = self._find_comp_matrix(sample, workspace)
         sample.compensated_events = comp_matrix.apply(sample)
         sample.compensation_status = "compensated"
         if not keep_raw:
             sample.original_events = None
         return sample
 
-    def find_comp_matrix(self,
-                         file: FCSFile,
-                         workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> Matrix:
-        """Returns compensation matrix. If matrix is within the workspace,
+    def _find_comp_matrix(self,
+                          file: FCSFile,
+                          workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> Matrix:
+        """\
+        Returns compensation matrix. If matrix is within the workspace,
         this matrix is used preferentially. Otherwise use the compensation matrix
-        from the FCS file"""
+        from the FCS file
+        """
         return workspace.wsp_dict["All Samples"][file.original_filename]["compensation"]
 
     def _append_comp_matrices(self,
                               file_list: list[FCSFile],
                               workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> None:
-        """loops through files and appends the comp matrix"""
+        """loops through files and appends the comp matrix to the workspace"""
         for file in file_list:
             self._append_comp_matrix(file, workspace)
 
     def _append_comp_matrix(self,
                             file: FCSFile,
                             workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> None:
-        """
+        """\
         If matrix is within the workspace, this matrix is used preferentially.
-        Otherwise use the compensation matrix from the FCS file."""
-
-        if not self.comp_matrix_within_workspace(file, workspace):
+        Otherwise use the compensation matrix from the FCS file.
+        """
+        if not self._comp_matrix_within_workspace(file, workspace):
             workspace.wsp_dict["All Samples"][file.original_filename]["compensation"] = file.fcs_compensation
         return
 
-    def comp_matrix_within_workspace(self,
-                                     file: FCSFile,
-                                     workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> bool:
-        return isinstance(workspace.wsp_dict["All Samples"][file.original_filename]["compensation"], Matrix)
+    def _comp_matrix_within_workspace(self,
+                                      file: FCSFile,
+                                      workspace: Union[FlowJoWorkspace, DivaWorkspace]) -> bool:
+        """returns True if there is a comp matrix supplied within the workspace"""
+        return isinstance(
+            workspace.wsp_dict["All Samples"][file.original_filename]["compensation"],
+            Matrix
+        )
 
-    def convert_fcs_to_FCSFile(self,
-                               input_directory: str,
-                               metadata_fcs_files: list[str],
-                               subsample_fcs_to: Optional[int],
-                               truncate_max_range) -> list[FCSFile]:
+    def _convert_fcs_to_FCSFile(self,
+                                input_directory: str,
+                                metadata_fcs_files: list[str],
+                                subsample_fcs_to: Optional[int],
+                                truncate_max_range) -> list[FCSFile]:
+        """converts FCS raw data to FCSFile objects"""
         return [
             FCSFile(input_directory,
                     file_name,
@@ -351,240 +442,41 @@ class DatasetAssembler:
             for file_name in metadata_fcs_files
         ]
         
-    def fetch_fcs_files(self,
-                        input_directory: str,
-                        metadata: Metadata,
-                        subsample_fcs_to: Optional[int],
-                        truncate_max_range) -> list[FCSFile]:
+    def _fetch_fcs_files(self,
+                         input_directory: str,
+                         metadata: Metadata,
+                         subsample_fcs_to: Optional[int],
+                         truncate_max_range) -> list[FCSFile]:
+        """\
+        fetches the FCS file names from the metadata object
+        and converts to FCSFile objects
+        """
         
         # sourcery skip: use-named-expression
         metadata_fcs_files = metadata.dataframe["file_name"].to_list()
         
         if metadata_fcs_files:
-            return self.convert_fcs_to_FCSFile(input_directory,
-                                               metadata_fcs_files,
-                                               subsample_fcs_to,
-                                               truncate_max_range)   
+            return self._convert_fcs_to_FCSFile(input_directory,
+                                                metadata_fcs_files,
+                                                subsample_fcs_to,
+                                                truncate_max_range)   
         
         available_fcs_files = [file for file in os.listdir(input_directory)
                                 if file.endswith(".fcs")]
-        metadata = self.append_empty_metadata(metadata,
-                                              available_fcs_files)
-        return self.convert_fcs_to_FCSFile(input_directory,
-                                           available_fcs_files,
-                                           subsample_fcs_to,
-                                           truncate_max_range)
+        metadata = self._append_empty_metadata(metadata,
+                                               available_fcs_files)
+        return self._convert_fcs_to_FCSFile(input_directory,
+                                            available_fcs_files,
+                                            subsample_fcs_to,
+                                            truncate_max_range)
     
-    def append_empty_metadata(self,
-                              metadata: Metadata,
-                              fcs_files: list[str]) -> Metadata:
+    def _append_empty_metadata(self,
+                               metadata: Metadata,
+                               fcs_files: list[str]) -> Metadata:
+        """
+        appends empty metadata based on the fcs files in
+        the input directory
+        """
         metadata.dataframe["file_name"] = fcs_files
         metadata.dataframe["sample_ID"] = range(1, len(fcs_files) + 1)
         return metadata
-
-
-class Transformer:
-    ## sort of deprecated..
-
-    def __init__(self,
-                 dataset: AnnData,
-                 cofactor_table: Optional[CofactorTable] = None,
-                 use_gate: Optional[str] = None) -> None:
-        ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
-        
-        
-        if not cofactor_table:
-            cofactor_table, raw_cofactor_table = self.calculate_cofactors(dataset)
-            dataset.uns["raw_cofactors"] = raw_cofactor_table
-        
-        dataset.uns["cofactors"] = cofactor_table    
-        self.dataset = self.transform_dataset(dataset, cofactor_table)
-
-    def calculate_cofactors(self,
-                            dataset: AnnData) -> tuple[CofactorTable, pd.DataFrame]:
-        
-        (stained_samples,
-         corresponding_control_samples) = find_corresponding_control_samples(dataset,
-                                                                             by = "file_name")
-        cofactors = {}
-        for sample in stained_samples:
-            cofactors[sample] = {}
-            fluo_channels = _fetch_fluo_channels(dataset)
-            sample_subset = create_sample_subset_with_controls(dataset,
-                                                               sample,
-                                                               corresponding_control_samples,
-                                                               match_cell_number = True)
-            for channel in fluo_channels:
-                data_array = sample_subset[:, sample_subset.var.index == channel].layers["compensated"]
-                cofactor_stained_sample = self.estimate_cofactor_on_stained_sample(data_array,
-                                                                                   200)
-                if corresponding_control_samples[sample]:
-                    control_sample = sample_subset[sample_subset.obs["staining"] != "stained", sample_subset.var.index == channel]
-                    data_array = control_sample.layers["compensated"]
-                    cofactor_unstained_sample = self.estimate_cofactor_on_unstained_sample(data_array, 20)
-                    cofactor_by_percentile = self.estimate_cofactor_from_control_quantile(control_sample)
-                
-                    cofactors[sample][channel] = np.mean([cofactor_stained_sample,
-                                                          cofactor_unstained_sample,
-                                                          cofactor_by_percentile])
-                    
-                    continue
-                cofactors[sample][channel] = cofactor_stained_sample
-        return self.create_cofactor_tables(cofactors)
-
-    def create_cofactor_tables(self,
-                               cofactors: dict[str, list[float]],
-                               reduction_method: str = "mean") -> tuple[CofactorTable, pd.DataFrame]:
-        raw_table = pd.DataFrame(data = cofactors).T
-        if reduction_method == "mean":
-            reduced = pd.DataFrame(cofactors).mean(axis = 1)
-        elif reduction_method == "median":
-            reduced = pd.DataFrame(cofactors).median(axis = 1)
-        reduced_table = pd.DataFrame({"fcs_colname": reduced.index,
-                                      "cofactors": reduced.values})
-        return CofactorTable(cofactors = reduced_table), raw_table
-
-    def only_one_peak(self,
-                      peaks: np.ndarray) -> bool:
-        return peaks.shape[0] == 1
-
-    def two_peaks(self,
-                  peaks: np.ndarray) -> bool:
-        return peaks.shape[0] == 2
-
-    def estimate_cofactor_on_stained_sample(self,
-                                            data_array: np.ndarray,
-                                            cofactor: int) -> float:
-        data_array = transform_data_array(data_array, cofactor)
-        x, curve = get_histogram_curve(data_array)
-        
-        peak_output = scs.find_peaks(curve, prominence = 0.001, height = 0.01)
-        peaks: np.ndarray = peak_output[0] ## array with the locs of found peaks
-        peak_characteristics: dict = peak_output[1]
-
-        if peaks.shape[0] >= 2: ## more than two peaks have been found it needs to be subset
-            peaks, peak_characteristics = self.subset_two_highest_peaks(peak_output)
-        # sourcery skip: use-named-expression
-        right_indents = self.find_curve_indent_right_side(curve, peak_output, x)
-        
-        if right_indents:
-            indent_idx = right_indents[0][0]
-            return abs(np.sinh(x[indent_idx]) * cofactor)
-        
-        if self.two_peaks(peaks): ## two peaks have been found
-            if np.argmax(peak_characteristics["peak_heights"]) == 0:
-                return abs(np.sinh(x[peak_characteristics["left_bases"][1]]) * cofactor)
-            
-            assert np.argmax(peak_characteristics["peak_heights"]) == 1
-            return abs(np.sinh(x[peak_characteristics["right_bases"][0]]) * cofactor)
-        
-        if self.only_one_peak(peaks): ## one peak has been found
-            return self.find_root_of_tangent_line_at_turning_point(x, curve)
-
-
-    def subset_two_highest_peaks(self,
-                                 peak_output: tuple[np.ndarray, dict]) -> tuple[np.ndarray, np.ndarray]:
-        peaks: np.ndarray = peak_output[0] ## array with the locs of found peaks
-        peak_characteristics: dict = peak_output[1]
-        
-        highest_peak_indices = self.find_index_of_two_highest_peaks(peak_characteristics)
-        
-        peaks: tuple = peaks[highest_peak_indices], peak_characteristics
-        for key, value in peak_characteristics.items():
-            peak_characteristics[key] = value[highest_peak_indices]
-        
-        return peaks[0], peaks[1]
-
-    def find_index_of_two_highest_peaks(self,
-                                        peak_characteristics: dict) -> np.ndarray:
-        return np.sort(np.argpartition(peak_characteristics["peak_heights"], -2)[-2:])
-    
-    def find_curve_indent_right_side(self,
-                                     curve: np.ndarray,
-                                     peaks: tuple[np.ndarray, dict],
-                                     x: np.ndarray) -> Optional[np.ndarray]:
-        try:
-            right_peak_index = peaks[0][1]
-        except IndexError:
-            right_peak_index = peaks[0][0]
-
-        curve = curve / np.max(curve)
-        first_derivative = np.gradient(curve)
-        second_derivative = np.gradient(first_derivative)
-
-        second_derivative = second_derivative / np.max(second_derivative)
-
-        indents = scs.find_peaks(second_derivative, prominence = 1, height = 1)
-
-        right_indents = indents[0][indents[0] > right_peak_index], indents[1]
-
-        for key, value in right_indents[1].items():
-            right_indents[1][key] = value[indents[0] > right_peak_index]
-
-        if right_indents[0].any() and curve[right_indents[0]] > 0.2 and x[right_indents[0]] < 4:
-            return right_indents
-
-        return None
-
-    def estimate_cofactor_on_unstained_sample(self,
-                                              data_array: np.ndarray,
-                                              cofactor: int) -> float:
-        data_array = transform_data_array(data_array, cofactor)
-        x, curve = get_histogram_curve(data_array)
-        
-        root = self.find_root_of_tangent_line_at_turning_point(x, curve)
-
-        return abs(np.sinh(root) * cofactor)
-
-    def find_root_of_tangent_line_at_turning_point(self,
-                                                   x: np.ndarray,
-                                                   curve: np.ndarray) -> float:
-        first_derivative = np.gradient(curve)
-        turning_point_index = np.argmin(first_derivative),
-        ## y = mx+n
-        m = np.diff(curve)[turning_point_index] * 1/((np.max(x) - np.min(x)) * 0.01)
-        n = curve[turning_point_index] - m * x[turning_point_index]
-        return -n/m                 
-
-    def estimate_cofactor_from_control_quantile(self,
-                                                dataset: AnnData) -> float:
-        return np.quantile(dataset[dataset.obs["staining"] != "stained"].layers["compensated"], 0.95)
-
-    def transform_dataset(self,
-                          dataset: AnnData,
-                          cofactor_table: CofactorTable) -> AnnData:
-        dataset.var = self.merge_cofactors_into_dataset_var(dataset, cofactor_table)
-        dataset.var = self.replace_missing_cofactors(dataset.var)
-        dataset.layers["transformed"] = transform_data_array(compensated_data = dataset.layers["compensated"],
-                                                             cofactors = dataset.var["cofactors"].values)
-        return dataset
-    
-    def get_dataset(self):
-        return self.dataset
-
-    def replace_missing_cofactors(self,
-                                  dataframe: pd.DataFrame) -> pd.DataFrame:
-        """ 
-        Missing cofactors can indicate Scatter-Channels and Time Channels
-        or not-measured channels. In any case, cofactor is set to 1 for now.
-        """
-        dataframe[["cofactors"]] = dataframe[["cofactors"]].fillna(1)
-        return dataframe
-
-    def merge_cofactors_into_dataset_var(self,
-                                         dataset: AnnData,
-                                         cofactor_table: CofactorTable):
-        if "cofactors" in dataset.var.columns:
-            print("... replacing cofactors")
-            dataset.var = dataset.var.drop("cofactors", axis = 1)
-        dataset_var = pd.merge(dataset.var,
-                               cofactor_table.dataframe,
-                               left_on = "pns",
-                               right_on = "fcs_colname",
-                               how = "left")
-        dataset_var["cofactors"] = dataset_var["cofactors"].astype("float") ## could crash, not tested, your fault if shitty
-        dataset_var.index = dataset_var["pns"].to_list()
-        dataset_var = dataset_var.drop("fcs_colname", axis = 1)
-        dataset_var["cofactors"] = dataset_var["cofactors"].astype(np.float32)
-        return dataset_var
-
