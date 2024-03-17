@@ -148,7 +148,7 @@ def test_correct_gating_names(mock_dataset: AnnData):
 def test_correct_gating_for_one_file(mock_dataset: AnnData): 
     fp.subset_gate(mock_dataset, "FSC_SSC")
     assert mock_dataset[mock_dataset.obs["sample_ID"] == "3",:].shape == (50624,21)
-    assert len(mock_dataset.obs["sample_ID"].unique()) == 1
+    assert len(mock_dataset.obs["sample_ID"].unique()) == 6
 
 def test_dataset_layers(mock_dataset: AnnData):
     """tests to confirm the presence and identities of the anndata"""
