@@ -16,3 +16,12 @@ plotting
 model
 dataset
 ```
+
+Additional functionality is available through the following top-level functions and classes.
+
+```{toctree}
+:maxdepth: 1
+
+utils
+settings
+```
