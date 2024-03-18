@@ -58,13 +58,11 @@ def sample_correlation(adata: AnnData,
                        return_fig: bool = False,
                        save: bool = None,
                        show: bool = None) -> Optional[Figure]:
-    """
+    """\
     Plot for sample correlation.
-
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -86,7 +84,7 @@ def sample_correlation(adata: AnnData,
         the asinh fold change on mfi and fop values, respectively
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
-        `RobustScaler` or `StandardScaler`(Z-score)
+        `RobustScaler` or `StandardScaler` (Z-score).
     corr_method
         correlation method that is used for correlation analysis. One of
         `pearson`, `spearman` or `kendall`.
@@ -112,7 +110,6 @@ def sample_correlation(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~seaborn.ClusterGrid`
 
     """

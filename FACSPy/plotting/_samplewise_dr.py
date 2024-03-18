@@ -126,12 +126,11 @@ def pca_samplewise(adata: AnnData,
                    return_fig: bool = False,
                    ax: Axes = None,
                    ) -> Optional[Figure]:
-    """
+    """\
     Plot for visualizing sample-wise dimensionality reduction (PCA).
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -217,12 +216,11 @@ def mds_samplewise(adata: AnnData,
                    save: bool = None,
                    show: bool = None
                    ) -> Optional[Figure]:
-    """
+    """\
     Plot for visualizing sample-wise dimensionality reduction (PCA).
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -307,12 +305,11 @@ def umap_samplewise(adata: AnnData,
                     return_fig: bool = False,
                     ax: Axes = None,
                     ) -> Optional[Figure]:
-    """
+    """\
     Plot for visualizing sample-wise dimensionality reduction (UMAP).
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -398,12 +395,11 @@ def tsne_samplewise(adata: AnnData,
                     return_fig: bool = False,
                     ax: Axes = None
                     ) -> Optional[Figure]:
-    """
+    """\
     Plot for visualizing sample-wise dimensionality reduction (TSNE).
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels

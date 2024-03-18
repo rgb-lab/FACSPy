@@ -49,12 +49,11 @@ def marker_correlation(adata: AnnData,
                        return_dataframe: bool = False,
                        save: bool = None,
                        show: bool = None) -> Optional[Figure]:
-    """
+    """\
     Plot for expression heatmap. Rows are the individual channels and columns are the data points.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -74,7 +73,7 @@ def marker_correlation(adata: AnnData,
         the asinh fold change on mfi and fop values, respectively
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
-        `RobustScaler` or `StandardScaler`(Z-score)
+        `RobustScaler` or `StandardScaler` (Z-score).
     corr_method
         correlation method that is used. One of `pearson`, `spearman` or `kendall`.
     y_label_fontsize
@@ -95,7 +94,6 @@ def marker_correlation(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~seaborn.ClusterGrid`
 
     """
