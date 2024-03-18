@@ -15,7 +15,7 @@ from ._utils import (calculate_fig_size,
 from typing import Optional, Union, Literal
 
 from ..dataset._utils import (find_corresponding_control_samples,
-                              get_histogram_curve)
+                              _get_histogram_curve)
 from .._utils import (subset_gate,
                       _is_valid_sample_ID,
                       _is_valid_filename,
@@ -68,7 +68,7 @@ def normalize_histogram_curve(curve: np.ndarray) -> np.ndarray:
 
 def calculate_histogram_data(data: pd.DataFrame,
                              plot_params: dict) -> tuple[np.ndarray, np.ndarray]:
-    x, curve = get_histogram_curve(data[plot_params["x"]].values)
+    x, curve = _get_histogram_curve(data[plot_params["x"]].values)
     curve = normalize_histogram_curve(curve)
     return x[:100], curve
 
