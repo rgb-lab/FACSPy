@@ -100,7 +100,7 @@ IMPLEMENTED_UNDERSAMPLERS = {
 class GateSampler:
         
     def __init__(self,
-                 target_size: [int] = None,
+                 target_size: Optional[int] = None,
                  target_size_per_gate: Optional[int] = None,
                  oversampler: str = "Gaussian",
                  undersampler: str = "RandomUnderSampler",
@@ -152,15 +152,15 @@ class GateSampler:
         if self._undersampler not in IMPLEMENTED_UNDERSAMPLERS and isinstance(self._undersampler, str):
             raise NotImplementedError(f"{self._undersampler} is not implemented. Please choose from {list(IMPLEMENTED_UNDERSAMPLERS.keys())}")
         if self.target_size_per_gate and self.target_size:
-            raise TypeError("Please provide a target size or a target size per gate")
+            raise ValueError("Please provide a target size or a target size per gate")
         if not self.target_size and not self.target_size_per_gate:
-            raise TypeError("Please provide target size or target_size_per_gate")
+            raise ValueError("Please provide target size or target_size_per_gate")
         if self.rare_cells_target_fraction and self.rare_cells_target_size_per_gate:
-            raise TypeError("Please provide a target size or a target size for rare cells")
+            raise ValueError("Please provide a target size or a target size for rare cells")
         if self.rare_cells_target_fraction is None and self.rare_cells_target_size_per_gate is None:
-            raise TypeError("Please provide target size or target_size_per_gate for rare cells")
+            raise ValueError("Please provide target size or target_size_per_gate for rare cells")
         if self.target_size_per_gate and self.rare_cells_target_fraction:
-            raise TypeError("Invalid combination!")
+            raise ValueError("Invalid combination!")
         return
 
     def _subset_arrays_by_idx(self,
