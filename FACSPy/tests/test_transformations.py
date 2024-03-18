@@ -1,6 +1,7 @@
 import pytest
 
 from FACSPy.dataset._transformation import transform
+from FACSPy.dataset._utils import asinh_transform
 from FACSPy.exceptions._exceptions import InvalidTransformationError
 from FACSPy.exceptions._supplements import SupplementFormatError
 from FACSPy.dataset._supplements import CofactorTable
@@ -106,4 +107,23 @@ def test_invalid_transform_error(mock_anndata):
     with pytest.raises(InvalidTransformationError):
         _ = transform(adata = mock_anndata,
                       transform = "whatever")
+
+def test_numpy_division_value_error(mock_anndata: AnnData):
+    with pytest.raises(ValueError):
+        cof_table_frame = pd.DataFrame(
+            data = {"fcs_colname": ["FSC-A" for i in range(9)],
+                    "cofactors": [200 for i in range(9)]},
+            index = list(range(9))
+        )
+        cof_table = CofactorTable(cofactors = cof_table_frame)
+        transform(mock_anndata,
+                  transform = "asinh",
+                  cofactor_table = cof_table,
+                  transform_kwargs = {"m": 3.5})
+
+def test_numpy_division_value_error(mock_anndata: AnnData):
+    with pytest.raises(ValueError):
+        asinh_transform(data = mock_anndata.layers["compensated"],
+                        cofactors = np.array([200 for _ in range(9)]))
+    
         

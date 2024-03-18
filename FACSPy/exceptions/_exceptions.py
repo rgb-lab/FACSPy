@@ -1,6 +1,19 @@
 from typing import Any
 import warnings
 
+class DataModificationWarning(Warning):
+    def __init__(self,
+                 message) -> None:
+        message = "It was detected that cells are either appended "
+        message += "or deleted. Please make sure that the performed "
+        message += "analyses are still valid. Note that if you removed "
+        message += "whole samples, mfi/fop calculations will not be affected."
+        self.message = message
+        warnings.warn(message, UserWarning)
+    
+    def __str__(self):
+        return repr(self.message)
+
 class CofactorNotFoundWarning(Warning):
     def __init__(self,
                  message) -> None:
@@ -109,7 +122,22 @@ class DimredSettingModificationWarning(Warning):
         )
         return message
 
+class ModificationAmbiguityError(Exception):
 
+    def __init__(self,
+                 param: str,
+                 mod_1: str,
+                 mod_2: str):
+        self.message = (
+            f"There were modifications for {param} in {mod_1} and {mod_2}, " + 
+            "which is not compatible."
+        )
+        if param == "sample_ids" and mod_1 == "obs" and mod_2 == "metadata":
+            self.message += (
+                "Please run either fp.sync.sample_ids_from_obs_to_metadata() " +
+                "or fp.sync.sample_ids_from_metadata_to_obs() in order to resolve " +
+                "that problem. You can then run fp.sync.synchronize_dataset() again."
+            )
 
 class AnalysisNotPerformedError(Exception):
 
@@ -120,6 +148,12 @@ class AnalysisNotPerformedError(Exception):
             f"Please run {analysis}() first."
         )
         super().__init__(self.message)
+
+class ReductionNotFoundError(AnalysisNotPerformedError):
+    def __init__(self,
+                 reduction):
+        analysis = f"fp.tl.{reduction}"
+        super().__init__(analysis)
 
 class InvalidScalingError(Exception):
 

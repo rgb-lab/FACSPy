@@ -7,10 +7,7 @@ import numpy as np
 from anndata import AnnData
 import pandas as pd
 import FACSPy as fp
-from FACSPy.synchronization._utils import (_get_frame_metrics,
-                                           _get_present_samplewise_dimreds,
-                                           _get_samplewise_dimred_columns)
-from FACSPy.synchronization._var_sync import synchronize_vars
+from FACSPy.synchronization._var_sync import _sync_panel_from_var, _sync_var_from_panel
 from FACSPy.synchronization._synchronize import _dataset_has_been_modified
 from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
@@ -33,7 +30,8 @@ def mock_dataset():
     adata = fp.create_dataset(input_directory = input_directory,
                               panel = panel,
                               metadata = metadata,
-                              workspace = workspace)
+                              workspace = workspace,
+                              subsample_fcs_to = 100)
     adata.layers["transformed"] = adata.layers["compensated"].copy()
     fp.settings.default_layer = "compensated"
     fp.tl.mfi(adata,
@@ -41,73 +39,55 @@ def mock_dataset():
     fp.tl.mds_samplewise(adata)
     return adata
 
-def test_synchronize_vars_wo_recalc(mock_dataset: AnnData):
-    adata = mock_dataset
-    df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    assert "MDS1" in df.columns
-    remove_channel(adata, channel = "CD15")
-    assert _dataset_has_been_modified(adata)
-    synchronize_vars(adata,
-                     recalculate = False)
-    df_after_sync: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    assert "MDS1" in df_after_sync.columns
-    assert "CD15" not in df_after_sync.columns
-    np.testing.assert_array_equal(df[["MDS1", "MDS2", "MDS3"]].values, df_after_sync[["MDS1", "MDS2", "MDS3"]].values)
+def test_sync_var_names_from_var_appended_scatters(mock_dataset: AnnData):
+    """the panel does not contain scatter channels, these should be appended"""
+    var_names = mock_dataset.var_names
+    subset = mock_dataset[:, var_names]
+    _sync_panel_from_var(subset)
+    panel_frame: pd.DataFrame = subset.uns["panel"].dataframe
+    fcs_colnames: pd.Series = panel_frame["fcs_colname"].tolist()
+    antigens = panel_frame["antigens"].tolist()
+    assert all(k in fcs_colnames for k in subset.var["pnn"].tolist())
+    assert all(k in antigens for k in subset.var["pns"].tolist())
+    assert all(k in subset.var["pnn"].tolist() for k in fcs_colnames)
+    assert all(k in subset.var["pns"].tolist() for k in antigens)
+    # specific check for Scatter and time channel
+    assert all(k in fcs_colnames for k in ["FSC-A", "FSC-H", "FSC-W",
+                                           "SSC-A", "SSC-H", "SSC-W",
+                                           "Time"])
 
-def test_synchronize_vars_with_recalc(mock_dataset: AnnData):
-    adata = mock_dataset
-    df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    assert "MDS1" in df.columns
-    remove_channel(adata, channel = "CD15")
-    assert _dataset_has_been_modified(adata)
-    synchronize_vars(adata,
-                     recalculate = True)
-    df_after_sync: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    assert "MDS1" in df_after_sync.columns
-    assert "CD15" not in df_after_sync.columns
-    # any needed because the last row of MDS coordinates is zero for all samples
-    assert np.any(
-        np.not_equal(df[["MDS1", "MDS2", "MDS3"]].values.flatten(),
-                     df_after_sync[["MDS1", "MDS2", "MDS3"]].values.flatten()
-        )
-    )
+def test_sync_var_names_from_var_removed_channels(mock_dataset: AnnData):
+    """we test simultaneously if scatter channels are appended and the subset
+    channels are excluded"""
+    var_names = mock_dataset.var_names
+    selected_channels = var_names[:10]
+    excluded_channels = var_names[10:-1]
+    assert not any(k in selected_channels for k in excluded_channels)
+    subset = mock_dataset[:, selected_channels]
+    var_names = subset.var_names
+    _sync_panel_from_var(subset)
+    panel_frame: pd.DataFrame = subset.uns["panel"].dataframe
+    fcs_colnames = panel_frame["fcs_colname"].tolist()
+    antigens = panel_frame["antigens"].tolist()
 
-def test_get_samplewise_dimred_columns(mock_dataset):
-    adata = mock_dataset
-    df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    assert "MDS1" in df.columns
-    assert _get_samplewise_dimred_columns(df) == ["MDS1", "MDS2", "MDS3"]
+    assert all(k in fcs_colnames for k in subset.var["pnn"].tolist())
+    assert all(k in antigens for k in subset.var["pns"].tolist())
+    assert all(k in subset.var["pnn"].tolist() for k in fcs_colnames)
+    assert all(k in subset.var["pns"].tolist() for k in antigens)
+    # specific check for Scatter and time channel
+    # Time channel was the last var_name and therefore gets excluded
+    assert all(k in fcs_colnames for k in ["FSC-A", "FSC-H", "FSC-W",
+                                           "SSC-A", "SSC-H", "SSC-W"])
 
-def test_get_samplewise_dimreds(mock_dataset):
-    adata = mock_dataset
-    df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
-    assert _get_present_samplewise_dimreds(df) == ["MDS"]
-
-def test_get_frame_metrics():
-    data_metric, data_origin, data_group = _get_frame_metrics("mfi_sample_ID_compensated")
-    assert data_metric == "mfi"
-    assert data_origin == "compensated"
-    assert data_group == "sample_ID"
-
-    data_metric, data_origin, data_group = _get_frame_metrics("fop_something_transformed")
-    assert data_metric == "fop"
-    assert data_origin == "transformed"
-    assert data_group == "something"
-
-    data_metric, data_origin, data_group = _get_frame_metrics("fop_some_long_string_that_a_user_gave_the_group_asinh")
-    assert data_metric == "fop"
-    assert data_origin == "asinh"
-    assert data_group == "some_long_string_that_a_user_gave_the_group"
-
-def test_panel_update(mock_dataset: AnnData):
-    # cofactors need to be added manually here
-    cofactors = CofactorTable(cofactors = pd.DataFrame(data = {"fcs_colname": mock_dataset.uns["panel"].dataframe["antigens"].to_list(),
-                                                               "cofactors": [1 for _ in range(len(mock_dataset.uns["panel"].dataframe))]}))
-    mock_dataset.uns["cofactors"] = cofactors
-    fp.remove_channel(mock_dataset, "CD15")
-    synchronize_vars(mock_dataset)
-    assert "CD15" not in mock_dataset.uns["panel"].dataframe["antigens"].to_list()
-    assert "CD15" not in mock_dataset.uns["cofactors"].dataframe["fcs_colname"].to_list()
-
-    
-
+def test_sync_var_names_from_panel(mock_dataset: AnnData):
+    ## the panel does not contain scatter and time
+    panel_frame = mock_dataset.uns["panel"].dataframe
+    channels = panel_frame["antigens"].tolist()
+    subset_frame = panel_frame.loc[panel_frame["antigens"].isin(channels[:5]),:]
+    mock_dataset.uns["panel"] = Panel(panel = subset_frame)
+    _sync_var_from_panel(mock_dataset)
+    var_names = mock_dataset.var_names.tolist()
+    assert all(k in var_names for k in ["FSC-A", "FSC-H", "FSC-W",
+                                        "SSC-A", "SSC-H", "SSC-W",
+                                        "Time"])
+    assert mock_dataset.var[mock_dataset.var["type"] == "fluo"].shape[0] == 5

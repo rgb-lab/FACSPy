@@ -3,7 +3,7 @@ import os
 import FACSPy as fp
 from anndata import AnnData
 import numpy as np
-from FACSPy.dataset._utils import (asinh,
+from FACSPy.dataset._utils import (asinh_transform,
                                    transform_data_array,
                                    get_control_samples,
                                    get_stained_samples,
@@ -27,12 +27,12 @@ def test_transform_data_array():
 def test_asinh_transformation():
     cofactors = [1,1,1]
     input_data = np.array([1,1,1])
-    x = asinh(input_data, cofactors)
+    x = asinh_transform(input_data, cofactors)
     np.testing.assert_array_almost_equal(np.repeat([0.88137359],3), x)
 
     cofactors = [5,5,5]
     input_data = np.array([5,5,5])
-    x = asinh(input_data, cofactors)
+    x = asinh_transform(input_data, cofactors)
     np.testing.assert_array_almost_equal(np.repeat([0.88137359],3), x)
 
 WSP_FILE_PATH = "FACSPy/_resources/"
