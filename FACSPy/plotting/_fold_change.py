@@ -67,7 +67,7 @@ def fold_change(adata: AnnData,
                 save: bool = None,
                 show: bool = None
                 ):
-    """
+    """\
     Plots the asinh fold change
 
     Parameters

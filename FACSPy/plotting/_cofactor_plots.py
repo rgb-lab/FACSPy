@@ -173,9 +173,8 @@ def transformation_plot(adata: AnnData,
                         save: bool = None,
                         show: bool = None
                         ) -> Union[Figure, Axes, tuple[pd.DataFrame]]:
-    """
-    Transformation plot. Plots the data on a log scale (biaxial), the data on the transformed
-    scale (biaxial) and the data on a transformed scale as histogram.
+    """\
+    Transformation plot. Plots the data on a log scale (biaxial), the data on the transformed scale (biaxial) and the data on a transformed scale as histogram.
 
     Parameters
     ----------
@@ -210,7 +209,6 @@ def transformation_plot(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """

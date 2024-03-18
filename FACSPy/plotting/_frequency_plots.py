@@ -138,12 +138,11 @@ def cluster_abundance(adata: AnnData,
                       return_fig: bool = False,
                       save: bool = None,
                       show: bool = None) -> Optional[Figure]:
-    """
+    """\
     Plots the frequency as a stacked bar chart of a grouping variable per cluster.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -171,7 +170,6 @@ def cluster_abundance(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~seaborn.ClusterGrid`
 
     """

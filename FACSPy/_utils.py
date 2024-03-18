@@ -1,3 +1,4 @@
+from functools import wraps
 from anndata import AnnData
 from typing import Optional, Union
 import warnings
@@ -652,6 +653,7 @@ def convert_var_to_panel(adata: AnnData,
     return adata if copy else None
 
 def _default_layer(func):
+    @wraps(func)
     def __add_default_layer(*args, **kwargs):
         if "layer" in kwargs and kwargs["layer"] is None or "layer" not in kwargs:
             from ._settings import settings
@@ -660,6 +662,7 @@ def _default_layer(func):
     return __add_default_layer
 
 def _default_gate(func):
+    @wraps(func)
     def __add_default_gate(*args, **kwargs):
         if "gate" in kwargs and kwargs["gate"] is None or "gate" not in kwargs:
             from ._settings import settings
@@ -670,11 +673,13 @@ def _default_gate(func):
 def _default_gate_and_default_layer(func):
     @_default_gate
     @_default_layer
+    @wraps(func)
     def __add_default_gate_and_default_layer(*args, **kwargs):
         return func(*args, **kwargs)
     return __add_default_gate_and_default_layer
 
 def _enable_gate_aliases(func):
+    @wraps(func)
     def __allow_gate_aliases(*args, **kwargs):
         if "gate" in kwargs:
             gate = kwargs["gate"]

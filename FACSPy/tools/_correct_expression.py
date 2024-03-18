@@ -22,7 +22,7 @@ def correct_expression(adata: AnnData,
                        return_matrix: bool = False,
                        copy: bool = False
                        ):
-    """
+    """\
     Function to correct the expression values based on a joint PCA embedding.
 
     Parameters

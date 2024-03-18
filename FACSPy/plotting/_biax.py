@@ -66,34 +66,34 @@ def _calculate_density(x: np.ndarray,
 
 @_default_layer
 @_enable_gate_aliases
-def biax(adata: AnnData,
-         gate: str,
-         layer: Optional[str] = None,
-         x_channel: str = None,
-         y_channel: str = None,
-         color: Optional[Union[str, Literal["density"]]] = "density",
-         sample_identifier: Union[str, list[str]] = None, 
-         add_cofactor: Literal["x", "y", "both"] = False,
-         x_scale: Literal["biex", "log", "linear"] = None,
-         y_scale: Literal["biex", "log", "linear"] = None,
-         color_scale: Literal["biex", "log", "linear"] = "linear",
-         cmap: str = None,
-         vmin: float = None,
-         vmax: float = None,
-         figsize: tuple[float, float] = (4,4),
-         title: Optional[str] = None,
-         show: Optional[bool] = None,
-         save: Optional[Union[str, bool]] = None,
-         ax: Axes = None,
-         return_dataframe: bool = False,
-         return_fig: bool = False) -> Optional[Figure]:
-    
-    """
+def biax(
+        adata: AnnData,
+        gate: str,
+        layer: Optional[str] = None,
+        x_channel: str = None,
+        y_channel: str = None,
+        color: Optional[Union[str, Literal["density"]]] = "density",
+        sample_identifier: Union[str, list[str]] = None, 
+        add_cofactor: Literal["x", "y", "both"] = False,
+        x_scale: Literal["biex", "log", "linear"] = None,
+        y_scale: Literal["biex", "log", "linear"] = None,
+        color_scale: Literal["biex", "log", "linear"] = "linear",
+        cmap: str = None,
+        vmin: float = None,
+        vmax: float = None,
+        figsize: tuple[float, float] = (4,4),
+        title: Optional[str] = None,
+        show: Optional[bool] = None,
+        save: Optional[Union[str, bool]] = None,
+        ax: Axes = None,
+        return_dataframe: bool = False,
+        return_fig: bool = False
+    ) -> Optional[Figure]:
+    """\
     Plot for normal biaxial representation of cytometry data.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -157,7 +157,6 @@ def biax(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~matplotlib.axes.Axes`
     
     """

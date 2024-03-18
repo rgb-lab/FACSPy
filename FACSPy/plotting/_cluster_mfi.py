@@ -182,9 +182,8 @@ def cluster_heatmap(adata: AnnData,
                     return_fig: bool = False,
                     save: bool = None,
                     show: bool = None) -> Optional[Figure]:
-    """
-    Plots a heatmap where every column corresponds to one cluster and the
-    rows display the marker expression.
+    """\
+    Plots a heatmap where every column corresponds to one cluster and the rows display the marker expression.
 
     Parameters
     ----------
@@ -197,7 +196,7 @@ def cluster_heatmap(adata: AnnData,
         can be superseded by the user.
     layer
         The layer corresponding to the data matrix. Similar to the
-        gate parameter, it has a default stored in fp.settings which
+        gate parameter, it has a default stored in `fp.settings` which
         can be overwritten by user input.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
@@ -207,10 +206,10 @@ def cluster_heatmap(adata: AnnData,
         the asinh fold change on mfi and fop values, respectively
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
-        `RobustScaler` or `StandardScaler`(Z-score)
+        `RobustScaler` or `StandardScaler` (Z-score).
     corr_method
         correlation method that is used for hierarchical clustering by cluster correlation.
-        if cluster_method == `distance`, this parameter is ignored. One of `pearson`, `spearman` 
+        if `cluster_method == distance`, this parameter is ignored. One of `pearson`, `spearman` 
         or `kendall`.
     cluster_method
         Method for hierarchical clustering of displayed clusters. If `correlation`, the correlation
@@ -240,7 +239,6 @@ def cluster_heatmap(adata: AnnData,
 
     Returns
     -------
-
     if `show==False` a :class:`~seaborn.ClusterGrid`
  
     """
