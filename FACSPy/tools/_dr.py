@@ -209,8 +209,8 @@ def diffmap(adata: AnnData,
             If not specified, diffmap looks into .obsp['neighbors_{gate}_{layer}_connectivities]
         random_state
             seed for control of randomness functions
-        copy
-            Return a copy of adata instead of modifying inplace
+    copy
+        Return a copy of adata instead of modifying inplace
     
     Returns
     -------
