@@ -76,7 +76,8 @@ def _find_current_population(gate: str) -> str:
 
 def _find_gate_path_of_gate(adata: AnnData,
                             gate: str) -> str:
-    """Finds the gate path of the specified population
+    """\
+    Finds the gate path of the specified population
     This function looks into adata.uns["gating_cols"] and selects
     the entry that endswith the provided population
 
