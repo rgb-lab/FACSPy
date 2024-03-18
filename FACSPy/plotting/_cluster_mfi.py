@@ -326,9 +326,3 @@ def cluster_heatmap(adata: AnnData,
     
     if show is False:
         return clustermap
-
-
-
-
-
-
