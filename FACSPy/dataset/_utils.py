@@ -1,13 +1,13 @@
 import warnings
 
+import os
 import pandas as pd
 import numpy as np
 from anndata import AnnData
-import os
-from typing import Union, Literal
 from KDEpy import FFTKDE
-
 from flowutils import transforms
+
+from typing import Union, Literal, Optional
 
 from ._supplements import Metadata, CofactorTable, Panel
 
@@ -252,10 +252,47 @@ def _gather_fcs_files(input_directory: str):
     return [file for file in os.listdir(input_directory)
             if file.endswith(".fcs")]
 
-def create_empty_metadata(input_directory: str,
+def create_empty_metadata(input_directory: Optional[str] = None,
                           as_frame: bool = False,
                           save: bool = True,
                           overwrite: bool = False):
+    """\
+    Creates a Metadata object from all .fcs files within a directory.
+    The table will contain a sample_ID and the file_names.
+
+    Parameters
+    ----------
+
+    input_directory
+        The directory to be used. If no input_directory is specified,
+        the current working directory is used.
+    as_frame
+        Whether to return the metadata as a pandas dataframe
+    save
+        Whether to save the metadata in the input_directory. Defaults to True.
+        Will create a file called `metadata.csv`.
+    overwrite
+        Whether to overwrite the file `metadata.csv`, if the file already exists.
+        Defaults to False
+
+    Returns
+    -------
+
+    If `as_frame == True` a :class:`~pandas.DataFrame`, else a :class:`~FACSPy.dataset._supplements.Metadata` object
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> metadata = fp.create_empty_metadata() # will read all file names with `.fcs` in the current working directory
+    >>> fp.create_dataset(
+    ...     metadata = metadata,
+    ...     ...
+    ... )
+    """
+    
+    if input_directory is None:
+        input_directory = os.getcwd()
     if not os.path.exists(input_directory):
         raise ValueError("Input directory not found")
     fcs_files = _gather_fcs_files(input_directory)
@@ -272,10 +309,48 @@ def create_empty_metadata(input_directory: str,
         return df
     return Metadata(metadata = df)
 
-def create_panel_from_fcs(input_directory: str,
+def create_panel_from_fcs(input_directory: Optional[str],
                           as_frame: bool = False,
                           save: bool = True,
                           overwrite: bool = False):
+    """\
+    Creates a Panel object from all .fcs files within a directory.
+    The table will contain the channel names and the antigens stored in the FCS file.
+    Note that all .fcs files have to contain the same panel, as only the first
+    .fcs file is read and analyzed.
+
+    Parameters
+    ----------
+
+    input_directory
+        The directory to be used. If no input_directory is specified,
+        the current working directory is used.
+    as_frame
+        Whether to return the panel as a pandas dataframe
+    save
+        Whether to save the panel in the input_directory. Defaults to True.
+        Will create a file called `panel.csv`.
+    overwrite
+        Whether to overwrite the file `panel.csv`, if the file already exists.
+        Defaults to False
+
+    Returns
+    -------
+
+    If `as_frame == True` a :class:`~pandas.DataFrame`, else a :class:`~FACSPy.dataset._supplements.Panel` object
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> metadata = fp.create_empty_metadata() # will read all file names with `.fcs` in the current working directory
+    >>> fp.create_dataset(
+    ...     metadata = metadata,
+    ...     ...
+    ... )
+    """
+    if input_directory is None:
+        input_directory = os.getcwd()
     if not os.path.exists(input_directory):
         raise ValueError("Input Directory not found")
     fcs_files = _gather_fcs_files(input_directory)
