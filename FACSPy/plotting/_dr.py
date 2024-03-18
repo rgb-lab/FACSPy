@@ -64,6 +64,7 @@ def _create_dimred_plot(adata: AnnData,
 def diffmap(adata: AnnData,
             gate: str = None,
             layer: str = None,
+            dimred: str = "diffmap",
             figsize: tuple[float, float] = (3,3),
             return_fig: bool = False,
             return_dataframe: bool = False,
@@ -116,9 +117,9 @@ def diffmap(adata: AnnData,
     
     """
     
-    dimred = "DMAP"
-    basis = f"X_diffmap_{gate}_{layer}"
+    basis = f"X_{dimred}_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
+    dimred = "DMAP"
 
     if "neighbors_key" not in kwargs:
         kwargs["neighbors_key"] = neighbors_key
@@ -151,6 +152,7 @@ def diffmap(adata: AnnData,
 def pca(adata: AnnData,
         gate: str = None,
         layer: str = None,
+        dimred: str = "pca",
         figsize: tuple[float, float] = (3,3),
         return_fig: bool = False,
         return_dataframe: bool = False,
@@ -203,9 +205,9 @@ def pca(adata: AnnData,
     
     """
  
-    dimred = "PCA"
-    basis = f"X_pca_{gate}_{layer}"
+    basis = f"X_{dimred}_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
+    dimred = "PCA"
 
     if "neighbors_key" not in kwargs:
         kwargs["neighbors_key"] = neighbors_key
@@ -238,6 +240,7 @@ def pca(adata: AnnData,
 def tsne(adata: AnnData,
          gate: str = None,
          layer: str = None,
+         dimred: str = "tsne",
          figsize: tuple[float, float] = (3,3),
          return_fig: bool = False,
          return_dataframe: bool = False,
@@ -290,10 +293,9 @@ def tsne(adata: AnnData,
     
     """
  
-    
-    dimred = "TSNE"
-    basis = f"X_tsne_{gate}_{layer}"
+    basis = f"X_{dimred}_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
+    dimred = "TSNE"
 
     if "neighbors_key" not in kwargs:
         kwargs["neighbors_key"] = neighbors_key
@@ -326,6 +328,7 @@ def tsne(adata: AnnData,
 def umap(adata: AnnData,
          gate: str = None,
          layer: str = None,
+         dimred: str = "umap",
          figsize: tuple[float, float] = (3,3),
          return_fig: bool = False,
          return_dataframe: bool = False,
@@ -378,9 +381,9 @@ def umap(adata: AnnData,
     
     """
  
-    dimred = "UMAP"
-    basis = f"X_umap_{gate}_{layer}"
+    basis = f"X_{dimred}_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
+    dimred = "UMAP"
 
     if "neighbors_key" not in kwargs:
         kwargs["neighbors_key"] = neighbors_key
