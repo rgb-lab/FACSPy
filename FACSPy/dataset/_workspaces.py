@@ -31,21 +31,44 @@ wsp_gate_constructor_lut = {
         }
 
 class FlowJoWorkspace:
+    """\
+    FlowJoWorkspace class to represent and unify cytometry FlowJo Workspace representations.
+    This class is the intermediate representation of a workspace for FACSPy.
+    
+    Parameters
+    ----------
+
+    file
+        The path or filename pointing to the table. Can be .txt, .csv.
+
+    Returns
+    -------
+    The object of :class:`~FACSPy.dataset._workspaces.FlowJoWorkspace`
+
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> workspace = fp.dt.FlowJoWorkspace("workspace.wsp")
+    >>> workspace
+    FlowJoWorkspace(3 groups: ['All Samples', 'Compensation', 'group1'], 99 entries.)
+
+    """ 
+
     #TODO: refactor self._convert_wsp_gate
     #TODO: refactor self.parse_wsp_transforms
     def __init__(self,
                  file: str,
                  ignore_transforms: bool = False) -> None:
         
-        #self.resource_path = resource_filename("FACSPy", "_resources")
         self.original_filename = os.path.basename(file)
         self.ignore_transforms = ignore_transforms
         if not os.path.isfile(file):
             raise SupplementFileNotFoundError(os.path.basename(file))
-        self.wsp_dict = self.parse_workspace(file)
+        self.wsp_dict = self._parse_workspace(file)
 
     def __repr__(self):
-        
         return (
             f"{self.__class__.__name__}(" +
             f"{len(list(self.wsp_dict.keys()))} groups: {list(self.wsp_dict.keys())}, " +
@@ -54,6 +77,7 @@ class FlowJoWorkspace:
 
     def add_external_compensation(self,
                                   matrix: pd.DataFrame) -> None:
+        """adds a compensation matrix to the samples. Supply as pd.DataFrame"""
         comp_matrix = Matrix(matrix_id = "user_supplied",
                              spill_data_or_file = matrix.values,
                              detectors = matrix.columns)
@@ -65,8 +89,8 @@ class FlowJoWorkspace:
         
         return
 
-    def parse_workspace(self,
-                        file: str) -> dict[dict]:
+    def _parse_workspace(self,
+                         file: str) -> dict[dict]:
         (wsp_root,
          gating_namespace,
          data_type_namespace,
@@ -74,26 +98,26 @@ class FlowJoWorkspace:
 
         ns_map = wsp_root.nsmap
         
-        group_node_list: list[etree._Element] = self.parse_xml_group_nodes(wsp_root, ns_map)
-        self.raw_wsp_groups = self.parse_wsp_groups(group_node_list,
-                                                    ns_map,
-                                                    gating_namespace,
-                                                    data_type_namespace)
+        group_node_list: list[etree._Element] = self._parse_xml_group_nodes(wsp_root, ns_map)
+        self.raw_wsp_groups = self._parse_wsp_groups(group_node_list,
+                                                     ns_map,
+                                                     gating_namespace,
+                                                     data_type_namespace)
         
-        sample_list: list[etree._Element] = self.parse_xml_samples(wsp_root, ns_map)
-        self.raw_wsp_samples = self.parse_wsp_samples(sample_list, ns_map,
-                                                      gating_namespace,
-                                                      transform_namespace,
-                                                      data_type_namespace)
+        sample_list: list[etree._Element] = self._parse_xml_samples(wsp_root, ns_map)
+        self.raw_wsp_samples = self._parse_wsp_samples(sample_list, ns_map,
+                                                       gating_namespace,
+                                                       transform_namespace,
+                                                       data_type_namespace)
         
-        return self.create_workspace_dictionary(self.raw_wsp_groups, self.raw_wsp_samples)
+        return self._create_workspace_dictionary(self.raw_wsp_groups, self.raw_wsp_samples)
 
     def _convert_wsp_gate(self, wsp_gate, comp_matrix, xform_lut, ignore_transforms=False):
         new_dims = []
         xforms = []
 
         for dim in wsp_gate.dimensions:
-            dim_id = dim.id
+            dim_id: str = dim.id
 
             if comp_matrix is not None:
                 pre = comp_matrix['prefix']
@@ -111,8 +135,8 @@ class FlowJoWorkspace:
                 comp_ref = None
 
             xform_id = None
-            new_dim_min = None
-            new_dim_max = None
+            new_dim_min: Optional[float] = None
+            new_dim_max: Optional[float] = None
 
             if dim_id in xform_lut and not ignore_transforms:
                 xform = xform_lut[dim_id]
@@ -166,21 +190,21 @@ class FlowJoWorkspace:
 
         return gate
    
-    def create_workspace_dictionary(self,
-                                    raw_wsp_groups: dict,
-                                    raw_wsp_samples: dict) -> dict:
+    def _create_workspace_dictionary(self,
+                                     raw_wsp_groups: dict,
+                                     raw_wsp_samples: dict) -> dict:
         wsp_dict = {}
         for group_id, group_dict in raw_wsp_groups.items():
             wsp_dict[group_id] = {}
             for sample_id in group_dict["samples"]:
                 sample_dict = raw_wsp_samples[sample_id]
                 sample_name = sample_dict['sample_name']
-                wsp_dict[group_id][sample_name] = self.assemble_sample_from_raw_sample(sample_dict, sample_name, group_dict)
+                wsp_dict[group_id][sample_name] = self._assemble_sample_from_raw_sample(sample_dict, sample_name, group_dict)
         return wsp_dict
 
-    def parse_group_gates(self,
-                          group_dict: dict,
-                          sample_dict: dict) -> tuple[list[dict], list[str]]:
+    def _parse_group_gates(self,
+                           group_dict: dict,
+                           sample_dict: dict) -> tuple[list[dict], list[str]]:
         
         # check the sample's sample_gates. If it is empty, then the
         # sample belongs to a group, but it has no gate hierarchy.
@@ -226,10 +250,10 @@ class FlowJoWorkspace:
         return group_sample_gates, group_sample_gate_names
 
 
-    def parse_custom_gates(self,
-                           sample_dict: dict,
-                           group_sample_gate_names: list[str],
-                           group_sample_gates: list[dict]) -> list[dict]:
+    def _parse_custom_gates(self,
+                            sample_dict: dict,
+                            group_sample_gate_names: list[str],
+                            group_sample_gates: list[dict]) -> list[dict]:
         # Now, we need to check if there were only custom sample gates
         # and no group gates. In this case the above would never have
         # found the custom sample gates, but we don't want to replicate
@@ -258,24 +282,24 @@ class FlowJoWorkspace:
 
         return group_sample_gates
     
-    def parse_raw_sample_gates(self,
-                               sample_dict: dict,
-                               group_dict: dict
-                               ) -> list[dict]:        
+    def _parse_raw_sample_gates(self,
+                                sample_dict: dict,
+                                group_dict: dict
+                                ) -> list[dict]:        
         
         (group_sample_gates,
-         group_sample_gate_names) = self.parse_group_gates(group_dict, sample_dict)
+         group_sample_gate_names) = self._parse_group_gates(group_dict, sample_dict)
         
-        custom_gates = self.parse_custom_gates(sample_dict, group_sample_gate_names, group_sample_gates)
+        custom_gates = self._parse_custom_gates(sample_dict, group_sample_gate_names, group_sample_gates)
 
         return group_sample_gates + custom_gates
 
-    def assemble_sample_from_raw_sample(self,
-                                        sample_dict: dict,
-                                        sample_name: str,
-                                        group_dict: dict) -> dict:
+    def _assemble_sample_from_raw_sample(self,
+                                         sample_dict: dict,
+                                         sample_name: str,
+                                         group_dict: dict) -> dict:
         
-        group_sample_gates = self.parse_raw_sample_gates(sample_dict, group_dict)
+        group_sample_gates = self._parse_raw_sample_gates(sample_dict, group_dict)
         matrix = sample_dict['comp']['matrix'] if sample_dict['comp'] is not None else None
         transforms = list(sample_dict['transforms'].values())
         return {
@@ -284,17 +308,17 @@ class FlowJoWorkspace:
             'compensation': matrix
         }
 
-    def parse_sample_gates(self,
-                           sample_node: etree._Element,
-                           gating_namespace: str,
-                           data_type_namespace: str,
-                           ns_map: dict) -> list[dict]:
+    def _parse_sample_gates(self,
+                            sample_node: etree._Element,
+                            gating_namespace: str,
+                            data_type_namespace: str,
+                            ns_map: dict) -> list[dict]:
         sample_root_subpopulation: etree._Element = sample_node.find("Subpopulations", ns_map)
 
         if sample_root_subpopulation is None:
             return []
         else:
-            sample_gates = self.parse_wsp_subpopulations(
+            sample_gates = self._parse_wsp_subpopulations(
                 sample_root_subpopulation,
                 None,
                 gating_namespace,
@@ -302,22 +326,22 @@ class FlowJoWorkspace:
             )
         return sample_gates
 
-    def parse_wsp_samples(self,
-                          sample_list: list[etree._Element],
-                          ns_map: dict,
-                          gating_namespace: str,
-                          transform_namespace: str,
-                          data_type_namespace: str) -> dict:
+    def _parse_wsp_samples(self,
+                           sample_list: list[etree._Element],
+                           ns_map: dict,
+                           gating_namespace: str,
+                           transform_namespace: str,
+                           data_type_namespace: str) -> dict:
         wsp_samples = {}
 
         for sample in sample_list:
             sample_node: etree._Element = sample.find("SampleNode", ns_map)
             sample_id = sample_node.attrib["sampleID"]
             
-            sample_xform_lut = self.parse_wsp_transforms(sample, transform_namespace, data_type_namespace, ns_map)
-            sample_keywords_lut = self.parse_wsp_keywords(sample, ns_map)
-            sample_comp = self.parse_wsp_compensation(sample, transform_namespace, data_type_namespace)
-            sample_gates = self.parse_sample_gates(sample_node, gating_namespace, data_type_namespace, ns_map)
+            sample_xform_lut = self._parse_wsp_transforms(sample, transform_namespace, data_type_namespace, ns_map)
+            sample_keywords_lut = self._parse_wsp_keywords(sample, ns_map)
+            sample_comp = self._parse_wsp_compensation(sample, transform_namespace, data_type_namespace)
+            sample_gates = self._parse_sample_gates(sample_node, gating_namespace, data_type_namespace, ns_map)
             
             # sample gate LUT will store everything we need to convert sample gates,
             # including any custom gates (ones with empty string owning groups).
@@ -331,14 +355,14 @@ class FlowJoWorkspace:
                 'comp': sample_comp
             }
 
-            wsp_samples = self.process_custom_gates(sample_gates, wsp_samples, sample_id)
+            wsp_samples = self._process_custom_gates(sample_gates, wsp_samples, sample_id)
 
         return wsp_samples         
 
-    def process_custom_gates(self,
-                             sample_gates: list[dict],
-                             wsp_samples: dict,
-                             sample_id: str) -> dict:
+    def _process_custom_gates(self,
+                              sample_gates: list[dict],
+                              wsp_samples: dict,
+                              sample_id: str) -> dict:
         for sample_gate in sample_gates:
             if sample_gate['owning_group'] == '':
                 # If the owning group is an empty string, it is a custom gate for that sample
@@ -355,9 +379,9 @@ class FlowJoWorkspace:
                 )
         return wsp_samples
 
-    def parse_detectors(self,
-                        matrix_element: etree._Element,
-                        data_type_ns: str) -> list[str]:
+    def _parse_detectors(self,
+                         matrix_element: etree._Element,
+                         data_type_ns: str) -> list[str]:
         params_els: etree._Element = matrix_element.find(
             f'{data_type_ns}:parameters', matrix_element.nsmap
         )
@@ -367,34 +391,39 @@ class FlowJoWorkspace:
         return [find_attribute_value(param_el, data_type_ns, 'name') for param_el in param_els]
 
 
-    def parse_matrix(self,
-                     matrix_element: etree._Element,
-                     transform_ns: str) -> np.ndarray:
+    def _parse_matrix(self,
+                      matrix_element: etree._Element,
+                      transform_ns: str) -> np.ndarray:
         
-        return self.assemble_matrix(matrix_element, transform_ns)
+        return self._assemble_matrix(matrix_element, transform_ns)
     
-    def parse_matrix_row(self,
-                         coefficients: list[etree._Element],
-                         transform_ns: str) -> np.ndarray:
+    def _parse_matrix_row(self,
+                          coefficients: list[etree._Element],
+                          transform_ns: str) -> np.ndarray:
         return np.array([float(find_attribute_value(coefficient, transform_ns, "value")) for coefficient in coefficients]) 
 
-    def parse_coefficients(self,
-                           spill_element: etree._Element,
-                           transform_ns: str) -> list[etree._Element]:
+    def _parse_coefficients(self,
+                            spill_element: etree._Element,
+                            transform_ns: str) -> list[etree._Element]:
         return spill_element.findall(f'{transform_ns}:coefficient', spill_element.nsmap)
 
-    def assemble_matrix(self,
-                        matrix_element: etree._Element,
-                        transform_ns: str):
+    def _assemble_matrix(self,
+                         matrix_element: etree._Element,
+                         transform_ns: str):
         spill_els: list[etree._Element] = matrix_element.findall(
             f'{transform_ns}:spillover', matrix_element.nsmap
         )
-        return np.array([self.parse_matrix_row(self.parse_coefficients(spill_el, transform_ns), transform_ns) for spill_el in spill_els])
+        return np.array(
+            [self._parse_matrix_row(
+                self._parse_coefficients(spill_el, transform_ns),
+                transform_ns)
+             for spill_el in spill_els]
+        )
 
-    def parse_wsp_compensation(self,
-                               sample: etree._Element,
-                               transform_ns: str,
-                               data_type_ns: str) -> Optional[dict]:
+    def _parse_wsp_compensation(self,
+                                sample: etree._Element,
+                                transform_ns: str,
+                                data_type_ns: str) -> Optional[dict]:
         
         matrix_elements = sample.findall(f'{transform_ns}:spilloverMatrix', sample.nsmap)
 
@@ -405,8 +434,8 @@ class FlowJoWorkspace:
 
         matrix_element: etree._Element = matrix_elements[0]
 
-        detectors = self.parse_detectors(matrix_element, data_type_ns)
-        matrix_array = self.parse_matrix(matrix_element, transform_ns)
+        detectors = self._parse_detectors(matrix_element, data_type_ns)
+        matrix_array = self._parse_matrix(matrix_element, transform_ns)
 
         matrix = Matrix(
             matrix_id = matrix_element.attrib['name'],
@@ -424,10 +453,9 @@ class FlowJoWorkspace:
             'matrix': matrix,
         }
 
-
-    def parse_wsp_keywords(self,
-                           sample: etree._Element,
-                           ns_map: dict) -> dict:
+    def _parse_wsp_keywords(self,
+                            sample: etree._Element,
+                            ns_map: dict) -> dict:
         keywords: etree._Element = sample.find("Keywords", ns_map)
         keyword_els = keywords.getchildren()
 
@@ -436,11 +464,11 @@ class FlowJoWorkspace:
             for keyword_el in keyword_els
         }
 
-    def parse_wsp_transforms(self,
-                             sample: etree._Element,
-                             transform_ns: str,
-                             data_type_ns: str,
-                             ns_map: dict) -> dict:
+    def _parse_wsp_transforms(self,
+                              sample: etree._Element,
+                              transform_ns: str,
+                              data_type_ns: str,
+                              ns_map: dict) -> dict:
         transforms_el: etree._Element = sample.find("Transformations", ns_map)
         xform_els: list[etree._Element] = transforms_el.getchildren()
 
@@ -532,22 +560,22 @@ class FlowJoWorkspace:
 
         return xforms_lut
 
-    def parse_wsp_groups(self,
-                         group_node_list: list[etree._Element],
-                         ns_map: dict,
-                         gating_namespace: str,
-                         data_type_namespace: str) -> dict:
+    def _parse_wsp_groups(self,
+                          group_node_list: list[etree._Element],
+                          ns_map: dict,
+                          gating_namespace: str,
+                          data_type_namespace: str) -> dict:
         wsp_groups = {}
         for group_node in group_node_list:
             group_name: str = group_node.attrib["name"]
 
             group_node_group: etree._Element = group_node.find("Group", ns_map)
             if group_node_group is not None:
-                sample_ids = self.parse_sampleIDs_from_sample_refs(group_node_group, ns_map)
+                sample_ids = self._parse_sampleIDs_from_sample_refs(group_node_group, ns_map)
             
             group_node_subpopulation = group_node.find("Subpopulations", ns_map)
             if group_node_subpopulation is not None:
-                group_gates = self.parse_wsp_subpopulations(
+                group_gates = self._parse_wsp_subpopulations(
                     group_node_subpopulation,
                     None,
                     gating_namespace,
@@ -563,11 +591,11 @@ class FlowJoWorkspace:
 
         return wsp_groups
 
-    def parse_wsp_subpopulations(self,
-                                 subpopulation: etree._Element,
-                                 gate_path: Optional[list],
-                                 gating_ns: str,
-                                 data_type_ns: str) -> list[dict]:
+    def _parse_wsp_subpopulations(self,
+                                  subpopulation: etree._Element,
+                                  gate_path: Optional[list],
+                                  gating_ns: str,
+                                  data_type_ns: str) -> list[dict]:
         
         ns_map = subpopulation.nsmap
 
@@ -576,8 +604,8 @@ class FlowJoWorkspace:
         populations: list[etree._Element] = subpopulation.findall("Population", ns_map)
         
         for population in populations:
-            gate_path, parent_id = self.fetch_gate_path_and_parent(gate_path)
-            gates.append(self.fetch_gate_from_xml_population(population,
+            gate_path, parent_id = self._fetch_gate_path_and_parent(gate_path)
+            gates.append(self._fetch_gate_from_xml_population(population,
                                                              ns_map,
                                                              gating_ns,
                                                              data_type_ns,
@@ -588,21 +616,25 @@ class FlowJoWorkspace:
             child_gate_path = gate_path.copy()
             child_gate_path.append(population.attrib["name"])
             for el in subpopulations:
-                gates.extend(self.parse_wsp_subpopulations(el,
-                                                           child_gate_path,
-                                                           gating_ns,
-                                                           data_type_ns))
+                gates.extend(
+                    self._parse_wsp_subpopulations(
+                        el,
+                        child_gate_path,
+                        gating_ns,
+                        data_type_ns
+                    )
+                )
 
 
         return gates
 
-    def fetch_gate_from_xml_population(self,
-                                       population: etree._Element,
-                                       ns_map: dict,
-                                       gating_ns: str,
-                                       data_type_ns: str,
-                                       parent_id: str,
-                                       gate_path: list) -> dict:
+    def _fetch_gate_from_xml_population(self,
+                                        population: etree._Element,
+                                        ns_map: dict,
+                                        gating_ns: str,
+                                        data_type_ns: str,
+                                        parent_id: str,
+                                        gate_path: list) -> dict:
         population_name = population.attrib["name"]
         owning_group = population.attrib["owningGroup"]
         
@@ -630,8 +662,8 @@ class FlowJoWorkspace:
                 'gate': g,
                 'gate_path': tuple(gate_path)}
 
-    def fetch_gate_path_and_parent(self,
-                                   gate_path: Optional[list]) -> tuple[list, str]:
+    def _fetch_gate_path_and_parent(self,
+                                    gate_path: Optional[list]) -> tuple[list, str]:
         if gate_path is None:
             gate_path = ["root"]
             parent_id = None
@@ -640,9 +672,9 @@ class FlowJoWorkspace:
 
         return gate_path, parent_id
 
-    def parse_sampleIDs_from_sample_refs(self,
-                                         group_element: etree._Element,
-                                         ns_map: dict) -> list[str]:
+    def _parse_sampleIDs_from_sample_refs(self,
+                                          group_element: etree._Element,
+                                          ns_map: dict) -> list[str]:
         sample_references: etree._Element = group_element.find("SampleRefs", ns_map)
         
         if sample_references is None:
@@ -650,30 +682,28 @@ class FlowJoWorkspace:
         
         sample_reference_elements: list[etree._Element] = sample_references.findall("SampleRef", ns_map)
         return [sample_ref.attrib["sampleID"] for sample_ref in sample_reference_elements]
-                  
-        
 
-    def parse_xml_group_nodes(self,
-                              wsp_root: etree._Element,
-                              ns_map: dict) -> list[etree._Element]:
-        group_elements = self.parse_xml_groups(wsp_root, ns_map)
+    def _parse_xml_group_nodes(self,
+                               wsp_root: etree._Element,
+                               ns_map: dict) -> list[etree._Element]:
+        group_elements = self._parse_xml_groups(wsp_root, ns_map)
         return group_elements.findall("GroupNode", ns_map)
 
-    def parse_xml_groups(self,
-                         wsp_root: etree._Element,
-                         ns_map: dict) -> etree._Element:
+    def _parse_xml_groups(self,
+                          wsp_root: etree._Element,
+                          ns_map: dict) -> etree._Element:
         return wsp_root.find("Groups", ns_map)
 
-    def parse_xml_samples(self,
-                          wsp_root: etree._Element,
-                          ns_map: dict) -> list[etree._Element]:
+    def _parse_xml_samples(self,
+                           wsp_root: etree._Element,
+                           ns_map: dict) -> list[etree._Element]:
         
-        sample_list_elements = self.parse_xml_sample_list(wsp_root, ns_map)
+        sample_list_elements = self._parse_xml_sample_list(wsp_root, ns_map)
         return sample_list_elements.findall("Sample", ns_map)
 
-    def parse_xml_sample_list(self,
-                              wsp_root: etree._Element,
-                              ns_map: dict) -> etree._Element:
+    def _parse_xml_sample_list(self,
+                               wsp_root: etree._Element,
+                               ns_map: dict) -> etree._Element:
         return wsp_root.find("SampleList", ns_map)
 
     def _extract_namespaces(self,
@@ -698,44 +728,65 @@ class FlowJoWorkspace:
 
 
 class DivaWorkspace:
+    #TODO: Q1-1 is not supported currently...
+    #TODO: Add gate names for Q-gates -> check with Diva which Qs are which gates
+    #TODO: refactor parse diva gate coordinates
     """
-    Class to represent a diva workspace.
+    Class to represent a diva workspace. Currently experimental!
+
     Built to be compatible with the flowkit package.
     Q1-Q4 Quadrant Gates are parsed as Polygon-Gates in contrast to GMLRectangle in Flowkit
     Quadrant Gates have an upper limit here in contrast to FlowKit were "None" is passed to extend the gates to infinity
     Binner-Regions are ignored as they define the points where the quadrant gates lie
     Code is inspired by CytoML, however one notable change: "restore to logicle scale" was removed
-    TODO: Q1-1 is not supported currently...
-    TODO: Add gate names for Q-gates -> check with Diva which Qs are which gates
-    TODO: refactor parse diva gate coordinates
-    """
+
+    Parameters
+    ----------
+
+    file
+        The path or filename pointing to the table. Can be .txt, .csv.
+
+    Returns
+    -------
+    The object of :class:`~FACSPy.dataset._workspaces.DivaWorkspace`
+
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> workspace = fp.dt.DivaWorkspace("workspace.xml")
+    >>> workspace
+    DivaWorkspace(3 groups: ['All Samples', 'Compensation', 'group1'], 99 entries.)
+
+    """ 
+
     def __init__(self,
                  file: str,):
 
         if not self._correct_suffix(file):
             raise ValueError("Only XML Diva Workspaces are supported")
 
-        self.wsp_dict = self.create_workspace_dictionary(file)
+        self.wsp_dict = self._create_workspace_dictionary(file)
 
     def __repr__(self):
-        
         return (
             f"{self.__class__.__name__}(" +
             f"{len(list(self.wsp_dict.keys()))} groups: {list(self.wsp_dict.keys())}, " +
             f"{len(list(self.wsp_dict['All Samples'].keys()))} entries.)"
         )
 
-    def parse_experiment(self,
-                         raw_wsp: etree._ElementTree) -> etree._Element:
+    def _parse_experiment(self,
+                          raw_wsp: etree._ElementTree) -> etree._Element:
         root: etree._Element = raw_wsp.getroot()
         experiment_list = root.getchildren()
         if len(experiment_list) != 1:
             raise ValueError("More than one experiment detected...???")
         return experiment_list[0]
     
-    def parse_tubes(self,
-                    raw_wsp: etree._ElementTree) -> list[etree._Element]:
-        experiment = self.parse_experiment(raw_wsp)
+    def _parse_tubes(self,
+                     raw_wsp: etree._ElementTree) -> list[etree._Element]:
+        experiment = self._parse_experiment(raw_wsp)
         log_decades = int(experiment.find("log_decades").text)
         if log_decades == 4:
             min_val = 26
@@ -746,11 +797,11 @@ class DivaWorkspace:
         specimens = experiment.findall("specimen")
         return list(itertools.chain(*[specimen.findall("tube") for specimen in specimens]))
     
-    def create_workspace_dictionary(self,
-                                    file: str) -> dict:
+    def _create_workspace_dictionary(self,
+                                     file: str) -> dict:
         
-        raw_wsp = self.parse_raw_data(file)
-        tubes = self.parse_tubes(raw_wsp)
+        raw_wsp = self._parse_raw_data(file)
+        tubes = self._parse_tubes(raw_wsp)
 
         #self.version = dict(root.items())["version"]
         #self.experiment_name = dict(experiment.items())["name"]
@@ -774,8 +825,8 @@ class DivaWorkspace:
 
         return wsp_dict
 
-    def parse_raw_data(self,
-                       file: str) -> etree._Element:
+    def _parse_raw_data(self,
+                        file: str) -> etree._Element:
         return etree.parse(file)
 
     def _parse_diva_transformation(self,
