@@ -245,16 +245,15 @@ class Metadata(BaseSupplement):
 
     file
         The path or filename pointing to the table. Can be .txt, .csv.
-    panel
+    metadata
         Optional. If the dataframe has been assembled with pandas,
         supply this metadata dataframe.
     from_fcs
         If True, returns an empty Metadata object which will be filled
-        during dataset assembly by fp.create_dataset().
+        during dataset assembly by :function:`~FACSPy.dataset._dataset.create_dataset()`.
 
     Returns
     -------
-
     The dataset object of :class:`~FACSPy.dataset._supplements.Metadata`
 
 
