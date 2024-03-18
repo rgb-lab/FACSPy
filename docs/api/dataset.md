@@ -13,8 +13,6 @@
     :toctree: ../generated/
     :nosignatures:
 
-    dt.DatasetAssembler
-    dt.Transformer
     dt.create_dataset
     dt.transform
     dt.calculate_cofactors
