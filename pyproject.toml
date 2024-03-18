@@ -50,7 +50,8 @@ dependencies = [
     "minisom",
     "phenograph",
     "flowsom-clustering",
-    "seaborn>0.12"
+    "seaborn>0.12",
+    "imblearn"
 ]
 
 #[project.urls]
