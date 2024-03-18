@@ -7,6 +7,8 @@ import os
 from typing import Union, Literal
 from KDEpy import FFTKDE
 
+from flowutils import transforms
+
 from ._supplements import Metadata, CofactorTable, Panel
 
 def _replace_missing_cofactors(dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -46,16 +48,11 @@ def create_sample_subset_with_controls(adata: AnnData,
         return match_cell_numbers(adata[adata.obs["file_name"].isin(sample_list)])
     return adata[adata.obs["file_name"].isin(sample_list)]
 
-def asinh(data: np.ndarray,
-          cofactors: Union[np.ndarray, int, float]) -> np.ndarray:
-    return np.arcsinh(np.divide(data, cofactors))
-
 def transform_data_array(compensated_data: np.ndarray,
                          cofactors: Union[np.ndarray, int, float]) -> np.ndarray:
-    return asinh(compensated_data, cofactors)
+    return asinh_transform(compensated_data, cofactors)
 
-def get_histogram_curve(data_array: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    # TODO: needs try except for finite support kernel
+def _get_histogram_curve(data_array: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     _, x = np.histogram(data_array, bins = 100)
     try:
         _, curve = FFTKDE(kernel = "gaussian",
@@ -88,6 +85,144 @@ def find_name_of_control_sample_by_metadata(sample,
     matching_metadata = indexed_frame.loc[tuple(metadata_to_compare.values[0])]
     return matching_metadata.loc[matching_metadata[by] != sample, by].to_list()
 
+def asinh_transform(data: np.ndarray,
+                    cofactors: Union[np.ndarray, int, float]) -> np.ndarray:
+    """\
+    Transforms the data according to the asinh function. First, the data
+    are divided by the cofactors. The np.arcsinh function is then applied.
+
+    Parameters
+    ----------
+
+    data
+        The data to be transformed
+
+    cofactors
+        the cofactors for each channel
+
+    Returns
+    -------
+        The transformed data array
+
+    """
+    return np.arcsinh(np.divide(data, cofactors))
+
+def logicle_transform(data: np.ndarray,
+                      m: Union[float, int],
+                      t: Union[float, int],
+                      w: Union[float, int],
+                      a: Union[float, int],
+                      channel_indices: np.ndarray) -> np.ndarray:
+    """\
+    Transforms the data according to the log transform.
+
+    Parameters
+    ----------
+
+    data
+        The data to be transformed
+
+    channel_indices
+        the indices of the channels to be transformed
+
+    t
+        parameter for the top of the linear scale (e.g. 262144)
+
+    m
+        parameter for desired number of decades
+        
+    w
+        parameter for the approximate number of decades in the linear region
+
+    a
+        parameter for the additional number of negative decades
+
+    Returns
+    -------
+        The transformed data array
+
+    """
+    return transforms.logicle(data,
+                              channel_indices = channel_indices,
+                              m = m,
+                              t = t,
+                              w = w,
+                              a = a)
+
+def hyperlog_transform(data: np.ndarray,
+                       m: Union[float, int],
+                       t: Union[float, int],
+                       w: Union[float, int],
+                       a: Union[float, int],
+                       channel_indices: np.ndarray) -> np.ndarray:
+    """\
+    Transforms the data according to the log transform.
+
+    Parameters
+    ----------
+
+    data
+        The data to be transformed
+
+    channel_indices
+        the indices of the channels to be transformed
+
+    t
+        parameter for the top of the linear scale (e.g. 262144)
+
+    m
+        parameter for desired number of decades
+        
+    w
+        parameter for the approximate number of decades in the linear region
+
+    a
+        parameter for the additional number of negative decades
+
+    Returns
+    -------
+        The transformed data array
+
+    """
+    return transforms.hyperlog(data,
+                               channel_indices = channel_indices,
+                               m = m,
+                               t = t,
+                               w = w,
+                               a = a)
+
+def log_transform(data: np.ndarray,
+                  m: Union[float, int],
+                  t: Union[float, int],
+                  channel_indices: np.ndarray) -> np.ndarray:
+    """\
+    Transforms the data according to the log transform.
+
+    Parameters
+    ----------
+
+    data
+        The data to be transformed
+
+    channel_indices
+        the indices of the channels to be transformed
+
+    t
+        parameter for the top of the linear scale (e.g. 262144)
+
+    m
+        parameter for desired number of decades
+
+    Returns
+    -------
+        The transformed data array
+
+    """
+    return transforms.log(data,
+                          channel_indices = channel_indices,
+                          m = m,
+                          t = t)
+
 def find_corresponding_control_samples(adata: AnnData,
                                        by: Literal["file_name", "sample_ID"]) -> tuple[list[str], dict[str, str]]:
     corresponding_controls = {}
@@ -116,7 +251,6 @@ def find_corresponding_control_samples(adata: AnnData,
 def _gather_fcs_files(input_directory: str):
     return [file for file in os.listdir(input_directory)
             if file.endswith(".fcs")]
-
 
 def create_empty_metadata(input_directory: str,
                           as_frame: bool = False,
@@ -163,4 +297,3 @@ def create_panel_from_fcs(input_directory: str,
     if as_frame:
         return channels
     return Panel(panel = df)
-
