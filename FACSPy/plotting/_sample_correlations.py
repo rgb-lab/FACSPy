@@ -76,7 +76,7 @@ def sample_correlation(adata: AnnData,
         The layer corresponding to the data matrix. Similar to the
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
-    annotate
+    metadata_annotation
         controls the annotated variables on top of the plot.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
@@ -116,7 +116,6 @@ def sample_correlation(adata: AnnData,
     if `show==False` a :class:`~seaborn.ClusterGrid`
 
     """
- 
 
     plot_data = _prepare_heatmap_data(adata = adata,
                                       gate = gate,
