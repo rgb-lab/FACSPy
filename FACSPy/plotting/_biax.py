@@ -16,26 +16,15 @@ from ._utils import (savefig_or_show,
                      _continous_color_vector,
                      _retrieve_cofactor_or_set_to_default,
                      _generate_continous_color_scale,
-                     _define_axis_scale,
+                     _generate_scale_kwargs,
                      _transform_data_to_scale,
                      _transform_color_to_scale)
 from .._utils import (subset_gate,
                       _is_valid_filename,
                       _is_valid_sample_ID,
-                      _default_layer,
+                      _default_gate_and_default_layer,
                       _enable_gate_aliases)
 
-def _generate_scale_kwargs(channel,
-                           channel_scale,
-                           linthresh: float) -> dict:
-    channel_scale: Literal["linear", "log", "symlog"]= _define_axis_scale(channel, channel_scale)
-    scale_kwargs = {
-        "value": channel_scale 
-    }
-    if channel_scale == "symlog":
-        scale_kwargs["linthresh"] = linthresh
-    return scale_kwargs
-    
 def _get_cmap_biax(cmap,
                    color):
     if cmap:
@@ -64,33 +53,35 @@ def _calculate_density(x: np.ndarray,
     z[np.where(np.isnan(z))] = 0.0
     return z
 
-@_default_layer
+@_default_gate_and_default_layer
 @_enable_gate_aliases
-def biax(
-        adata: AnnData,
-        gate: str,
-        layer: Optional[str] = None,
-        x_channel: str = None,
-        y_channel: str = None,
-        color: Optional[Union[str, Literal["density"]]] = "density",
-        sample_identifier: Union[str, list[str]] = None, 
-        add_cofactor: Literal["x", "y", "both"] = False,
-        x_scale: Literal["biex", "log", "linear"] = None,
-        y_scale: Literal["biex", "log", "linear"] = None,
-        color_scale: Literal["biex", "log", "linear"] = "linear",
-        cmap: str = None,
-        vmin: float = None,
-        vmax: float = None,
-        figsize: tuple[float, float] = (4,4),
-        title: Optional[str] = None,
-        show: Optional[bool] = None,
-        save: Optional[Union[str, bool]] = None,
-        ax: Axes = None,
-        return_dataframe: bool = False,
-        return_fig: bool = False
-    ) -> Optional[Figure]:
+def biax(adata: AnnData,
+         gate: str = None,
+         layer: Optional[str] = None,
+         x_channel: str = None,
+         y_channel: str = None,
+         color: Optional[Union[str, Literal["density"]]] = "density",
+         sample_identifier: Union[str, list[str]] = None, 
+         add_cofactor: Literal["x", "y", "both"] = False,
+         x_scale: Literal["biex", "log", "linear"] = None,
+         y_scale: Literal["biex", "log", "linear"] = None,
+         color_scale: Literal["biex", "log", "linear"] = "linear",
+         cmap: str = None,
+         vmin: float = None,
+         vmax: float = None,
+         title: Optional[str] = None,
+         figsize: tuple[float, float] = (4,4),
+         return_dataframe: bool = False,
+         return_fig: bool = False,
+         ax: Optional[Axes] = None,
+         show: bool = True,
+         save: Optional[str] = None
+         ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plot for normal biaxial representation of cytometry data.
+
+    Color the plot using annotations of observations (.obs) or expression of markers.
+    Axes are customizable to `log`, `biex` or `linear` scale.
 
     Parameters
     ----------
@@ -120,44 +111,70 @@ def biax(
         If set, has to be one of the sample_IDs or the file_names.
     add_cofactor
         if set, adds the cofactor as a line to the plot for visualization.
-        if 'x', sets the cofactor for the x-axis,
-        if 'y', sets the cofactor for the y-axis,
-        if 'both', sets both axis cofactors
+        if `x`, sets the cofactor for the x-axis,
+        if `y`, sets the cofactor for the y-axis,
+        if `both`, sets both axis cofactors
     x_scale
-        sets the scale for the x axis. Has to be one of 'biex', 'log', 'linear'.
-        The value 'biex' gets converted to 'symlog' internally
+        sets the scale for the x axis. Has to be one of `biex`, `log`, `linear`.
+        The value `biex` gets converted to `symlog` internally
     y_scale
-        sets the scale for the y axis. Has to be one of 'biex', 'log', 'linear'.
-        The value 'biex' gets converted to 'symlog' internally
+        sets the scale for the y axis. Has to be one of `biex`, `log`, `linear`.
+        The value `biex` gets converted to `symlog` internally
     color_scale
-        sets the scale for the colorbar. Has to be one of 'biex', 'log', 'linear'.
+        sets the scale for the colorbar. Has to be one of `biex`, `log`, `linear`.
     cmap
         Sets the colormap for plotting. Can be continuous or categorical, depending
-        on the input data. When set, both seaborns 'palette' and 'cmap'
+        on the input data. When set, both seaborns `palette` and `cmap`
         parameters will use this value
     vmin
         minimum value to plot in the color vector
     vmax
         maximum value to plot in the color vector
-    figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
     title
         sets the figure title. Optional
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
 
     Returns
     -------
-    if `show==False` a :class:`~matplotlib.axes.Axes`
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated'
+    >>> fp.pl.biax(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "compensated",
+    ...     x_channel = "CD3",
+    ...     y_channel = "SSC-A",
+    ...     color = "batch",
+    ...     x_scale = "biex",
+    ...     y_scale = "linear"
+    ... )
     
     """
     

@@ -1,7 +1,10 @@
 from matplotlib.axes import Axes
 from anndata import AnnData
+import pandas as pd
 
-from typing import Optional
+from matplotlib.figure import Figure
+
+from typing import Optional, Union
 
 from ._utils import savefig_or_show
 from ._categorical_stripplot import _categorical_strip_box_plot
@@ -19,10 +22,73 @@ def metadata(adata: AnnData,
              figsize: tuple[float, float] = (3,3),
              return_dataframe: bool = False,
              return_fig: bool = False,
-             ax: Axes = None,
-             save: Optional[str] = None,
-             show: bool = None
-             ):
+             ax: Optional[Axes] = None,
+             show: bool = True,
+             save: Optional[str] = None
+             ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
+    """
+    Plots the frequency of the metadata columns.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    marker
+        The channel to be displayed. Has to be in adata.var_names
+    groupby
+        controls the x axis and the grouping of the data points
+    splitby
+        The parameter controlling additional split along the groupby-axis.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value
+    stat_test
+        Statistical test that is used for the p-value calculation. One of
+        `Kruskal` and `Wilcoxon`. Defaults to Kruskal.
+    order
+        specifies the order of x-values.
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
+    return_dataframe
+        If set to True, returns the raw data that are used for plotting as a dataframe.
+    return_fig
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.pl.metadata(
+    ...     dataset,
+    ...     groupby = "condition",
+    ...     splitby = "sex"
+    ... )
+    
+    """
     
     data = adata.uns["metadata"].dataframe.copy()
     try:

@@ -7,13 +7,11 @@ from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from ._utils import (calculate_fig_size,
-                    turn_off_missing_plots,
-                    calculate_nrows,
-                    savefig_or_show)
 
 from typing import Optional, Union, Literal
 
+from ._categorical_stripplot import _categorical_strip_box_plot
+from ._utils import savefig_or_show
 from ..dataset._utils import (find_corresponding_control_samples,
                               _get_histogram_curve)
 from .._utils import (subset_gate,
@@ -21,6 +19,7 @@ from .._utils import (subset_gate,
                       _is_valid_filename,
                       _default_gate,
                       _enable_gate_aliases)
+from .._settings import settings
 
 
 def prepare_data_subsets(adata: AnnData,
@@ -75,13 +74,15 @@ def calculate_histogram_data(data: pd.DataFrame,
 def append_cofactor_label(ax: Axes,
                           x: float,
                           y: float) -> Axes:
-    ax.text(x = x,
-            y = y,
-            s = "Cofactor",
-            fontdict = {
-                "size": 10,
-                "weight": "bold"
-            })
+    ax.text(
+        x = x,
+        y = y,
+        s = "Cofactor",
+        fontdict = {
+            "size": 10,
+            "weight": "bold"
+        }
+    )
     return ax
 
 def transformation_scatter_plot(type: Literal["compensated", "transformed"],
@@ -122,7 +123,6 @@ def transformation_scatter_plot(type: Literal["compensated", "transformed"],
                  else f"Transformed Values\nScatter Plot - {plot_params['x']}")
     
     return ax
-
 
 def transformation_histogram_plot(type: Literal["compensated", "transformed"],
                                   ax: Axes,
@@ -170,11 +170,13 @@ def transformation_plot(adata: AnnData,
                         figsize: tuple[float, float] = (10,3),
                         return_dataframe: bool = False,
                         return_fig: bool = False,
-                        save: bool = None,
-                        show: bool = None
-                        ) -> Union[Figure, Axes, tuple[pd.DataFrame]]:
+                        show: bool = True,
+                        save: Optional[str] = None
+                        ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
-    Transformation plot. Plots the data on a log scale (biaxial), the data on the transformed scale (biaxial) and the data on a transformed scale as histogram.
+    Transformation plot. Plots the data on a log scale (biaxial),
+    the data on the transformed scale (biaxial) and the data
+    on a transformed scale as histogram.
 
     Parameters
     ----------
@@ -189,27 +191,50 @@ def transformation_plot(adata: AnnData,
         Used to specify a specific sample. Can be a valid sample_ID and a valid file_name
         from the .obs slot or the metadata
     marker
-        the channel to plot
+        The channel to plot
     scatter
-        the scatter channel to use on the y-axis. Defaults to SSC-A
+        The scatter channel to use on the y-axis. Defaults to SSC-A
     sample_size
         Controls how many data points are displayed. Defaults to 5000. More displayed data
         points can significantly increase plotting time.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
 
     Returns
     -------
-    if `show==False` a :class:`~matplotlib.axes.Axes`
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.pl.transformation_plot(
+    ...     dataset,
+    ...     gate = "live",
+    ...     sample_identifier = "2", # plots sample_ID 2
+    ...     marker = "CD3"
+    ... )
     
     """
 
@@ -308,96 +333,100 @@ def transformation_plot(adata: AnnData,
     
 
 def cofactor_distribution(adata: AnnData,
+                          marker: Optional[str] = None,
                           groupby: Optional[str] = None,
-                          channels: Optional[str] = None,
-                          ncols: int = 4,
+                          splitby: Optional[str] = None,
+                          cmap: str = None,
+                          order: list[str] = None,
+                          stat_test: str = "Kruskal",
+                          figsize: tuple[float, float] = (3,3),
                           return_dataframe: bool = False,
                           return_fig: bool = False,
-                          save: bool = None,
-                          show: bool = None) -> Union[Figure, Axes, None]:
+                          ax: Optional[Axes] = None,
+                          show: bool = True,
+                          save: Optional[str] = None
+                          ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """
-    Plots the cofactor distribution of specific channels
+    Plots the cofactor distribution of specific channels.
 
     Parameters
     ----------
     adata
         The anndata object of shape `n_obs` x `n_vars`
-        where rows correspond to cells and columns to the channels
+        where rows correspond to cells and columns to the channels.
+    marker
+        The channel to be displayed. Has to be in adata.var_names.
     groupby
-        controls the x-axis and sets the variables to group the data by. Should be categorical.
-    channels
-        the channels to display. Each channel gets its individual plot.
-    ncols
-        controls the number of columns for the plotting of multiple channels
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+        controls the x axis and the grouping of the data points.
+    splitby
+        The parameter controlling additional split along the groupby-axis.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value.
+    order
+        specifies the order of x-values.
+    stat_test
+        Statistical test that is used for the p-value calculation. One of
+        `Kruskal` and `Wilcoxon`. Defaults to Kruskal.
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
 
     Returns
     -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
 
-    if `show==False` a :class:`~matplotlib.axes.Axes`
  
     """
     
     assert "raw_cofactors" in adata.uns, "raw cofactors not found..."
-    cofactors = adata.uns["raw_cofactors"]
-    if channels:
-        if not isinstance(channels, list):
-            channels = [channels]
-        cofactors = cofactors.loc[:, cofactors.columns.isin(channels)]
+    cofactors: pd.DataFrame = adata.uns["raw_cofactors"]
+    
+    cofactors = cofactors.loc[:, cofactors.columns == marker]
     metadata = adata.uns["metadata"].to_df()
     data = cofactors.merge(metadata, left_index = True, right_on = "file_name")
+
     if return_dataframe:
         return data
 
-    nrows = calculate_nrows(ncols, cofactors)
-    figsize = calculate_fig_size(ncols,
-                                 nrows,
-                                 data[groupby].unique() if groupby else None)
-    
-    fig, ax = plt.subplots(ncols = ncols,
-                           nrows = nrows,
-                           figsize = figsize)
-    
-    ax = np.ravel(ax)
-    
-    for i, marker in enumerate(cofactors.columns):
-        plot_params = {
-            "y": marker,
-            "x": groupby,
-            "data": data
-        }
-        sns.boxplot(boxprops = dict(facecolor = "white"),
-                    ax = ax[i],
-                    whis = (0,100),
-                    **plot_params)
-        sns.stripplot(linewidth = 1,
-                      dodge = True,
-                      ax = ax[i],
-                      **plot_params)
-        ax[i].set_title(marker, fontsize = 10)
-    
-    ax: list[Axes] = turn_off_missing_plots(ax)
-    
-    for axs in ax:
-        axs.set_ylim(0, axs.get_ylim()[1] * 1.2)
-        axs.set_ylabel("AFU")
-        axs.set_xticklabels(axs.get_xticklabels(), rotation = 45, ha = "right")
-        axs.set_xlabel("")
-    
-    ax = np.reshape(ax, (ncols, nrows))
-    
+    plot_params = {
+        "data": data,
+        "x": groupby,
+        "y": marker,
+        "hue": splitby,
+        "palette": cmap or settings.default_categorical_cmap if splitby else None,
+        "order": order
+    }
+
+    fig, ax = _categorical_strip_box_plot(ax = ax,
+                                          data = data,
+                                          plot_params = plot_params,
+                                          groupby = groupby,
+                                          splitby = splitby,
+                                          stat_test = stat_test,
+                                          figsize = figsize)
+
+    ax.set_title(f"{marker}\ngrouped by {groupby}")
+    ax.set_xlabel("")
+    ax.set_ylabel("cofactor")
+
     if return_fig:
         return fig
-    
-    savefig_or_show(show = show, save = save)
 
+    savefig_or_show(save = save, show = show)
+    
     if show is False:
         return ax

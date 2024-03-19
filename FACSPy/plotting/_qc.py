@@ -18,8 +18,7 @@ from .._utils import (subset_gate,
                       _find_current_population,
                       _default_gate,
                       _enable_gate_aliases,
-                      _is_parent,
-                      GATE_SEPARATOR)
+                      _is_parent)
 from ..exceptions._exceptions import AnalysisNotPerformedError, HierarchyError
 from .._settings import settings
 
@@ -86,14 +85,15 @@ def gate_frequency(adata: AnnData,
                    groupby: Optional[str] = None,
                    splitby: Optional[str] = None,
                    cmap: str = None,
-                   stat_test: str = "Kruskal",
                    order: list[str] = None,
+                   stat_test: str = "Kruskal",
                    figsize: tuple[float, float] = (3,3),
                    return_dataframe: bool = False,
                    return_fig: bool = False,
-                   ax: Axes = None,
-                   save: bool = None,
-                   show: bool = None):
+                   ax: Optional[Axes] = None,
+                   show: bool = True,
+                   save: Optional[str] = None
+                   ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the gate frequency in comparison to a defined gate.
 
@@ -117,23 +117,50 @@ def gate_frequency(adata: AnnData,
         Sets the colormap for plotting. Can be continuous or categorical, depending
         on the input data. When set, both seaborns 'palette' and 'cmap'
         parameters will use this value
+    order
+        specifies the order of x-values.
+    stat_test
+        Statistical test that is used for the p-value calculation. One of
+        `Kruskal` and `Wilcoxon`. Defaults to Kruskal.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
 
     Returns
     -------
-    if `show==False` a :class:`~matplotlib.axes.Axes`
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.gate_frequencies(dataset)
+    >>> fp.pl.gate_frequency(
+    ...     dataset,
+    ...     gate = "live",
+    ...     groupby = "condition",
+    ...     splitby = "sex"
+    ... )
     
     """
 
@@ -188,9 +215,10 @@ def cell_counts(adata: AnnData,
                 figsize: tuple[float, float] = (3,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
-                ax: Axes = None,
-                save: bool = None,
-                show: bool = None) -> Optional[Union[Figure, Axes]]:
+                ax: Optional[Axes] = None,
+                show: bool = True,
+                save: Optional[str] = None
+                ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """
     Plots the cell counts of a specific population.
 
@@ -206,30 +234,54 @@ def cell_counts(adata: AnnData,
         can be superseded by the user.
     groupby
         controls the x axis and the grouping of the data points
-    colorby
-        controls the coloring of the data points. Defaults to None.
+    splitby
+        The parameter controlling additional split along the groupby-axis.
     cmap
         Sets the colormap for plotting. Can be continuous or categorical, depending
         on the input data. When set, both seaborns 'palette' and 'cmap'
         parameters will use this value
+    order
+        specifies the order of x-values.
+    stat_test
+        Statistical test that is used for the p-value calculation. One of
+        `Kruskal` and `Wilcoxon`. Defaults to Kruskal.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
 
     Returns
     -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
 
-    if `show==False` a :class:`~matplotlib.axes.Axes`
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.pl.cell_counts(
+    ...     dataset,
+    ...     gate = "live",
+    ...     groupby = "condition",
+    ...     splitby = "sex"
+    ... )
     
     """
 

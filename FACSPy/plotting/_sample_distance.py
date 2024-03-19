@@ -49,20 +49,22 @@ def sample_distance(adata: AnnData,
                     data_metric: Literal["mfi", "fop"] = "mfi",
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
                     cmap: str = "inferno",
-                    figsize: tuple[float, float] = (4,4),
                     metaclusters: Optional[int] = None,
                     label_metaclusters_in_dataset: bool = True,
                     label_metaclusters_key: Optional[str] = "sample_distance_metaclusters",
-                    return_fig: bool = False,
+                    figsize: tuple[float, float] = (4,4),
                     return_dataframe: bool = False,
-                    save: bool = None,
-                    show: bool = None) -> Optional[Figure]:
+                    return_fig: bool = False,
+                    show: bool = True,
+                    save: Optional[str] = None
+                    ) -> Optional[Union[Figure, pd.DataFrame]]:
     
     """\
-    Plot to display sample distance as a heatmap.
+    Plot to display sample to sample distance as a heatmap.
 
     Parameters
     ----------
+
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -74,43 +76,64 @@ def sample_distance(adata: AnnData,
         The layer corresponding to the data matrix. Similar to the
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
-    annotate
-        controls the annotated variables on top of the plot.
+    metadata_annotation
+        Controls the annotated variables on top of the plot.
+    include_technical_channels
+        Whether to include technical channels. If set to False, will exclude
+        all channels that are not labeled with `type=="fluo"` in adata.var.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
         use `data_group` to specify the right dataframe
     data_metric
         One of `mfi` or `fop`. Using a different metric will calculate
-        the asinh fold change on mfi and fop values, respectively
+        the asinh fold change on mfi and fop values, respectively.
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
-        `RobustScaler` or `StandardScaler` (Z-score).
-    corr_method
-        correlation method that is used for correlation analysis. One of
-        `pearson`, `spearman` or `kendall`.
+        `RobustScaler` or `StandardScaler` (Z-score)
     cmap
         Sets the colormap for plotting the markers
     metaclusters
-        controls the n of metaclusters to be computed
+        Controls the n of metaclusters to be computed
     label_metaclusters_in_dataset
         Whether to label the calculated metaclusters and write into the metadata
     label_metaclusters_key
         Column name that is used to store the metaclusters in
     figsize
-        Contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        Expects a file path and a file name. saves the figure to the indicated path
-    show
-        Whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        If set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
         If set to True, the figure is returned.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
 
     Returns
     -------
-    if `show==False` a :class:`~seaborn.ClusterGrid`
+    If `show==False` a :class:`~seaborn.ClusterGrid`
+    If `return_fig==True` a :class:`~seaborn.ClusterGrid`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.mfi(dataset)
+    >>> fp.pl.sample_distance(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     metadata_annotation = ["condition", "sex"]
+    ... )
 
     """
  
@@ -129,20 +152,6 @@ def sample_distance(adata: AnnData,
     plot_data = _calculate_distances(adata = adata,
                                      plot_data = plot_data)
 
-    #raw_data = _get_uns_dataframe(adata = adata,
-    #                              gate = gate,
-    #                              table_identifier = f"{data_metric}_{data_group}_{layer}")
-
-    #if not include_technical_channels:
-    #    raw_data = _remove_technical_channels(adata,
-    #                                          raw_data)
- 
-    #plot_data = _prepare_plot_data(adata = adata,
-    #                               raw_data = raw_data,
-    #                               copy = False,
-    #                               scaling = scaling)
-    
-    
     row_linkage = _calculate_linkage(plot_data[plot_data["sample_ID"].to_list()])
 
     if metaclusters is not None:
@@ -196,5 +205,6 @@ def sample_distance(adata: AnnData,
     
     if return_fig:
         return clustermap
-
     savefig_or_show(save = save, show = show)
+    if show is False:
+        return clustermap

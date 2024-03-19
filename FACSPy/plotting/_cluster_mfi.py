@@ -96,9 +96,90 @@ def cluster_fop(adata: AnnData,
                 figsize: tuple[float, float] = (3,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
-                ax: Axes = None,
-                save: bool = None,
-                show: bool = None):
+                ax: Optional[Axes] = None,
+                show: bool = True,
+                save: Optional[str] = None
+                ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
+    """
+    Plots the frequency of parent (fop) values as calculated by fp.tl.fop
+    as a combined strip-/boxplot for the indicated clustering.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    marker
+        The channel to be displayed. Has to be in adata.var_names
+    cluster_key
+        The `.obs` column where the cluster information is stored.
+    splitby
+        The parameter controlling additional split along the groupby-axis.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value
+    order
+        specifies the order of x-values.
+    stat_test
+        Statistical test that is used for the p-value calculation. One of
+        `Kruskal` and `Wilcoxon`. Defaults to Kruskal.
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
+    return_dataframe
+        If set to True, returns the raw data that are used for plotting as a dataframe.
+    return_fig
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
+    >>> fp.tl.fop(dataset, groupby = "T_cells_transformed_leiden")
+    >>> fp.pl.cluster_fop(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     marker = "CD3",
+    ...     cluster_key = "T_cells_transformed_leiden",
+    ...     splitby = "sex"
+    ... )
+    
+    """
     
     return _cluster_mfi_fop_baseplot(data_metric = "fop",
                                      adata = adata,
@@ -121,8 +202,8 @@ def cluster_fop(adata: AnnData,
 def cluster_mfi(adata: AnnData,
                 gate: str = None,
                 layer: str = None,
-                cluster_key: str = None,
                 marker: str = None,
+                cluster_key: str = None,
                 splitby: Optional[str] = None,
                 cmap: str = None,
                 order: list[str] = None,
@@ -130,9 +211,90 @@ def cluster_mfi(adata: AnnData,
                 figsize: tuple[float, float] = (3,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
-                ax: Axes = None,
-                save: bool = None,
-                show: bool = None):
+                ax: Optional[Axes] = None,
+                show: bool = True,
+                save: Optional[str] = None
+                ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
+    """
+    Plots the median fluorescence intensity (mfi) values as calculated by fp.tl.mfi
+    as a combined strip-/boxplot for the indicated clustering.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    marker
+        The channel to be displayed. Has to be in adata.var_names
+    cluster_key
+        The `.obs` column where the cluster information is stored.
+    splitby
+        The parameter controlling additional split along the groupby-axis.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value
+    order
+        specifies the order of x-values.
+    stat_test
+        Statistical test that is used for the p-value calculation. One of
+        `Kruskal` and `Wilcoxon`. Defaults to Kruskal.
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
+    return_dataframe
+        If set to True, returns the raw data that are used for plotting as a dataframe.
+    return_fig
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
+    >>> fp.tl.mfi(dataset, groupby = "T_cells_transformed_leiden")
+    >>> fp.pl.cluster_mfi(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     marker = "CD3",
+    ...     cluster_key = "T_cells_transformed_leiden",
+    ...     splitby = "sex"
+    ... )
+    
+    """
 
     return _cluster_mfi_fop_baseplot(data_metric = "mfi",
                                      adata = adata,
@@ -168,20 +330,21 @@ def cluster_heatmap(adata: AnnData,
                     gate: str = None,
                     layer: str = None,
                     cluster_key: Optional[Union[str, list[str]]] = None,
-                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     include_technical_channels: bool = False,
+                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                     cluster_method: Literal["correlation", "distance"] = "distance",
                     annotate: Optional[Union[Literal["frequency"], str]] = None,
                     annotation_kwargs: dict = {},
                     cmap: str = "RdYlBu_r",
-                    figsize: Optional[tuple[float, float]] = (5,3.8),
                     y_label_fontsize: Optional[Union[int, float]] = 10,
+                    figsize: Optional[tuple[float, float]] = (5,3.8),
                     return_dataframe: bool = False,
                     return_fig: bool = False,
-                    save: bool = None,
-                    show: bool = None) -> Optional[Figure]:
+                    show: bool = True,
+                    save: Optional[str] = None
+                    ) -> Optional[Union[Figure, pd.DataFrame]]:
     """\
     Plots a heatmap where every column corresponds to one cluster and the rows display the marker expression.
 
@@ -198,9 +361,11 @@ def cluster_heatmap(adata: AnnData,
         The layer corresponding to the data matrix. Similar to the
         gate parameter, it has a default stored in `fp.settings` which
         can be overwritten by user input.
-    data_group
-        When MFIs/FOPs are calculated, and the groupby parameter is used,
-        use `data_group` to specify the right dataframe
+    cluster_key
+        The `.obs` column where the cluster information is stored.
+    include_technical_channels
+        Whether to include technical channels. If set to False, will exclude
+        all channels that are not labeled with `type=="fluo"` in adata.var.
     data_metric
         One of `mfi` or `fop`. Using a different metric will calculate
         the asinh fold change on mfi and fop values, respectively
@@ -209,7 +374,7 @@ def cluster_heatmap(adata: AnnData,
         `RobustScaler` or `StandardScaler` (Z-score).
     corr_method
         correlation method that is used for hierarchical clustering by cluster correlation.
-        if `cluster_method == distance`, this parameter is ignored. One of `pearson`, `spearman` 
+        if `cluster_method==distance`, this parameter is ignored. One of `pearson`, `spearman` 
         or `kendall`.
     cluster_method
         Method for hierarchical clustering of displayed clusters. If `correlation`, the correlation
@@ -221,26 +386,49 @@ def cluster_heatmap(adata: AnnData,
         contained in adata.var_names
     annotation_kwargs
         Used to specify and customize the annotation plot. 
-    y_label_fontsize
-        controls the fontsize of the marker labels
     cmap
         Sets the colormap for plotting the markers
+    y_label_fontsize
+        controls the fontsize of the marker labels
     figsize
-        Contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        Expects a file path and a file name. saves the figure to the indicated path
-    show
-        Whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        If set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
         If set to True, the figure is returned.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
 
     Returns
     -------
-    if `show==False` a :class:`~seaborn.ClusterGrid`
- 
+    If `show==False` a :class:`~seaborn.ClusterGrid`
+    If `return_fig==True` a :class:`~seaborn.ClusterGrid`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
+    >>> fp.tl.mfi(dataset, groupby = "T_cells_transformed_leiden")
+    >>> fp.pl.cluster_heatmap(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     cluster_key = "T_cells_transformed_leiden",
+    ...     annotate = "frequency"
+    ... )
+
     """
     raw_data, plot_data = _prepare_heatmap_data(adata = adata,
                                                 gate = gate,

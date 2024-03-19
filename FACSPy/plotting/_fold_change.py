@@ -7,6 +7,7 @@ import matplotlib
 from matplotlib.colors import LogNorm, ListedColormap
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from typing import Literal, Union, Optional
 
@@ -51,24 +52,30 @@ def fold_change(adata: AnnData,
                 group1: Union[str, list[Union[str, int]]] = None,
                 group2: Union[str, list[Union[str, int]]] = None,
                 data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                data_metric: Literal["mfi", "fop"] = "mfi",
                 include_technical_channels: bool = False,
                 stat: Literal["p", "p_adj"] = "p",
                 cmap: str = "Reds_r",
                 test: Literal["Kruskal", "Wilcoxon"] = "Kruskal",
                 min_pval: float = None,
-                figsize: tuple[float, float] = (4,10),
                 comparison_label: Optional[str] = None,
                 group1_label: Optional[str] = None,
                 group2_label: Optional[str] = None,
+                figsize: tuple[float, float] = (4,10),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
-                ax: Axes = None,
-                save: bool = None,
-                show: bool = None
-                ):
+                ax: Optional[Axes] = None,
+                show: bool = True,
+                save: Optional[str] = None
+                ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
-    Plots the asinh fold change
+    Plots the asinh fold change.
+
+    The asinh fold change is calculated from the MFI values of the compensated data.
+    It is similar to the log2fc, but since log does not allow negative values,
+    we calculate the asinh foldchange as asinh(mean(group2)) - asinh(mean(group1)).
+    The p_value is calculated using the specified test and the asinh transformed
+    expression values per sample. 
 
     Parameters
     ----------
@@ -95,6 +102,9 @@ def fold_change(adata: AnnData,
     data_metric
         One of `mfi` or `fop`. Using a different metric will calculate
         the asinh fold change on mfi and fop values, respectively
+    include_technical_channels
+        Whether to include technical channels. If set to False, will exclude
+        all channels that are not labeled with `type=="fluo"` in adata.var.
     stat
         One of `p` or `p_adj`. Specifies whether to show the calculated
         p value or the adjusted p value.
@@ -102,34 +112,54 @@ def fold_change(adata: AnnData,
         colormap for the p-value colorbar.
     test
         statistical test that is used for the p-value calculation. One of
-        `Kruskal` and `Wilcoxon`.
+        `Kruskal` and `Wilcoxon`. Defaults to Kruskal.
     min_pval
         minimum p_value that is still displayed
-    figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
     comparison_label
         Sets the title for the comparison
     group1_label
         Sets the labeling for the first group
     group2_label
         Sets the labeling for the second group
-    show
-        whether to show the fifig = if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
-    
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
     Returns
     -------
-    if `show==False` a :class:`~matplotlib.axes.Axes`
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated'
+    >>> fp.pl.fold_change(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "compensated",
+    ...     groupby = "condition",
+    ...     group1 = "healthy",
+    ...     group2 = "disease",
+    ... )
 
     """
        

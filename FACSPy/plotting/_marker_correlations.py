@@ -37,20 +37,21 @@ def _calculate_correlations(adata: AnnData,
 def marker_correlation(adata: AnnData,
                        gate: str = None,
                        layer: str = None,
-                       scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
                        include_technical_channels: bool = False,
+                       scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
                        data_group: Optional[Union[str, list[str]]] = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cmap: str = "inferno",
-                       figsize: tuple[float, float] = (4,4),
                        y_label_fontsize: float = 10,
-                       return_fig: bool = False,
+                       figsize: tuple[float, float] = (4,4),
                        return_dataframe: bool = False,
-                       save: bool = None,
-                       show: bool = None) -> Optional[Figure]:
+                       return_fig: bool = False,
+                       show: bool = True,
+                       save: Optional[str] = None
+                       ) -> Optional[Union[Figure, pd.DataFrame]]:
     """\
-    Plot for expression heatmap. Rows are the individual channels and columns are the data points.
+    Plot for marker correlation heatmap. 
 
     Parameters
     ----------
@@ -65,36 +66,59 @@ def marker_correlation(adata: AnnData,
         The layer corresponding to the data matrix. Similar to the
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
+    include_technical_channels
+        Whether to include technical channels. If set to False, will exclude
+        all channels that are not labeled with `type=="fluo"` in adata.var.
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score).
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
         use `data_group` to specify the right dataframe
     data_metric
         One of `mfi` or `fop`. Using a different metric will calculate
         the asinh fold change on mfi and fop values, respectively
-    scaling
-        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
-        `RobustScaler` or `StandardScaler` (Z-score).
     corr_method
         correlation method that is used. One of `pearson`, `spearman` or `kendall`.
-    y_label_fontsize
-        controls the fontsize of the marker labels
     cmap
-        Sets the colormap for plotting the markers
+        Sets the colormap for plotting the markers.
+    y_label_fontsize
+        controls the fontsize of the marker labels.
     figsize
-        Contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        Expects a file path and a file name. saves the figure to the indicated path
-    show
-        Whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        If set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
         If set to True, the figure is returned.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
 
     Returns
     -------
-    if `show==False` a :class:`~seaborn.ClusterGrid`
+    If `show==False` a :class:`~seaborn.ClusterGrid`
+    If `return_fig==True` a :class:`~seaborn.ClusterGrid`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.mfi(dataset)
+    >>> fp.pl.marker_correlation(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed"
+    ... )
 
     """
 

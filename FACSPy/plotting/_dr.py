@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 import pandas as pd
 
-from typing import Optional
+from typing import Optional, Union
 
 
 from ._utils import savefig_or_show
@@ -66,13 +66,13 @@ def diffmap(adata: AnnData,
             layer: str = None,
             dimred: str = "diffmap",
             figsize: tuple[float, float] = (3,3),
-            return_fig: bool = False,
             return_dataframe: bool = False,
-            save: Optional[bool] = None,
-            show: Optional[bool] = None,
-            ax: Axes = None,
+            return_fig: bool = False,
+            ax: Optional[Axes] = None,
+            show: bool = True,
+            save: Optional[str] = None,
             *args,
-            **kwargs):
+            **kwargs) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the diffusion embedding.
 
@@ -90,20 +90,18 @@ def diffmap(adata: AnnData,
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    title
-        sets the figure title. Optional
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
     *args
         arguments ultimately passed to sc.pl.diffmap
     **kwargs
@@ -111,8 +109,31 @@ def diffmap(adata: AnnData,
 
     Returns
     -------
-    if `show==False` a :class:`~matplotlib.axes.Axes`
-    
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+    >>> fp.tl.diffmap(dataset)
+    >>> fp.pl.diffmap(
+    ...     dataset,
+    ...     color = "condition"
+    ... )
+
     """
     
     basis = f"X_{dimred}_{gate}_{layer}"
@@ -150,15 +171,14 @@ def diffmap(adata: AnnData,
 def pca(adata: AnnData,
         gate: str = None,
         layer: str = None,
-        dimred: str = "pca",
         figsize: tuple[float, float] = (3,3),
-        return_fig: bool = False,
         return_dataframe: bool = False,
-        save: Optional[bool] = None,
-        show: Optional[bool] = None,
-        ax: Axes = None,
+        return_fig: bool = False,
+        ax: Optional[Axes] = None,
+        show: bool = True,
+        save: Optional[str] = None,
         *args,
-        **kwargs):
+        **kwargs) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the PCA embedding.
 
@@ -176,20 +196,18 @@ def pca(adata: AnnData,
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    title
-        sets the figure title. Optional
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
     *args
         arguments ultimately passed to sc.pl.pca
     **kwargs
@@ -197,8 +215,29 @@ def pca(adata: AnnData,
 
     Returns
     -------
-    if `show==False` a :class:`~matplotlib.axes.Axes`
-    
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.pl.pca(
+    ...     dataset,
+    ...     color = "condition"
+    ... )
+
     """
  
     basis = f"X_{dimred}_{gate}_{layer}"
@@ -238,13 +277,13 @@ def tsne(adata: AnnData,
          layer: str = None,
          dimred: str = "tsne",
          figsize: tuple[float, float] = (3,3),
-         return_fig: bool = False,
          return_dataframe: bool = False,
-         save: Optional[bool] = None,
-         show: Optional[bool] = None,
-         ax: Axes = None,
+         return_fig: bool = False,
+         ax: Optional[Axes] = None,
+         show: bool = True,
+         save: Optional[str] = None,
          *args,
-         **kwargs):
+         **kwargs) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the TSNE embedding.
 
@@ -262,20 +301,18 @@ def tsne(adata: AnnData,
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    title
-        sets the figure title. Optional
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
     *args
         arguments ultimately passed to sc.pl.tsne
     **kwargs
@@ -283,8 +320,31 @@ def tsne(adata: AnnData,
 
     Returns
     -------
-    if `show==False` a :class:`~matplotlib.axes.Axes`
-    
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+    >>> fp.tl.tsne(dataset)
+    >>> fp.pl.tsne(
+    ...     dataset,
+    ...     color = "condition",
+    ... )
+  
     """
  
     basis = f"X_{dimred}_{gate}_{layer}"
@@ -322,15 +382,14 @@ def tsne(adata: AnnData,
 def umap(adata: AnnData,
          gate: str = None,
          layer: str = None,
-         dimred: str = "umap",
          figsize: tuple[float, float] = (3,3),
-         return_fig: bool = False,
          return_dataframe: bool = False,
-         save: Optional[bool] = None,
-         show: Optional[bool] = None,
-         ax: Axes = None,
+         return_fig: bool = False,
+         ax: Optional[Axes] = None,
+         show: bool = True,
+         save: Optional[str] = None,
          *args,
-         **kwargs):
+         **kwargs) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the UMAP embedding.
 
@@ -348,20 +407,18 @@ def umap(adata: AnnData,
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    title
-        sets the figure title. Optional
-    show
-        whether to show the figure
-    save
-        expects a file path and a file name. saves the figure to the indicated path
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
     *args
         arguments ultimately passed to sc.pl.umap
     **kwargs
@@ -369,8 +426,31 @@ def umap(adata: AnnData,
 
     Returns
     -------
-    if `show==False` a :class:`~matplotlib.axes.Axes`
-    
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+    >>> fp.tl.umap(dataset)
+    >>> fp.pl.umap(
+    ...     dataset,
+    ...     color = "condition",
+    ... )
+
     """
  
     basis = f"X_{dimred}_{gate}_{layer}"

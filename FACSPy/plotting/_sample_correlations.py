@@ -14,10 +14,10 @@ from ._utils import (_map_obs_to_cmap,
                      _scale_cbar_to_heatmap,
                      _add_categorical_legend_to_clustermap,
                      _calculate_correlation_data,
-                     ANNOTATION_CMAPS,
-                     CONTINUOUS_CMAPS,
                      savefig_or_show,
-                     _has_interval_index)
+                     _has_interval_index,
+                     ANNOTATION_CMAPS,
+                     CONTINUOUS_CMAPS)
 
 from ._clustermap import create_clustermap
 
@@ -56,8 +56,9 @@ def sample_correlation(adata: AnnData,
                        figsize: tuple[float, float] = (4,4),
                        return_dataframe: bool = False,
                        return_fig: bool = False,
-                       save: bool = None,
-                       show: bool = None) -> Optional[Figure]:
+                       show: bool = True,
+                       save: Optional[str] = None
+                       ) -> Optional[Union[Figure, pd.DataFrame]]:
     """\
     Plot for sample correlation.
 
@@ -75,42 +76,66 @@ def sample_correlation(adata: AnnData,
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
     metadata_annotation
-        controls the annotated variables on top of the plot.
+        Controls the annotated variables on top of the plot.
+    include_technical_channels
+        Whether to include technical channels. If set to False, will exclude
+        all channels that are not labeled with `type=="fluo"` in adata.var.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
-        use `data_group` to specify the right dataframe
+        use `data_group` to specify the right dataframe.
     data_metric
         One of `mfi` or `fop`. Using a different metric will calculate
-        the asinh fold change on mfi and fop values, respectively
+        the asinh fold change on mfi and fop values, respectively.
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
-        `RobustScaler` or `StandardScaler` (Z-score).
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to MinMaxScaler.
     corr_method
-        correlation method that is used for correlation analysis. One of
-        `pearson`, `spearman` or `kendall`.
+        Correlation method that is used for correlation analysis. One of
+        `pearson`, `spearman` or `kendall`. Defaults to `pearson`.
     cmap
-        Sets the colormap for plotting the markers
+        Sets the colormap for plotting the markers.
     metaclusters
-        controls the n of metaclusters to be computed
+        Controls the n of metaclusters to be computed.
     label_metaclusters_in_dataset
-        Whether to label the calculated metaclusters and write into the metadata
+        Whether to label the calculated metaclusters and write into the metadata.
     label_metaclusters_key
-        Column name that is used to store the metaclusters in
+        Column name that is used to store the metaclusters in.
     figsize
-        Contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        Expects a file path and a file name. saves the figure to the indicated path
-    show
-        Whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        If set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
         If set to True, the figure is returned.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
 
     Returns
     -------
-    if `show==False` a :class:`~seaborn.ClusterGrid`
+    If `show==False` a :class:`~seaborn.ClusterGrid`
+    If `return_fig==True` a :class:`~seaborn.ClusterGrid`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.mfi(dataset)
+    >>> fp.pl.sample_correlation(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     metadata_annotation = ["condition", "sex"]
+    ... )
 
     """
 
@@ -125,20 +150,6 @@ def sample_correlation(adata: AnnData,
                                         plot_data = plot_data,
                                         corr_method = corr_method)
  
-    #raw_data = _get_uns_dataframe(adata = adata,
-    #                              gate = gate,
-    #                              table_identifier = f"{data_metric}_{data_group}_{layer}")
-
-    #if not include_technical_channels:
-    #    raw_data = _remove_technical_channels(adata,
-    #                                          raw_data)
-    
-    #plot_data = _prepare_plot_data(adata = adata,
-    #                               raw_data = raw_data,
-    #                               copy = False,
-    #                               scaling = scaling,
-    #                               corr_method = corr_method)
-
     if not isinstance(metadata_annotation, list) and metadata_annotation is not None:
         metadata_annotation = [metadata_annotation]
     elif metadata_annotation is None:

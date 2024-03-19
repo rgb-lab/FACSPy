@@ -1,6 +1,7 @@
 from anndata import AnnData
 from matplotlib import pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -117,17 +118,18 @@ def pca_samplewise(adata: AnnData,
                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                    color_scale: Literal["biex", "log", "linear"] = "linear",
                    cmap: str = None,
-                   vmin: float = None,
-                   vmax: float = None,
+                   vmin: Optional[float] = None,
+                   vmax: Optional[float] = None,
                    figsize: tuple[float, float] = (3,3),
-                   save: bool = None,
-                   show: bool = None,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
-                   ax: Axes = None,
-                   ) -> Optional[Figure]:
+                   ax: Optional[Axes] = None,
+                   show: bool = True,
+                   save: Optional[str] = None
+                   ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
-    Plot for visualizing sample-wise dimensionality reduction (PCA).
+    Plot for visualizing sample-wise dimensionality reduction (PCA)
+    as a scatter plot.
 
     Parameters
     ----------
@@ -144,38 +146,67 @@ def pca_samplewise(adata: AnnData,
         can be overwritten by user input.
     color
         The parameter that controls the coloring of the plot.
-        Can be set to categorical variables from the .obs slot
+        Can be set to categorical variables from the `.obs` slot
         or continuous variables corresponding to channels.
-        Default is set to 'density', which calculates the point
+        Default is set to `density`, which calculates the point
         density in the plot.
     data_group
         Sets the groupby parameter that was used for samplewise dimred
         calculation. Using this value, the correct dataframe is extracted
-        from adata.uns. Defaults to sample_ID
+        from adata.uns. Defaults to sample_ID.
     data_metric
         Sets the data metric that was used for dimensionality reduction
-        calculation. Can be one of 'mfi' or 'fop'
+        calculation. Can be one of `mfi` or `fop`.
     color_scale
-        Sets the scale for the colorbar. Has to be one of 'biex', 'log', 'linear'.
+        Sets the scale for the colorbar. Has to be one of `biex`, `log`, `linear`.
     cmap
         Sets the colormap for plotting. Can be continuous or categorical, depending
-        on the input data. When set, both seaborns 'palette' and 'cmap'
-        parameters will use this value
+        on the input data. When set, both seaborns `palette` and `cmap`
+        parameters will use this value.
     vmin
-        Minimum value to plot in the color vector
+        Minimum value to plot in the color vector.
     vmax
-        Maximum value to plot in the color vector
+        Maximum value to plot in the color vector.
     figsize
-        Contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        Expects a file path and a file name. saves the figure to the indicated path
-    show
-        Whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        If set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
         If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.mfi(dataset)
+    >>> fp.tl.pca_samplewise(dataset)
+    >>> fp.pl.pca_samplewise(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     color = "condition",
+    ... )
+
     """
 
     return _samplewise_dr_plot(reduction = "PCA",
@@ -207,17 +238,17 @@ def mds_samplewise(adata: AnnData,
                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                    color_scale: Literal["biex", "log", "linear"] = "linear",
                    cmap: str = None,
-                   vmin: float = None,
-                   vmax: float = None,
+                   vmin: Optional[float] = None,
+                   vmax: Optional[float] = None,
                    figsize: tuple[float, float] = (3,3),
-                   ax: Axes = None,
                    return_dataframe: bool = False,
                    return_fig: bool = False,
-                   save: bool = None,
-                   show: bool = None
-                   ) -> Optional[Figure]:
+                   ax: Optional[Axes] = None,
+                   show: bool = True,
+                   save: Optional[str] = None
+                   ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
-    Plot for visualizing sample-wise dimensionality reduction (PCA).
+    Plot for visualizing sample-wise dimensionality reduction (MDS).
 
     Parameters
     ----------
@@ -234,39 +265,69 @@ def mds_samplewise(adata: AnnData,
         can be overwritten by user input.
     color
         The parameter that controls the coloring of the plot.
-        Can be set to categorical variables from the .obs slot
+        Can be set to categorical variables from the `.obs` slot
         or continuous variables corresponding to channels.
-        Default is set to 'density', which calculates the point
+        Default is set to `density`, which calculates the point
         density in the plot.
     data_group
         Sets the groupby parameter that was used for samplewise dimred
         calculation. Using this value, the correct dataframe is extracted
-        from adata.uns. Defaults to sample_ID
+        from adata.uns. Defaults to sample_ID.
     data_metric
         Sets the data metric that was used for dimensionality reduction
-        calculation. Can be one of 'mfi' or 'fop'
+        calculation. Can be one of `mfi` or `fop`.
     color_scale
-        sets the scale for the colorbar. Has to be one of 'biex', 'log', 'linear'.
+        Sets the scale for the colorbar. Has to be one of `biex`, `log`, `linear`.
     cmap
         Sets the colormap for plotting. Can be continuous or categorical, depending
-        on the input data. When set, both seaborns 'palette' and 'cmap'
-        parameters will use this value
+        on the input data. When set, both seaborns `palette` and `cmap`
+        parameters will use this value.
     vmin
-        minimum value to plot in the color vector
+        Minimum value to plot in the color vector.
     vmax
-        maximum value to plot in the color vector
+        Maximum value to plot in the color vector.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        expects a file path and a file name. saves the figure to the indicated path
-    show
-        whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.mfi(dataset)
+    >>> fp.tl.mds_samplewise(dataset)
+    >>> fp.pl.mds_samplewise(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     color = "condition",
+    ... )
+
     """
+
  
     return _samplewise_dr_plot(reduction = "MDS",
                                adata = adata,
@@ -297,14 +358,14 @@ def umap_samplewise(adata: AnnData,
                     color_scale: Literal["biex", "log", "linear"] = "linear",
                     cmap: str = None,
                     figsize: tuple[float, float] = (3,3),
-                    vmin: float = None,
-                    vmax: float = None,
-                    save: bool = None,
-                    show: bool = None,
+                    vmin: Optional[float] = None,
+                    vmax: Optional[float] = None,
                     return_dataframe: bool = False,
                     return_fig: bool = False,
-                    ax: Axes = None,
-                    ) -> Optional[Figure]:
+                    ax: Optional[Axes] = None,
+                    show: bool = True,
+                    save: Optional[str] = None
+                    ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plot for visualizing sample-wise dimensionality reduction (UMAP).
 
@@ -323,38 +384,67 @@ def umap_samplewise(adata: AnnData,
         can be overwritten by user input.
     color
         The parameter that controls the coloring of the plot.
-        Can be set to categorical variables from the .obs slot
+        Can be set to categorical variables from the `.obs` slot
         or continuous variables corresponding to channels.
-        Default is set to 'density', which calculates the point
+        Default is set to `density`, which calculates the point
         density in the plot.
     data_group
         Sets the groupby parameter that was used for samplewise dimred
         calculation. Using this value, the correct dataframe is extracted
-        from adata.uns. Defaults to sample_ID
+        from adata.uns. Defaults to sample_ID.
     data_metric
         Sets the data metric that was used for dimensionality reduction
-        calculation. Can be one of 'mfi' or 'fop'
+        calculation. Can be one of `mfi` or `fop`.
     color_scale
-        sets the scale for the colorbar. Has to be one of 'biex', 'log', 'linear'.
+        Sets the scale for the colorbar. Has to be one of `biex`, `log`, `linear`.
     cmap
         Sets the colormap for plotting. Can be continuous or categorical, depending
-        on the input data. When set, both seaborns 'palette' and 'cmap'
-        parameters will use this value
+        on the input data. When set, both seaborns `palette` and `cmap`
+        parameters will use this value.
     vmin
-        minimum value to plot in the color vector
+        Minimum value to plot in the color vector.
     vmax
-        maximum value to plot in the color vector
+        Maximum value to plot in the color vector.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        expects a file path and a file name. saves the figure to the indicated path
-    show
-        whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.mfi(dataset)
+    >>> fp.tl.umap_samplewise(dataset)
+    >>> fp.pl.umap_samplewise(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     color = "condition",
+    ... )
+
     """
     
     return _samplewise_dr_plot(reduction = "UMAP",
@@ -387,14 +477,14 @@ def tsne_samplewise(adata: AnnData,
                     color_scale: Literal["biex", "log", "linear"] = "linear",
                     cmap: str = None,
                     figsize: tuple[float, float] = (3,3),
-                    vmin: float = None,
-                    vmax: float = None,
-                    save: bool = None,
-                    show: bool = None,
+                    vmin: Optional[float] = None,
+                    vmax: Optional[float] = None,
                     return_dataframe: bool = False,
                     return_fig: bool = False,
-                    ax: Axes = None
-                    ) -> Optional[Figure]:
+                    ax: Optional[Axes] = None,
+                    show: bool = True,
+                    save: Optional[str] = None
+                    ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plot for visualizing sample-wise dimensionality reduction (TSNE).
 
@@ -413,38 +503,67 @@ def tsne_samplewise(adata: AnnData,
         can be overwritten by user input.
     color
         The parameter that controls the coloring of the plot.
-        Can be set to categorical variables from the .obs slot
+        Can be set to categorical variables from the `.obs` slot
         or continuous variables corresponding to channels.
-        Default is set to 'density', which calculates the point
+        Default is set to `density`, which calculates the point
         density in the plot.
     data_group
         Sets the groupby parameter that was used for samplewise dimred
         calculation. Using this value, the correct dataframe is extracted
-        from adata.uns. Defaults to sample_ID
+        from adata.uns. Defaults to sample_ID.
     data_metric
         Sets the data metric that was used for dimensionality reduction
-        calculation. Can be one of 'mfi' or 'fop'
+        calculation. Can be one of `mfi` or `fop`.
     color_scale
-        sets the scale for the colorbar. Has to be one of 'biex', 'log', 'linear'.
+        Sets the scale for the colorbar. Has to be one of `biex`, `log`, `linear`.
     cmap
         Sets the colormap for plotting. Can be continuous or categorical, depending
-        on the input data. When set, both seaborns 'palette' and 'cmap'
-        parameters will use this value
+        on the input data. When set, both seaborns `palette` and `cmap`
+        parameters will use this value.
     vmin
-        minimum value to plot in the color vector
+        Minimum value to plot in the color vector.
     vmax
-        maximum value to plot in the color vector
+        Maximum value to plot in the color vector.
     figsize
-        contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        expects a file path and a file name. saves the figure to the indicated path
-    show
-        whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        if set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
-        if set to True, the figure is returned.
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.mfi(dataset)
+    >>> fp.tl.tsne_samplewise(dataset)
+    >>> fp.pl.tsne_samplewise(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     color = "condition",
+    ... )
+
     """
 
     return _samplewise_dr_plot(reduction = "TSNE",

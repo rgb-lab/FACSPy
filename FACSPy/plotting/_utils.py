@@ -48,6 +48,11 @@ CATEGORICAL_BOXPLOT_PARAMS = {
     "whis": (0,100)
 }
 
+LINEPLOT_PARAMS = {
+    "dashes": False,
+    "legend": "auto"
+}
+
 def _scale_heatmap_data(adata: AnnData,
                         raw_data: pd.DataFrame,
                         copy: bool,
@@ -443,8 +448,19 @@ def _transform_data_to_scale(data: np.ndarray,
                                                         channel)
         return np.arcsinh(data / cofactor)
 
+def _generate_scale_kwargs(channel,
+                           channel_scale,
+                           linthresh: float) -> dict:
+    channel_scale: Literal["linear", "log", "symlog"]= _define_axis_scale(channel, channel_scale)
+    scale_kwargs = {
+        "value": channel_scale 
+    }
+    if channel_scale == "symlog":
+        scale_kwargs["linthresh"] = linthresh
+    return scale_kwargs
+
 def _define_axis_scale(channel,
-                       user_scale: Literal["biex", "linear", "log"]) -> bool:
+                       user_scale: Literal["biex", "linear", "log"]) -> Literal["symlog", "linear", "log"]:
     """
     decides if data are plotted on a linear or biex scale
     Log Scaling is not a default but has to be set by the user

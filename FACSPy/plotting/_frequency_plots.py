@@ -12,7 +12,7 @@ from typing import Optional
 from ._utils import savefig_or_show
 from ._categorical_stripplot import _categorical_strip_box_plot
 
-from .._utils import (_default_gate_and_default_layer,
+from .._utils import (_default_gate,
                       subset_gate,
                       _enable_gate_aliases)
 from .._settings import settings
@@ -61,25 +61,100 @@ def _prepare_cluster_frequencies(adata: AnnData,
     return dataframe[dataframe[cluster_key] == cluster]
 
 
-@_default_gate_and_default_layer
+@_default_gate
 @_enable_gate_aliases
 def cluster_frequency(adata: AnnData,
                       gate: str = None,
-                      layer: str = None,
-                      cluster_key: Union[str, list[str]] = None,
+                      cluster_key: str = None,
                       cluster: str = None,
                       normalize: bool = False,
-                      groupby: Union[str, list[str]] = None,
-                      splitby: str = None,
-                      cmap: str = None,
-                      order: list[str] = None,
+                      groupby: Optional[Union[str, list[str]]] = None,
+                      splitby: Optional[str] = None,
+                      cmap: Optional[str] = None,
+                      order: Optional[list[str]] = None,
                       stat_test: str = "Kruskal",
                       figsize: tuple[float, float] = (3,3),
                       return_dataframe: bool = False,
                       return_fig: bool = False,
-                      ax: Axes = None,
-                      save: bool = None,
-                      show: bool = None):
+                      ax: Optional[Axes] = None,
+                      show: bool = True,
+                      save: Optional[str] = None
+                      ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
+    """\
+    Plots the cluster frequency per cluster as a combined strip-/boxplot.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where Rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    cluster_key
+        The `.obs` column where the cluster information is stored.
+    cluster
+        Specifies the cluster to be analyzed.
+    normalize
+        If True, normalizes the frequencies to the total amount of cells.
+        If False, plots the cell counts per cluster and group.
+    groupby
+        The parameter to group the x-axis.
+    splitby
+        The parameter controlling additional split along the groupby-axis.
+    cmap
+        Sets the colormap for plotting. Can be continuous or categorical, depending
+        on the input data. When set, both seaborns 'palette' and 'cmap'
+        parameters will use this value.
+    order
+        specifies the order of x-values.
+    stat_test
+        Statistical test that is used for the p-value calculation. One of
+        `Kruskal` and `Wilcoxon`. Defaults to Kruskal.
+    figsize
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
+    return_dataframe
+        If set to True, returns the raw data that are used for plotting as a dataframe.
+    return_fig
+        If set to True, the figure is returned.
+    ax
+        A :class:`~matplotlib.axes.Axes` created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
+ 
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`pandas.DataFrame` containg the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
+    >>> fp.pl.cluster_frequency(
+    ...     dataset,
+    ...     gate = "live",
+    ...     cluster_key = "T_cells_transformed_leiden",
+    ...     cluster = "2",
+    ...     groupby = "condition",
+    ...     splitby = "sex",
+    ...     normalize = True
+    ... )
+
+    """
     
     if gate is None:
         raise TypeError("A Gate has to be provided")
@@ -133,11 +208,12 @@ def cluster_abundance(adata: AnnData,
                       normalize: bool = True,
                       order: Optional[list[str]] = None,
                       figsize: tuple[float, float] = (5,4),
-                      ax: Axes = None,
                       return_dataframe: bool = False,
                       return_fig: bool = False,
-                      save: bool = None,
-                      show: bool = None) -> Optional[Figure]:
+                      ax: Optional[Axes] = None,
+                      show: bool = True,
+                      save: Optional[str] = None
+                      ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the frequency as a stacked bar chart of a grouping variable per cluster.
 
@@ -145,32 +221,56 @@ def cluster_abundance(adata: AnnData,
     ----------
     adata
         The anndata object of shape `n_obs` x `n_vars`
-        where rows correspond to cells and columns to the channels
+        where rows correspond to cells and columns to the channels.
     groupby
-        controls the x axis and the grouping of the data points
+        controls the x axis and the grouping of the data points.
     cluster_key
-        The obs slot where the clusters of interest are stored
+        The obs slot where the clusters of interest are stored.
     normalize
-        Whether to normalize the frequencies to 1.
+        If True, normalizes the frequencies to 1. If False, the y-axis
+        represents the cell counts per cluster.
     order
         Sets the order of the groupby variable.
     figsize
-        Contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        Expects a file path and a file name. saves the figure to the indicated path
-    show
-        Whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        If set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
         If set to True, the figure is returned.
     ax
-        Optional parameter. Sets user defined ax from for example plt.subplots
+        A :class:`~matplotlib.axes.Axes` to created from matplotlib to plot into.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
 
     Returns
     -------
-    if `show==False` a :class:`~seaborn.ClusterGrid`
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    If `return_fig==True` a :class:`~matplotlib.figure.Figure`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
+    >>> fp.pl.cluster_abundance(
+    ...     dataset,
+    ...     gate = "live",
+    ...     cluster_key = "T_cells_transformed_leiden",
+    ...     groupby = "condition",
+    ...     normalize = True
+    ... )
+
 
     """
     

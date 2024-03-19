@@ -57,12 +57,13 @@ def expression_heatmap(adata: AnnData,
                        metaclusters: Optional[int] = None,
                        label_metaclusters_in_dataset: bool = True,
                        label_metaclusters_key: Optional[str] = "metacluster_sc",
-                       figsize: Optional[tuple[int, int]] = (5,3.8),
                        y_label_fontsize: Optional[Union[int, float]] = 10,
+                       figsize: Optional[tuple[int, int]] = (5,3.8),
                        return_dataframe: bool = False,
                        return_fig: bool = False,
-                       save: bool = None,
-                       show: bool = None) -> Optional[Figure]:
+                       show: bool = True,
+                       save: Optional[str] = None
+                       ) -> Optional[Union[Figure, pd.DataFrame]]:
     """\
     Plot for expression heatmap. Rows are the individual channels and columns are the data points.
 
@@ -79,11 +80,14 @@ def expression_heatmap(adata: AnnData,
         The layer corresponding to the data matrix. Similar to the
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
-    annotate
-        controls the annotated variables on top of the plot.
-    plot_annotate
+    metadata_annotation
+        Controls the annotated variables on top of the plot.
+    marker_annotation
         creates a second plot on top of the heatmap where marker expressions can
         be shown. 
+    include_technical_channels
+        Whether to include technical channels. If set to False, will exclude
+        all channels that are not labeled with `type=="fluo"` in adata.var.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
         use `data_group` to specify the right dataframe
@@ -94,13 +98,15 @@ def expression_heatmap(adata: AnnData,
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
         `RobustScaler` or `StandardScaler` (Z-score).
     corr_method
-        correlation method that is used for hierarchical clustering by sample correlation.
+        Correlation method that is used for hierarchical clustering by sample correlation.
         if `cluster_method == distance`, this parameter is ignored. One of `pearson`, `spearman` 
         or `kendall`.
     cluster_method
         Method for hierarchical clustering of displayed samples. If `correlation`, the correlation
         specified by corr_method is computed (default: pearson). If `distance`, the euclidean
         distance is computed.
+    cmap
+        Sets the colormap for plotting the markers
     metaclusters
         controls the n of metaclusters to be computed
     label_metaclusters_in_dataset
@@ -109,23 +115,44 @@ def expression_heatmap(adata: AnnData,
         Column name that is used to store the metaclusters in
     y_label_fontsize
         controls the fontsize of the marker labels
-    cmap
-        Sets the colormap for plotting the markers
     figsize
-        Contains the dimensions of the final figure as a tuple of two ints or floats
-    save
-        Expects a file path and a file name. saves the figure to the indicated path
-    show
-        Whether to show the figure
+        Contains the dimensions of the final figure as a tuple of two ints or floats.
     return_dataframe
-        If set to True, returns the raw data that are used for plotting. vmin and vmax
-        are not set.
+        If set to True, returns the raw data that are used for plotting as a dataframe.
     return_fig
         If set to True, the figure is returned.
+    show
+        Whether to show the figure. Defaults to True.
+    save
+        Expects a file path including the file name.
+        Saves the figure to the indicated path. Defaults to None.
 
     Returns
     -------
-    if `show==False` a :class:`~seaborn.ClusterGrid`
+    If `show==False` a :class:`~seaborn.ClusterGrid`
+    If `return_fig==True` a :class:`~seaborn.ClusterGrid`
+    If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.mfi(dataset)
+    >>> fp.pl.expression_heatmap(
+    ...     dataset,
+    ...     gate = "live",
+    ...     layer = "transformed",
+    ...     metadata_annotation = ["condition", "sex"],
+    ...     marker_annotation = "CD3"
+    ... )
+
 
     """
 
