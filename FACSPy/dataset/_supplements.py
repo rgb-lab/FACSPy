@@ -250,7 +250,7 @@ class Metadata(BaseSupplement):
         supply this metadata dataframe.
     from_fcs
         If True, returns an empty Metadata object which will be filled
-        during dataset assembly by :function:`~FACSPy.dataset._dataset.create_dataset()`.
+        during dataset assembly by :meth:`fp.create_dataset()`.
 
     Returns
     -------
