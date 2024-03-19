@@ -161,7 +161,7 @@ class Panel(BaseSupplement):
         supply this panel dataframe.
     from_fcs
         If True, returns an empty Panel object which will be filled
-        during dataset assembly by fp.create_dataset().
+        during dataset assembly by :meth:`fp.create_dataset()`.
 
     Returns
     -------
@@ -409,7 +409,7 @@ class CofactorTable(BaseSupplement):
         supply this metadata dataframe.
     from_fcs
         If True, returns an empty CofactorTable object which will be filled
-        during cofactor_calculation by fp.calculate_cofactors().
+        during cofactor_calculation by :meth:`fp.calculate_cofactors()`.
 
     Returns
     -------
