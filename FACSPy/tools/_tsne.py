@@ -1,28 +1,94 @@
 from anndata import AnnData
+import numpy as np
 from typing import Optional, Union
 import warnings
 from typing import Literal
 from anndata import AnnData
 
+from scanpy._settings import settings
 from ._dr_samplewise import _perform_samplewise_dr
 from ._utils import (_choose_representation,
                      _merge_dimred_coordinates_into_adata,
                      _add_uns_data)
-from scanpy._settings import settings
 from .._utils import _default_layer
 
 @_default_layer
 def tsne_samplewise(adata: AnnData,
-                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     layer: str = None,
+                    n_components: int = 3,
                     use_only_fluo: bool = True,
                     exclude: Optional[Union[str, list, str]] = None,
                     scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                    n_components: int = 3,
+                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                     copy = False,
                     *args,
                     **kwargs) -> Optional[AnnData]:
+    """\
+    Computes samplewise TSNE based on either the median fluorescence values (MFI)
+    or frequency of parent values (FOP). TSNE will be calculated for all gates at once.
+    The values are added to the corresponding `.uns` slot where MFI/FOP values are
+    stored.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    n_components
+        The number of components to be calculated. Defaults to 3.
+    use_only_fluo
+        Parameter to specify if the TSNE should only be calculated for the fluorescence
+        channels.
+    exclude
+        Can be used to exclude channels from calculating the embedding.
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
+    data_metric
+        One of `mfi` or `fop`. Using a different metric will calculate
+        the asinh fold change on mfi and fop values, respectively
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    copy
+        Return a copy of adata instead of modifying inplace.
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `sklearn.TSNE`
+        function. Please refer to its documentation.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.uns[f'{data_metric}_{data_group}_{layer}']`
+            TSNE coordinates are added to the respective frame
+        `.uns['settings'][f"_tsne_samplewise_{data_metric}_{layer}"]`
+            Settings that were used for samplewise TSNE calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.mfi(dataset)
+    >>> fp.tl.tsne_samplewise(dataset)
+
+    """
 
     adata = adata.copy() if copy else adata
 
@@ -69,65 +135,68 @@ def _compute_tsne(adata: AnnData,
                   use_rep: Optional[str] = None,
                   perplexity: Union[float, int] = 30,
                   early_exaggeration: Union[float, int] = 12,
-                  learning_rate: Union[float, int] = 1000,
+                  learning_rate: Union[float, int] = "auto",
                   random_state: int = 187,
                   use_fast_tsne: bool = False,
                   n_jobs: Optional[int] = None,
                   *,
-                  metric: str = "euclidean") -> Optional[AnnData]:
+                  metric: str = "euclidean") -> tuple[np.ndarray, dict]:
     """\
-    t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
-
-    t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been
-    proposed for visualizating single-cell data by [Amir13]_. Here, by default,
-    we use the implementation of *scikit-learn* [Pedregosa11]_. You can achieve
-    a huge speedup and better convergence if you install `Multicore-tSNE
-    <https://github.com/DmitryUlyanov/Multicore-TSNE>`__ by [Ulyanov16]_, which
-    will be automatically detected by Scanpy.
+    Internal function to compute the TSNE embedding. The core of the function
+    is implemented from scanpy with the important difference that the TSNE
+    coordinates are returned and not written to the adata object.
 
     Parameters
     ----------
     adata
-        Annotated data matrix.
-    {doc_n_pcs}
-    {use_rep}
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    uns_key
+        Name of the slot in `.obsm` that the TSNE is calculated on.
+    n_components
+        The number of dimensions of the embedding.
+    n_pcs
+        Number of principal components to use
+    use_rep
+        Name of the slot in `.obsm` that specifies the embedding
+        that TSNE is calculated on. Used in conjunction with `uns_key`.
     perplexity
-        The perplexity is related to the number of nearest neighbors that
-        is used in other manifold learning algorithms. Larger datasets
-        usually require a larger perplexity. Consider selecting a value
-        between 5 and 50. The choice is not extremely critical since t-SNE
-        is quite insensitive to this parameter.
-    metric
-        Distance metric calculate neighbors on.
+        The perplexity is related to the number of nearest neighbors
+        that is used in other manifold learning algorithms. Larger
+        datasets usually require a larger perplexity. Consider
+        selecting a value between 5 and 50. Different values
+        can result in significantly different results. The perplexity
+        must be less than the number of samples.
     early_exaggeration
-        Controls how tight natural clusters in the original space are in the
-        embedded space and how much space will be between them. For larger
-        values, the space between natural clusters will be larger in the
-        embedded space. Again, the choice of this parameter is not very
-        critical. If the cost function increases during initial optimization,
-        the early exaggeration factor or the learning rate might be too high.
+        Controls how tight natural clusters in the original space
+        are in the embedded space and how much space will be between
+        them. For larger values, the space between natural clusters
+        will be larger in the embedded space. Again, the choice of
+        this parameter is not very critical. If the cost function
+        increases during initial optimization, the early exaggeration
+        factor or the learning rate might be too high.
     learning_rate
-        Note that the R-package "Rtsne" uses a default of 200.
-        The learning rate can be a critical parameter. It should be
-        between 100 and 1000. If the cost function increases during initial
-        optimization, the early exaggeration factor or the learning rate
-        might be too high. If the cost function gets stuck in a bad local
-        minimum increasing the learning rate helps sometimes.
+        Learning rate. The learning rate for t-SNE is usually in the
+        range [10.0, 1000.0]. If the learning rate is too high, the
+        data may look like a 'ball' with any point approximately
+        equidistant from its nearest neighbours. If the learning rate
+        is too low, most points may look compressed in a dense cloud
+        with few outliers. If the cost function gets stuck in a bad
+        local minimum increasing the learning rate may help.
     random_state
-        Change this to use different intial states for the optimization.
-        If `None`, the initial state is not reproducible.
+        Sets the random state for the algorithm.
+    use_fast_tsne
+        Whether to use the fast_tsne implementation
     n_jobs
-        Number of jobs for parallel computation.
-        `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
-    copy
-        Return a copy instead of writing to `adata`.
+        number of CPU cores to use.
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
-
-    **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
-        tSNE coordinates of data.
+    X_tsne
+        The TSNE coordinates
+    params
+        A dictionary containing the parameters used for analysis.
+    
     """
 
     X = _choose_representation(adata,

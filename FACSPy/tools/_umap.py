@@ -33,6 +33,71 @@ def umap_samplewise(adata: AnnData,
                     copy = False,
                     *args,
                     **kwargs) -> Optional[AnnData]:
+    """\
+    Computes samplewise UMPA based on either the median fluorescence values (MFI)
+    or frequency of parent values (FOP). UMAP will be calculated for all gates at once.
+    The values are added to the corresponding `.uns` slot where MFI/FOP values are
+    stored.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    n_components
+        The number of components to be calculated. Defaults to 3.
+    use_only_fluo
+        Parameter to specify if the UMAP should only be calculated for the fluorescence
+        channels.
+    exclude
+        Can be used to exclude channels from calculating the embedding.
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
+    data_metric
+        One of `mfi` or `fop`. Using a different metric will calculate
+        the asinh fold change on mfi and fop values, respectively
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    copy
+        Return a copy of adata instead of modifying inplace.
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `umap.UMAP`
+        function. Please refer to its documentation.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.uns[f'{data_metric}_{data_group}_{layer}']`
+            UMAP coordinates are added to the respective frame
+        `.uns['settings'][f"_umap_samplewise_{data_metric}_{layer}"]`
+            Settings that were used for samplewise UMAP calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.mfi(dataset)
+    >>> fp.tl.umap_samplewise(dataset)
+
+    """
 
     adata = adata.copy() if copy else adata
 
@@ -90,23 +155,17 @@ def _compute_umap(adata: AnnData,
                   method: Literal['umap', 'rapids'] = 'umap',
                   neighbors_key: Optional[str] = None) -> tuple[np.ndarray, dict]:
     """\
-    Embed the neighborhood graph using UMAP [McInnes18]_.
-
-    UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
-    technique suitable for visualizing high-dimensional data. Besides tending to
-    be faster than tSNE, it optimizes the embedding such that it best reflects
-    the topology of the data, which we represent throughout Scanpy using a
-    neighborhood graph. tSNE, by contrast, optimizes the distribution of
-    nearest-neighbor distances in the embedding such that these best match the
-    distribution of distances in the high-dimensional space.  We use the
-    implementation of `umap-learn <https://github.com/lmcinnes/umap>`__
-    [McInnes18]_. For a few comparisons of UMAP with tSNE, see this `preprint
-    <https://doi.org/10.1101/298430>`__.
+    Internal function to compute the UMAP embedding. The core of the function
+    is implemented from scanpy with the important difference that the UMAP
+    coordinates are returned and not written to the adata object.
 
     Parameters
     ----------
     adata
-        Annotated data matrix.
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    uns_key
+        Name of the slot in `.obsm` that the UMAP is calculated on.
     min_dist
         The effective minimum distance between embedded points. Smaller values
         will result in a more clustered/clumped embedding where nearby points on
@@ -154,32 +213,22 @@ def _compute_umap(adata: AnnData,
         More specific parameters controlling the embedding. If `None` these
         values are set automatically as determined by `min_dist` and
         `spread`.
-    copy
-        Return a copy instead of writing to adata.
     method
         Use the original 'umap' implementation, or 'rapids' (experimental, GPU only)
     neighbors_key
-        If not specified, umap looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'] for connectivities
-        (default storage places for pp.neighbors).
         If specified, umap looks .uns[neighbors_key] for neighbors settings and
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
-
-    **X_umap** : `adata.obsm` field
-        UMAP coordinates of data.
+    X_umap
+        The UMAP coordinates
+    params
+        A dictionary containing the parameters used for analysis.
     """
 
     if neighbors_key is None:
-        neighbors_key = 'neighbors'
-
-    if neighbors_key not in adata.uns:
-        raise ValueError(
-            f'Did not find .uns["{neighbors_key}"]. Run `sc.pp.neighbors` first.'
-        )
+        raise ValueError("neighbors key has to be supplied!")
 
     neighbors = NeighborsView(adata, neighbors_key)
 

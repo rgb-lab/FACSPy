@@ -47,6 +47,69 @@ def leiden(adata: AnnData,
            key_added: Optional[str] = None,
            copy: bool = False,
            **kwargs) -> Optional[AnnData]:
+    """\
+    Computes Leiden clustering. 
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    key_added
+        Name of the `.obs` column that is filled with the cluster
+        annotations. Defaults to f'{gate}_{layer}_leiden'.
+    use_only_fluo
+        Parameter to specify if the UMAP should only be calculated for the fluorescence
+        channels. Specify `recalculate_pca` to repeat PCA calculation.
+    exclude
+        Can be used to exclude channels from calculating the embedding.
+        Specify `recalculate_pca` to repeat PCA calculation.
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
+    copy
+        Return a copy of adata instead of modifying inplace
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `_compute_leiden`
+        function. Please refer to its documentation.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.obs[f'{gate}_{layer}_leiden]`
+            cluster annotations
+        `.uns['settings'][f'_leiden_{gate}_{layer}]`
+            Settings that were used for leiden calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+    >>> fp.tl.leiden(dataset)
+
+    """
     
     adata = adata.copy() if copy else adata
 

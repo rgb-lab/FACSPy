@@ -11,8 +11,44 @@ from .._utils import _find_parents_recursively, _flatten_nested_list
 
 def gate_frequencies_mem(adata: AnnData,
                          copy: bool = False) -> Optional[AnnData]:
-    """same as gate_frequencies, but less memory. Slightly slower."""
+    """\
+    Calculates the gate frequencies as a percentage. Same as fp.tl.gate_frequencies
+    but runs on the csr_matrix of `.obsm['gating']`. This approach is slightly slower
+    but much more memory efficient. Will eventually replace :meth:`fp.tl.gate_frequencies`.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.uns['gate_frequencies']`
+            The gate frequencies as a percentage of all parent gates.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.gate_frequencies_mem(dataset)
     
+    """
+
     adata = adata.copy() if copy else adata
 
     sample_ID_cat_codes = adata.obs["sample_ID"].cat.codes.to_numpy()
@@ -128,10 +164,44 @@ def _calculate_gate_freq_per_parent(df: pd.DataFrame,
                                  ignore_index = False).set_index("gate", append = True)
     return freq_frame
 
-#TODO: Does not reasonably support multiple parallel gating strategies, these will be mixed.
-#TODO: if user is dumb, could lead to errors. lol
 def gate_frequencies(adata: AnnData,
                      copy: bool = False) -> Optional[AnnData]:
+    """\
+    Calculates the gate frequencies as a percentage.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.uns['gate_frequencies']`
+            The gate frequencies as a percentage of all parent gates.
+
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.gate_frequencies(dataset)
+    
+    """
     
     adata = adata.copy() if copy else adata
     gates = adata.uns["gating_cols"].tolist()

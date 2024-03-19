@@ -63,12 +63,88 @@ def _save_settings(adata: AnnData,
 
 @_default_layer
 def fop(adata: AnnData,
-        groupby: Union[Literal["sample_ID"], str] = "sample_ID",
-        cutoff: Optional[Union[int, float, list[int], list[float]]] = None,
         layer: Union[str, list[str]] = None,
+        cutoff: Optional[Union[int, float, list[int], list[float]]] = None,
+        groupby: Union[Literal["sample_ID"], str] = "sample_ID",
         use_only_fluo: bool = False,
         aggregate: bool = False,
         copy: bool = False) -> Optional[AnnData]:
+    """\
+    
+    Calculates the frequency of parents. For the calculation, cutoffs
+    per channel are necessary that can be supplied as a singular value,
+    a list of values or via the cofactors. FOPs are calculated for all
+    gates.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input. Multiple layers can be passed
+        as a list.
+    cutoff
+        Intensity cutoff above which cells are counted as positive. Can be
+        a singular value, a value per channel. If None, values will be pulled
+        from `.var['cofactors']` or from `.uns['cofactors']`.
+    groupby
+        Argument to specify the grouping. Defaults to sample_ID, which
+        will calculate the FOP per sample. Can be any column from the `.obs`
+        slot of adata.
+    use_only_fluo
+        Parameter to specify if the FOP should only be calculated for the fluorescence
+        channels. Defaults to False.
+    aggregate
+        If False, calculates the FOP as if `groupby==['sample_ID', groupby]`. If set to
+        True, the FOP is calculated per entry in `.obs[groupby]`. Defaults to False.
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.uns[f'fop_{groupby}_{layer}']`
+            calculated FOP values per channel
+        `.uns['settings'][f'_fop_{groupby}_{layer}']`
+            Settings that were used for calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.tl.fop(dataset)
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+    >>> fp.tl.leiden(dataset)
+    >>> fp.tl.fop(dataset, groupby = "leiden", aggregate = True) # will calculate FOP per leiden cluster
+    >>> fp.tl.fop(dataset, groupby = "leiden", aggregate = False) # will calculate FOP per leiden cluster and sample_ID
+    
+    """
 
     adata = adata.copy() if copy else adata
 

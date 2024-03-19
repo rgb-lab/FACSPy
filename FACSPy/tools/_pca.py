@@ -11,16 +11,81 @@ from .._utils import _default_layer
 
 @_default_layer
 def pca_samplewise(adata: AnnData,
-                   data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                   data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                    layer: str = None,
                    use_only_fluo: bool = True,
+                   n_components: int = 3,
                    exclude: Optional[Union[str, list, str]] = None,
                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                   n_components: int = 3,
+                   data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                   data_metric: Literal["mfi", "fop"] = "mfi",
                    copy = False,
                    *args,
                    **kwargs) -> Optional[AnnData]:
+    """\
+    Computes samplewise PCA based on either the median fluorescence values (MFI)
+    or frequency of parent values (FOP). PCA will be calculated for all gates at once.
+    The values are added to the corresponding `.uns` slot where MFI/FOP values are
+    stored.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    n_components
+        The number of components to be calculated. Defaults to 3.
+    use_only_fluo
+        Parameter to specify if the PCA should only be calculated for the fluorescence
+        channels.
+    exclude
+        Can be used to exclude channels from calculating the embedding.
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
+    data_metric
+        One of `mfi` or `fop`. Using a different metric will calculate
+        the asinh fold change on mfi and fop values, respectively
+    data_group
+        When MFIs/FOPs are calculated, and the groupby parameter is used,
+        use `data_group` to specify the right dataframe
+    copy
+        Return a copy of adata instead of modifying inplace.
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `sklearn.PCA`
+        function. Please refer to its documentation.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.uns[f'{data_metric}_{data_group}_{layer}']`
+            PCA coordinates are added to the respective frame
+        `.uns['settings'][f"_pca_samplewise_{data_metric}_{layer}"]`
+            Settings that were used for samplewise PCA calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.mfi(dataset)
+    >>> fp.tl.pca_samplewise(dataset)
+
+    """
 
     adata = adata.copy() if copy else adata
 
@@ -66,12 +131,49 @@ def _compute_pca(adata: AnnData,
                  random_state: int = 187,
                  chunked: bool = False,
                  chunk_size: Optional[int] = None) -> tuple[np.ndarray, np.ndarray, dict, dict]:
-    
-    # This module copies the sc.pp.pca function
-    # with the important difference that nothing 
-    # gets written to the dataset directly. That way,
-    # we keep the anndatas as Views when multiple gates are
-    # analyzed
+    """\
+    Internal function to compute the PCA embedding. The core of the function
+    is implemented from scanpy with the important difference that the PCA
+    coordinates are returned and not written to the adata object.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    n_comps
+        Number of components to be calculated.
+    zero_center
+        If `True`, compute standard PCA from covariance matrix.
+        If `False`, omit zero-centering variables
+        (uses :class:`~sklearn.decomposition.TruncatedSVD`),
+        which allows to handle sparse input efficiently.
+        Passing `None` decides automatically based on sparseness of the data.
+    svd_solver
+        One of `auto`, `full`, `arpack`, `randomized`
+    random_state
+        Sets the random state.
+    chunked
+        If `True`, perform an incremental PCA on segments of `chunk_size`.
+        The incremental PCA automatically zero centers and ignores settings of
+        `random_seed` and `svd_solver`. If `False`, perform a full PCA.
+    chunk_size
+        Number of observations to include in each chunk.
+        Required if `chunked=True` was passed.
+
+    Returns
+    -------
+    X_pca
+        The PCA coordinates
+    pca_.components
+        Principal components containing the loadings
+    pca_variances
+        Explained variance, equivalent to the eigenvalues of the
+        covariance matrix
+    pca_settings
+        A dictionary containing the parameters used for analysis.
+
+    """
     
     if n_comps is None:
         n_comps = min(adata.n_vars, adata.n_obs) - 1

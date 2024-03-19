@@ -39,7 +39,7 @@ def pca(adata: AnnData,
     ----------
     adata
         The anndata object of shape `n_obs` x `n_vars`
-        where Rows correspond to cells and columns to the channels
+        where rows correspond to cells and columns to the channels
     gate
         The gate to be analyzed, called by the population name.
         This parameter has a default stored in fp.settings, but
@@ -49,16 +49,14 @@ def pca(adata: AnnData,
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
     use_only_fluo
-        Boolean parameter that controls whether only channels corresponding
-        to fluorescence values are analyzed or if scatter (flow) and technical
-        channels (CyTOF) are used for analysis. Defaults to True
+        Parameter to specify if the UMAP should only be calculated for the fluorescence
+        channels. Specify `recalculate_pca` to repeat PCA calculation.
     exclude
-        gives the user the opportunity to exclude channels from the
-        analysis. Lists or strings are allowed.
+        Can be used to exclude channels from calculating the embedding.
+        Specify `recalculate_pca` to repeat PCA calculation.
     scaling
-        parameter that allows for scaling of the data matrix before
-        PCA computation. Allowed values are "MinMaxScaler",
-        "StandardScaler" or "RobustScaler".
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
     copy
         Return a copy of adata instead of modifying inplace
     **kwargs : dict, optional
@@ -67,21 +65,37 @@ def pca(adata: AnnData,
     
     Returns
     -------
-    adata : anndata.AnnData
-        Returned if `copy = True`, otherwise adds fields to the anndata
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
         object:
 
-        `.obsm['X_pca_{gate}_{layer}]`
+        `.obsm[f'X_pca_{gate}_{layer}]`
             PCA representation of the data
-        `.varm['PCs_{gate}_{layer}]`
+        `.varm[f'PCs_{gate}_{layer}]`
             Principal components containing the loadings
-        `.uns['pca_{gate}_{layer}]['variance']`
+        `.uns[f'pca_{gate}_{layer}]['variance']`
             Explained variance, equivalent to the eigenvalues of the
             covariance matrix
-        `.uns['pca_{gate}_{layer}]['variance_ratio']`
+        `.uns[f'pca_{gate}_{layer}]['variance_ratio']`
             Ratio of explained variance.
-        `.uns['settings']['_pca_{gate}_{layer}]`
+        `.uns['settings'][f'_pca_{gate}_{layer}]`
             Settings that were used for PCA calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+
     """
 
     adata = adata.copy() if copy else adata
@@ -148,15 +162,11 @@ def diffmap(adata: AnnData,
     `method=='umap'`. Differences between these options shouldn't usually be
     dramatic.
 
-    Due to the Note in the scanpy documentation, that the 0th column is the steady
-    state solution and not informative in diffusion maps, we discard the 0th
-    position.
-
     Parameters
     ----------
     adata
         The anndata object of shape `n_obs` x `n_vars`
-        where Rows correspond to cells and columns to the channels
+        where rows correspond to cells and columns to the channels
     gate
         The gate to be analyzed, called by the population name.
         This parameter has a default stored in fp.settings, but
@@ -165,17 +175,18 @@ def diffmap(adata: AnnData,
         The layer corresponding to the data matrix. Similar to the
         gate parameter, it has a default stored in fp.settings which
         can be overwritten by user input.
+    recalculate_pca
+        Parameter to specify whether to re-calculate the PCA. Defaults
+        to False.
     use_only_fluo
-        Boolean parameter that controls whether only channels corresponding
-        to fluorescence values are analyzed or if scatter (flow) and technical
-        channels (CyTOF) are used for analysis. Defaults to True
+        Parameter to specify if the UMAP should only be calculated for the fluorescence
+        channels. Specify `recalculate_pca` to repeat PCA calculation.
     exclude
-        gives the user the opportunity to exclude channels from the
-        analysis. Lists or strings are allowed.
+        Can be used to exclude channels from calculating the embedding.
+        Specify `recalculate_pca` to repeat PCA calculation.
     scaling
-        parameter that allows for scaling of the data matrix before
-        PCA computation. Allowed values are "MinMaxScaler",
-        "StandardScaler" or "RobustScaler".
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
     copy
         Return a copy of adata instead of modifying inplace
     **kwargs : dict, optional
@@ -184,20 +195,36 @@ def diffmap(adata: AnnData,
     
     Returns
     -------
-    adata : anndata.AnnData
-        Returned if `copy = True`, otherwise adds fields to the anndata
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
         object:
 
-        `.obsm['X_diffmap_{gate}_{layer}]`
+        `.obsm[f'X_diffmap_{gate}_{layer}]`
             DiffusionMap embedding of the data
-        `.uns['diffmap_evals'_{gate}_{layer}]`
+        `.uns[f'diffmap_evals'_{gate}_{layer}]`
             Array of size (number of eigen vectors).
             Eigenvalues of transition matrix
-        `.uns['settings']['_pca_{gate}_{layer}]`
+        `.uns['settings'][f'_diffmap_{gate}_{layer}]`
             Settings that were used for PCA calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+    >>> fp.tl.diffmap(dataset)
     
     """
-
 
     adata = adata.copy() if copy else adata
 
@@ -271,8 +298,74 @@ def umap(adata: AnnData,
          exclude: Optional[list[str]] = None,
          scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
          copy: bool = False,
-         *args,
          **kwargs) -> Optional[AnnData]:
+    """\
+    
+    Calculates UMAP embedding. If PCA and neighbors have not been calculated,
+    this function will also calculate both with the inputs specified here.
+    
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    recalculate_pca
+        Parameter to specify whether to re-calculate the PCA. Defaults
+        to False.
+    use_only_fluo
+        Parameter to specify if the UMAP should only be calculated for the fluorescence
+        channels. Specify `recalculate_pca` to repeat PCA calculation.
+    exclude
+        Can be used to exclude channels from calculating the embedding.
+        Specify `recalculate_pca` to repeat PCA calculation.
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
+    copy
+        Return a copy of adata instead of modifying inplace
+
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `_compute_umap`
+        function. Please refer to its documentation.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.obsm[f'X_umap_{gate}_{layer}]`
+            UMAP embedding of the data
+        `.uns['settings'][f'_umap_{gate}_{layer}]`
+            Settings that were used for UMAP calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+    >>> fp.tl.umap(dataset)
+ 
+    """
 
     adata = adata.copy() if copy else adata
 
@@ -287,8 +380,7 @@ def umap(adata: AnnData,
                       use_only_fluo = use_only_fluo,
                       exclude = exclude,
                       scaling = scaling,
-                      reduction = "pca",
-                      *args,
+                      reduction = "umap",
                       **kwargs)
     
     uns_key = f"{gate}_{layer}"
@@ -312,11 +404,6 @@ def umap(adata: AnnData,
                          **pca_kwargs)
             preprocessed_adata = _recreate_preprocessed_view(adata,
                                                              preprocessed_adata)
-            print(adata)
-            print(preprocessed_adata)
-            assert "X_pca_live_compensated" in preprocessed_adata.obsm
-            
-
 
     if connectivities_key not in adata.obsp:
         print("computing neighbors for umap")
@@ -332,7 +419,6 @@ def umap(adata: AnnData,
                            **neighbors_kwargs)
         preprocessed_adata = _recreate_preprocessed_view(adata,
                                                          preprocessed_adata)
-        print(preprocessed_adata)
 
     umap_kwargs = _extract_valid_umap_kwargs(kwargs)
     adata = _umap(adata = adata,
@@ -351,13 +437,77 @@ def umap(adata: AnnData,
 def tsne(adata: AnnData,
          gate: str = None,
          layer: str = None,
+         recalculate_pca: bool = False,
          use_only_fluo: bool = True,
          exclude: Optional[list[str]] = None,
          scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
-         recalculate_pca: bool = False,
          copy: bool = False,
          *args,
          **kwargs) -> Optional[AnnData]:
+    """\
+    
+    Calculates TSNE embedding. If PCA and neighbors have not been calculated,
+    this function will also calculate both with the inputs specified here.
+    
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    recalculate_pca
+        Parameter to specify whether to re-calculate the PCA. Defaults
+        to False.
+    use_only_fluo
+        Parameter to specify if the UMAP should only be calculated for the fluorescence
+        channels. Specify `recalculate_pca` to repeat PCA calculation.
+    exclude
+        Can be used to exclude channels from calculating the embedding.
+        Specify `recalculate_pca` to repeat PCA calculation.
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
+
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `_compute_tsne`
+        function. Please refer to its documentation.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.obsm[f'X_tsne_{gate}_{layer}]`
+            TSNE embedding of the data
+        `.uns['settings'][f'_tsne_{gate}_{layer}]`
+            Settings that were used for UMAP calculation
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.tsne(dataset)
+ 
+    """
 
     adata = adata.copy() if copy else adata
 
@@ -402,4 +552,3 @@ def tsne(adata: AnnData,
                   **tsne_kwargs)
     del adata.X
     return adata if copy else None
-

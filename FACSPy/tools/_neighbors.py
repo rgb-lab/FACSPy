@@ -21,7 +21,72 @@ def neighbors(adata: AnnData,
               copy: bool = False,
               *args,
               **kwargs) -> Optional[AnnData]:
-    """Function to add neighbors to adata"""
+    """\
+    Computes Neighbors. 
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
+    use_only_fluo
+        Parameter to specify if the UMAP should only be calculated for the fluorescence
+        channels. Specify `recalculate_pca` to repeat PCA calculation.
+    exclude
+        Can be used to exclude channels from calculating the embedding.
+        Specify `recalculate_pca` to repeat PCA calculation.
+    scaling
+        Whether to apply scaling to the data for display. One of `MinMaxScaler`,
+        `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
+    n_neighbors
+        Number of neighbors to compute.
+    use_rep
+        Representation to compute neighbors on. Defaults to `X_pca_{gate}_{layer}`
+    n_pcs
+        Number of principal components to use.
+    copy
+        Return a copy of adata instead of modifying inplace.
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `_compute_neighbors`
+        function. Please refer to its documentation.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
+
+        `.obsm[f'{gate}_{layer}_neighbors_connectivities']`
+            connectivities
+        `.obsm[f'{gate}_{layer}_neighbors_distances']`
+            distances
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+
+    """
+
     adata = adata.copy() if copy else adata
     
     uns_key = f"{gate}_{layer}"

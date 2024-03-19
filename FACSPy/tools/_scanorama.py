@@ -24,32 +24,27 @@ def scanorama_integrate(
     **kwargs,
 ):
     """\
-    Use Scanorama [Hie19]_ to integrate different experiments.
-
-    Scanorama [Hie19]_ is an algorithm for integrating single-cell
-    data from multiple experiments stored in an AnnData object. This
-    function should be run after performing PCA but before computing
-    the neighbor graph, as illustrated in the example below.
-
-    This uses the implementation of `scanorama
-    <https://github.com/brianhie/scanorama>`__ [Hie19]_.
+    Computes scanorama integration.
 
     Parameters
     ----------
     adata
-        The annotated data matrix.
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    gate
+        The gate to be analyzed, called by the population name.
+        This parameter has a default stored in fp.settings, but
+        can be superseded by the user.
+    layer
+        The layer corresponding to the data matrix. Similar to the
+        gate parameter, it has a default stored in fp.settings which
+        can be overwritten by user input.
     key
-        The name of the column in ``adata.obs`` that differentiates
-        among experiments/batches. Cells from the same batch must be
-        contiguously stored in ``adata``.
+        Column in `.obs` that specifies the batch.
     basis
-        The name of the field in ``adata.obsm`` where the PCA table is
-        stored. Defaults to ``'X_pca'``, which is the default for
-        ``sc.tl.pca()``.
+        Entry in `.obsm` that specifies the embedding.
     adjusted_basis
-        The name of the field in ``adata.obsm`` where the integrated
-        embeddings will be stored after running this function. Defaults
-        to ``X_scanorama``.
+        Name of the integrated embedding. 
     knn
         Number of nearest neighbors to use for matching.
     sigma
@@ -63,40 +58,44 @@ def scanorama_integrate(
         The batch size used in the alignment vector computation. Useful
         when integrating very large (>100k samples) datasets. Set to
         large value that runs within available memory.
-    kwargs
-        Any additional arguments will be passed to
-        ``scanorama.integrate()``.
 
+        Return a copy of adata instead of modifying inplace.
+    **kwargs : dict, optional
+        keyword arguments that are passed directly to the `scanorama.scanorama`
+        function. Please refer to its documentation.
+    
     Returns
     -------
-    Updates adata with the field ``adata.obsm[adjusted_basis]``,
-    containing Scanorama embeddings such that different experiments
-    are integrated.
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
+        object:
 
-    Example
-    -------
-    First, load libraries and example dataset, and preprocess.
+        `.obsm[adjusted_basis]`
+            integrated embedding of the data
 
-    >>> import scanpy as sc
-    >>> import scanpy.external as sce
-    >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.recipe_zheng17(adata)
-    >>> sc.tl.pca(adata)
 
-    We now arbitrarily assign a batch metadata variable to each cell
-    for the sake of example, but during real usage there would already
-    be a column in ``adata.obs`` giving the experiment each cell came
-    from.
+    Examples
+    --------
 
-    >>> adata.obs['batch'] = 1350*['a'] + 1350*['b']
+    >>> import FACSPy as fp
+    >>> dataset
+    AnnData object with n_obs × n_vars = 615936 × 22
+    obs: 'sample_ID', 'file_name', 'condition', 'sex', 'batch'
+    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn', 'cofactors'
+    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
+    obsm: 'gating'
+    layers: 'compensated', 'transformed'
+    >>> fp.settings.default_gate = "T_cells"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.scanorama_integrate(
+    ...     dataset,
+    ...     basis = "X_pca_T_cells_transformed",
+    ...     adjusted_basis = "X_pca_T_cells_transformed_scanorama",
+    ... )
 
-    Finally, run Scanorama. Afterwards, there will be a new table in
-    ``adata.obsm`` containing the Scanorama embeddings.
-
-    >>> sce.pp.scanorama_integrate(adata, 'batch')
-    >>> 'X_scanorama' in adata.obsm
-    True
     """
+
 
     adata = adata.copy() if copy else adata
 

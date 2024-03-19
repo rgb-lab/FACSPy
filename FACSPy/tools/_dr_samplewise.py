@@ -73,7 +73,7 @@ def _perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
         # n_components is greater or equal to the number of samples
         # Here, we set the init parameter to random to overcome this
         # while still allowing the override by the user (with accompanying)
-        # errors ^^
+        # errors
         # https://github.com/lmcinnes/umap/issues/201
         if n_components >= data.shape[0]:
             if "init" not in kwargs:
