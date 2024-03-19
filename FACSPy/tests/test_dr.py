@@ -183,7 +183,7 @@ def test_tsne_works_as_sklearn(mock_dataset: AnnData):
     tsne_ = TSNE(n_components = 2,
                  perplexity = 30,
                  early_exaggeration = 12,
-                 learning_rate = 1000,
+                 learning_rate = "auto",
                  random_state = 187)
     coords = tsne_.fit_transform(adata.layers["compensated"])
 
@@ -201,7 +201,7 @@ def test_tsne_works_as_sklearn(mock_dataset: AnnData):
     uns_dict = adata.uns["tsne_live_compensated"]
     assert uns_dict["params"]["perplexity"] == 30
     assert uns_dict["params"]["early_exaggeration"] == 12
-    assert uns_dict["params"]["learning_rate"] == 1000
+    assert uns_dict["params"]["learning_rate"] == "auto"
     assert uns_dict["params"]["n_jobs"] == 1
     assert uns_dict["params"]["use_rep"] == "X"
     assert uns_dict["params"]["metric"] == "euclidean"
@@ -217,7 +217,8 @@ def test_tsne_works_as_scanpy(mock_dataset: AnnData):
     facspy_adata = mock_dataset.copy()
     sc.tl.tsne(scanpy_adata,
                random_state = 187,
-               use_rep = "X")
+               use_rep = "X",
+               learning_rate = "auto")
     fp.tl.tsne(facspy_adata,
                gate = "live",
                layer = "compensated",
@@ -237,6 +238,7 @@ def test_tsne_works_as_scanpy_2(mock_dataset: AnnData):
     sc.tl.tsne(scanpy_adata,
                early_exaggeration = 400,
                use_rep = "X",
+               learning_rate = "auto",
                random_state = 187)
     fp.tl.tsne(facspy_adata,
                gate = "live",
@@ -250,7 +252,7 @@ def test_tsne_works_as_scanpy_2(mock_dataset: AnnData):
     uns_dict = facspy_adata.uns["tsne_live_compensated"]
     assert uns_dict["params"]["perplexity"] == 30
     assert uns_dict["params"]["early_exaggeration"] == 400
-    assert uns_dict["params"]["learning_rate"] == 1000
+    assert uns_dict["params"]["learning_rate"] == "auto"
     assert uns_dict["params"]["n_jobs"] == 1
     assert uns_dict["params"]["metric"] == "euclidean"
     assert uns_dict["params"]["use_rep"] == "X"
@@ -370,7 +372,7 @@ def test_tsne_kwargs(mock_dataset: AnnData):
     tsne_ = TSNE(n_components = 2,
                  perplexity = 30,
                  early_exaggeration = 400,
-                 learning_rate = 1000,
+                 learning_rate = "auto",
                  random_state = 187)
     coords = tsne_.fit_transform(adata.layers["compensated"])
 
@@ -391,7 +393,7 @@ def test_tsne_kwargs(mock_dataset: AnnData):
     uns_dict = adata.uns["tsne_live_compensated"]
     assert uns_dict["params"]["perplexity"] == 30
     assert uns_dict["params"]["early_exaggeration"] == 400
-    assert uns_dict["params"]["learning_rate"] == 1000
+    assert uns_dict["params"]["learning_rate"] == "auto"
     assert uns_dict["params"]["n_jobs"] == 1
     assert uns_dict["params"]["metric"] == "euclidean"
     assert uns_dict["params"]["n_components"] == 2
@@ -405,7 +407,7 @@ def test_tsne_kwargs_2(mock_dataset: AnnData):
                       perplexity = 30,
                       metric = "euclidean",
                       early_exaggeration = 12,
-                      learning_rate = 1000,
+                      learning_rate = "auto",
                       random_state = 187)
     test_coords = test_tsne_.fit_transform(adata.layers["compensated"])
 
@@ -413,7 +415,7 @@ def test_tsne_kwargs_2(mock_dataset: AnnData):
                  perplexity = 30,
                  metric = "cosine",
                  early_exaggeration = 12,
-                 learning_rate = 1000,
+                 learning_rate = "auto",
                  random_state = 187)
     coords = tsne_.fit_transform(adata.layers["compensated"])
 
@@ -434,7 +436,7 @@ def test_tsne_kwargs_2(mock_dataset: AnnData):
     uns_dict = adata.uns["tsne_live_compensated"]
     assert uns_dict["params"]["perplexity"] == 30
     assert uns_dict["params"]["early_exaggeration"] == 12
-    assert uns_dict["params"]["learning_rate"] == 1000
+    assert uns_dict["params"]["learning_rate"] == "auto"
     assert uns_dict["params"]["n_jobs"] == 1
     assert uns_dict["params"]["metric"] == "cosine"
     assert uns_dict["params"]["n_components"] == 2
