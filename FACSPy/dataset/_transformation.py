@@ -105,8 +105,8 @@ def transform(adata: AnnData,
 
     Returns
     -------
-    adata : anndata.AnnData
-        Returned if `copy = True`, otherwise adds fields to the anndata
+    :class:`~anndata.AnnData` or None
+        Returns adata if `copy = True`, otherwise adds fields to the anndata
         object:
 
         `.uns[layer]`
@@ -204,7 +204,6 @@ def calculate_cofactors(adata: AnnData,
 
     Returns
     -------
-
     If copy is True:
         The AnnData object. If `add_to_adata` is True,
         the .uns['cofactors'] and .uns['raw_cofactors']

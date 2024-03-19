@@ -21,4 +21,6 @@
     dt.Panel
     dt.create_empty_metadata
     dt.create_panel_from_fcs
+    dt.FlowJoWorkspace
+    dt.DivaWorkspace
 ```

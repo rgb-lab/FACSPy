@@ -277,8 +277,7 @@ def create_empty_metadata(input_directory: Optional[str] = None,
 
     Returns
     -------
-
-    If `as_frame == True` a :class:`~pandas.DataFrame`, else a :class:`~FACSPy.dataset._supplements.Metadata` object
+    If `as_frame==True` a :class:`~pandas.DataFrame`, else a :class:`~FACSPy.dataset._supplements.Metadata` object
 
     Examples
     --------
@@ -289,6 +288,7 @@ def create_empty_metadata(input_directory: Optional[str] = None,
     ...     metadata = metadata,
     ...     ...
     ... )
+
     """
     
     if input_directory is None:
@@ -336,8 +336,7 @@ def create_panel_from_fcs(input_directory: Optional[str],
 
     Returns
     -------
-
-    If `as_frame == True` a :class:`~pandas.DataFrame`, else a :class:`~FACSPy.dataset._supplements.Panel` object
+    If `as_frame==True` a :class:`~pandas.DataFrame`, else a :class:`~FACSPy.dataset._supplements.Panel` object
 
     Examples
     --------
@@ -348,7 +347,9 @@ def create_panel_from_fcs(input_directory: Optional[str],
     ...     metadata = metadata,
     ...     ...
     ... )
+
     """
+
     if input_directory is None:
         input_directory = os.getcwd()
     if not os.path.exists(input_directory):

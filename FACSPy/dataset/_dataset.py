@@ -57,7 +57,6 @@ def create_dataset(metadata: Metadata,
 
     Returns
     -------
-
     The dataset object of :class:`~anndata.AnnData`
 
     Examples
