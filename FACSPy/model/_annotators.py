@@ -538,26 +538,23 @@ class unsupervisedGating(BaseGating):
 class supervisedGating(BaseGating):
     """
     
-    
     Examples
     --------
-
-    adata = fp.create_dataset([...])
-    gating = fp.ml.supervisedGating(dataset)
-    gating.run_data_setup(
-        gated_samples = ["1", "2", "3"],
-        layer = "compensated",
-        scaling = "StandardScaler"
-    )
-    gating.setup_classifier("DecisionTreeClassifier")
-    gating.tune_hyperparameters(
-        method = "HalvingRandomSearchCV",
-        grid = {"max_depth": [10,20,100]}
-    )
-    gating.setup_classifier("DecisionTreeClassifier")
-    gating.train()
-    gating.gate_dataset()
-    
+    >>> adata = fp.create_dataset([...])
+    >>> gating = fp.ml.supervisedGating(dataset)
+    >>> gating.run_data_setup(
+    ...     gated_samples = ["1", "2", "3"],
+    ...     layer = "compensated",
+    ...     scaling = "StandardScaler"
+    ... )
+    >>> gating.setup_classifier("DecisionTreeClassifier")
+    >>> gating.tune_hyperparameters(
+    >>> method = "HalvingRandomSearchCV",
+    ...     grid = {"max_depth": [10,20,100]}
+    ... )
+    >>> gating.setup_classifier("DecisionTreeClassifier")
+    >>> gating.train()
+    >>> gating.gate_dataset()
     """
 
     def __init__(self,
