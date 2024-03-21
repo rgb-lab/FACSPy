@@ -665,7 +665,7 @@ def test_metadata_categoricals(mock_metadata_with_factors):
 def test_metadata_manage_dtypes(mock_metadata_correct: pd.DataFrame):
     x = Metadata(metadata = mock_metadata_correct)
     x.dataframe["sample_ID"] = x.dataframe["sample_ID"].astype(int)
-    assert x.dataframe["sample_ID"].dtype.name == "int32"
+    assert x.dataframe["sample_ID"].dtype.name == "int32" or x.dataframe["sample_ID"].dtype.name == "int64"
     x._manage_dtypes()
     assert x.dataframe["sample_ID"].dtype.name == "object"
 
