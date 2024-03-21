@@ -136,9 +136,9 @@ def diffmap(adata: AnnData,
 
     """
     
+    dimred = "DMAP"
     basis = f"X_{dimred}_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
-    dimred = "DMAP"
 
     if "neighbors_key" not in kwargs:
         kwargs["neighbors_key"] = neighbors_key
@@ -240,9 +240,9 @@ def pca(adata: AnnData,
 
     """
  
+    dimred = "PCA"
     basis = f"X_{dimred}_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
-    dimred = "PCA"
 
     if "neighbors_key" not in kwargs:
         kwargs["neighbors_key"] = neighbors_key
@@ -347,9 +347,9 @@ def tsne(adata: AnnData,
   
     """
  
+    dimred = "TSNE"
     basis = f"X_{dimred}_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
-    dimred = "TSNE"
 
     if "neighbors_key" not in kwargs:
         kwargs["neighbors_key"] = neighbors_key
@@ -453,9 +453,9 @@ def umap(adata: AnnData,
 
     """
  
+    dimred = "UMAP"
     basis = f"X_{dimred}_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
-    dimred = "UMAP"
 
     if "neighbors_key" not in kwargs:
         kwargs["neighbors_key"] = neighbors_key
