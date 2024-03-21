@@ -118,12 +118,6 @@ class BaseSupplement:
             elif self.__class__.__name__ == "CofactorTable":
                 return pd.DataFrame(columns = ["fcs_colname", "cofactors"])
     
-    def rename_channel(self,
-                       old_channel_name,
-                       new_channel_name) -> None:
-        """renames a channel"""
-        self.dataframe.loc[self.dataframe["fcs_colname"] == old_channel_name, "fcs_colname"] = new_channel_name
-
     def select_channels(self,
                         channels: list[str]) -> None:
         """selects channels and subsets dataframe"""
@@ -231,6 +225,17 @@ class Panel(BaseSupplement):
         """returns the channel names from the panel as a list"""
         return self.dataframe["fcs_colname"].to_list()
     
+    def rename_channel(self,
+                       old_channel_name,
+                       new_channel_name) -> None:
+        """renames a channel"""
+        self.dataframe.loc[self.dataframe["fcs_colname"] == old_channel_name, "fcs_colname"] = new_channel_name
+    
+    def rename_antigen(self,
+                       old_name,
+                       new_name) -> None:
+        """renames an antigen"""
+        self.dataframe.loc[self.dataframe["antigens"] == old_name, "antigens"] = new_name 
 
 class Metadata(BaseSupplement):
     """\
@@ -325,13 +330,25 @@ class Metadata(BaseSupplement):
         self.dataframe = self.dataframe.astype("category")
     
     def annotate(self,
-                 file_names: Union[str, list[str]],
-                 column: str,
-                 value: str) -> None:
+                 sample_IDs: Union[list[str], str] = "",
+                 file_names: Union[list[str], str] = "",
+                 column: str = None,
+                 value: str = None) -> None:
         """allows the annotation of new metadata"""
-        if not isinstance(file_names, list):
+        if file_names and sample_IDs:
+            raise TypeError("Please provide either sample_IDs or file_names")
+        if sample_IDs and not isinstance(sample_IDs, list):
+            sample_IDs = [sample_IDs]
+        if file_names and not isinstance(file_names, list):
             file_names = [file_names]
-        self.dataframe.loc[self.dataframe["file_name"].isin(file_names), column] = value
+        if file_names and not all(file in self.dataframe["file_name"].tolist() for file in file_names):
+            raise ValueError("Invalid filename passed.")
+        if sample_IDs and not all(sid in self.dataframe["sample_ID"].tolist() for sid in sample_IDs):
+            raise ValueError("Invalid sample_ID passed. Make sure to provide strings.")
+        if sample_IDs:
+            self.dataframe.loc[self.dataframe["sample_ID"].isin(sample_IDs), column] = value
+        if file_names:
+            self.dataframe.loc[self.dataframe["file_name"].isin(file_names), column] = value
 
     def group_variable(self,
                        factor: str,
@@ -343,25 +360,31 @@ class Metadata(BaseSupplement):
             raise ValueError("Only numeric columns are supported") from e
         column = self.dataframe[factor]
         min_value, max_value = column.min(), column.max()
-        intervals = np.arange(min_value, max_value + min_value, (max_value - min_value) / n_groups)
+        intervals = np.arange(min_value - 1,
+                              max_value + min_value + 1,
+                              np.ceil((max_value - min_value) / n_groups))
         self.dataframe[f"{factor}_grouped"] = pd.cut(column, intervals)
     
-    def rename(self,
-               current_name: str,
-               new_name: str) -> None:
-        """renames a column from the metadata dataframe"""
+    def rename_column(self,
+                      current_name: str,
+                      new_name: str) -> None:
+        """renames a column from the metadata dataframe and removes the old column"""
+        if current_name not in self.dataframe.columns:
+            raise ValueError("Column not found in metadata.")
         self.dataframe[new_name] = self.dataframe[current_name]
         self.dataframe = self.dataframe.drop(current_name, axis = 1)
 
-    def rename_factors(self,
-                       column: Union[str, pd.Index],
-                       replacement: Union[Mapping, list[Union[str, float, int]]]) -> None:
-        """renames the instances of a factor"""
+    def rename_values(self,
+                      column: Union[str, pd.Index],
+                      replacement: Union[Mapping, list[Union[str, float, int]]]) -> None:
+        """renames the values of a metadata factor"""
         if isinstance(replacement, dict):
             self.dataframe[column].replace(replacement,
                                            inplace = True)
         else:
             self.dataframe[column] = replacement
+        self._make_dataframe_categorical()
+        self._sanitize_categoricals()
 
     def subset(self,
                column: str,
