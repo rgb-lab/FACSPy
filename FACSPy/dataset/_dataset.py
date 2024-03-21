@@ -89,6 +89,12 @@ def create_dataset(metadata: Metadata,
     obsm: 'gating'
     layers: 'compensated'
 
+    Notes
+    -----
+
+    See further explanation about the created dataset in the following tutorials:
+    :doc:`/vignettes/dataset_structure`
+
     """
 
     if input_directory is None:

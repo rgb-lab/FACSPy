@@ -191,7 +191,7 @@ class Panel(BaseSupplement):
     -----
 
     See further usage examples in the following tutorials:
-    1. :doc:`/vignettes/panel_object`
+    :doc:`/vignettes/panel_object`
 
     """
 
@@ -290,8 +290,8 @@ class Metadata(BaseSupplement):
     -----
 
     See further usage examples in the following tutorials:
-    ### NEEDS DOCSTRING LINKS!
-    vignettes/metadata_vignette.ipynb
+    :doc:`/vignettes/metadata_object`
+
     
     """ 
 
@@ -463,8 +463,7 @@ class CofactorTable(BaseSupplement):
     -----
 
     See further usage examples in the following tutorials:
-    ### NEEDS DOCSTRING LINKS!
-    vignettes/cofactor_table_vignette.ipynb
+    :doc:`/vignettes/cofactortable_object`
 
     """
 
