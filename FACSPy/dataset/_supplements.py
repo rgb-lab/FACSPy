@@ -191,8 +191,7 @@ class Panel(BaseSupplement):
     -----
 
     See further usage examples in the following tutorials:
-    ### NEEDS DOCSTRING LINKS!
-    vignettes/panel_vignette.ipynb
+    1. :doc:`/vignettes/panel_object`
 
     """
 

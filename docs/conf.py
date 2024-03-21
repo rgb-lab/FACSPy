@@ -16,6 +16,7 @@ author = 'Tarik Exner, Nicolaj Hackert'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 sys.path.insert(0, os.path.abspath('../../FACSPy/'))
+sys.path.insert(0, os.path.abspath('../../vignettes/'))
 
 extensions = [
     "sphinxcontrib.bibtex",
@@ -24,6 +25,8 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
+    "nbsphinx", # for notebook implementation
+    "nbsphinx_link" # necessary to keep vignettes outside of sphinx root directory
 ]
 
 templates_path = ['_templates']
