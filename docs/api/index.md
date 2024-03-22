@@ -15,6 +15,8 @@ tools
 plotting
 model
 dataset
+io
+
 ```
 
 Additional functionality is available through the following top-level functions and classes.

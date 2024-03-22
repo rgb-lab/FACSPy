@@ -68,9 +68,35 @@ def test_save_dataset(tmpdir,
                  overwrite = False)
     assert os.path.isfile(os.path.join(tmpdir, f"{file_name}.uns"))
     assert os.path.isfile(os.path.join(tmpdir, f"{file_name}.h5ad"))
+
+def test_save_dataset_deprecation_warning(tmpdir, mock_dataset):
+    file_name = "test"
+    with pytest.warns(DeprecationWarning):
+        save_dataset(mock_dataset,
+                     output_dir = tmpdir,
+                     file_name = file_name,
+                     overwrite = False)
+
+def test_save_dataset_full_file_path(tmpdir, mock_dataset):
+    file_name = "test"
+    save_dataset(mock_dataset,
+                 file_name = os.path.join(tmpdir, file_name),
+                 overwrite = False)
+    assert os.path.isfile(os.path.join(tmpdir, f"{file_name}.uns"))
+    assert os.path.isfile(os.path.join(tmpdir, f"{file_name}.h5ad"))
+
+def test_save_dataset_with_file_extension(tmpdir, mock_dataset):
+    file_name = "test.h5ad"
+    short_name = "test"
+    save_dataset(mock_dataset,
+                 file_name = os.path.join(tmpdir, file_name),
+                 overwrite = False)
+    assert os.path.isfile(os.path.join(tmpdir, f"{short_name}.uns"))
+    assert os.path.isfile(os.path.join(tmpdir, f"{short_name}.h5ad"))
     
 def test_save_dataset_overwrite(tmpdir,
                                 mock_dataset):
+    """setting overwrite to False results in an error."""
     save_dataset(mock_dataset,
                  output_dir = tmpdir,
                  file_name = "test",
@@ -81,14 +107,58 @@ def test_save_dataset_overwrite(tmpdir,
                      file_name = "test",
                      overwrite = False)
 
+def test_save_dataset_overwrite_2(tmpdir,
+                                  mock_dataset):
+    """setting overwrite to True should work."""
+    save_dataset(mock_dataset,
+                 output_dir = tmpdir,
+                 file_name = "test",
+                 overwrite = False)
+    save_dataset(mock_dataset,
+                 output_dir = tmpdir,
+                 file_name = "test",
+                 overwrite = True)
+
+def test_read_file_deprecationwarnings(tmpdir,
+                                       mock_dataset):
+    save_dataset(mock_dataset,
+                 output_dir = tmpdir,
+                 file_name = "test",
+                 overwrite = False)
+    with pytest.warns(DeprecationWarning):
+        x = read_dataset(input_dir = tmpdir,
+                         file_name = "test")
+    assert isinstance(x, AnnData)
+    assert isinstance(x.uns["dataset_status_hash"], dict)
+
 def test_read_file(tmpdir,
                    mock_dataset):
     save_dataset(mock_dataset,
                  output_dir = tmpdir,
                  file_name = "test",
                  overwrite = False)
-    x = read_dataset(tmpdir,
-                     "test")
+    x = read_dataset(input_dir = tmpdir,
+                     file_name = "test")
+    assert isinstance(x, AnnData)
+    assert isinstance(x.uns["dataset_status_hash"], dict)
+
+def test_read_file_filename_only(tmpdir,
+                                 mock_dataset):
+    save_dataset(mock_dataset,
+                 output_dir = tmpdir,
+                 file_name = "test",
+                 overwrite = False)
+    x = read_dataset(file_name = os.path.join(tmpdir, "test"))
+    assert isinstance(x, AnnData)
+    assert isinstance(x.uns["dataset_status_hash"], dict)
+
+def test_read_file_filename_only_with_extension(tmpdir,
+                                                mock_dataset):
+    save_dataset(mock_dataset,
+                 output_dir = tmpdir,
+                 file_name = "test",
+                 overwrite = False)
+    x = read_dataset(file_name  = os.path.join(tmpdir, "test.h5ad"))
     assert isinstance(x, AnnData)
     assert isinstance(x.uns["dataset_status_hash"], dict)
 
@@ -100,7 +170,7 @@ def test_read_file_rehash(tmpdir,
                  output_dir = tmpdir,
                  file_name = "test",
                  overwrite = False)
-    x = read_dataset(tmpdir,
-                     "test")
+    x = read_dataset(input_dir = tmpdir,
+                     file_name = "test")
     assert isinstance(x, AnnData)
     assert isinstance(x.uns["dataset_status_hash"], dict)
