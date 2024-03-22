@@ -816,6 +816,13 @@ def test_channel_selection_cofactors(mock_cofactors_correct: pd.DataFrame):
     assert "mitoTracker" in x.dataframe["fcs_colname"].to_list()
     assert "FSC-A" not in x.dataframe["fcs_colname"].to_list()
 
+# .rename_channel() method
+def test_rename_channels_cofactors(mock_cofactors_correct: pd.DataFrame):
+    x = CofactorTable(cofactors = mock_cofactors_correct)
+    x.rename_channel("CD16", "FCGR3")
+    assert "CD16" not in x.dataframe["fcs_colname"].tolist()
+    assert "FCGR3" in x.dataframe["fcs_colname"].tolist()
+
 # other
 def test_channel_selection_metadata(mock_metadata_correct: pd.DataFrame):
     x = Metadata(metadata = mock_metadata_correct)

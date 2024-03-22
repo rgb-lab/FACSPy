@@ -512,4 +512,9 @@ class CofactorTable(BaseSupplement):
             raise ValueError("Please provide a list of cofactors or set the cytof flag to True")
         if cytof and cofactors is not None:
             print("... warning cytof flag has been set to True, cofactors will be 5 for each channel.")
-        self.dataframe["cofactors"] = 5 if cytof else cofactors       
+        self.dataframe["cofactors"] = 5 if cytof else cofactors
+
+    def rename_channel(self,
+                       current_name,
+                       new_name):
+        self.dataframe.loc[self.dataframe["fcs_colname"] == current_name, "fcs_colname"] = new_name   
