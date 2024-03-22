@@ -37,6 +37,35 @@ scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
 time_channels = ["time", "Time"]
 spectral_flow_technical_channels = ["AF"]
 
+def _default_gate(func):
+    @wraps(func)
+    def __add_default_gate(*args, **kwargs):
+        if "gate" in kwargs and kwargs["gate"] is None or "gate" not in kwargs:
+            from ._settings import settings
+            kwargs["gate"] = settings._default_gate
+        return func(*args, **kwargs)
+    return __add_default_gate
+
+def _default_gate_and_default_layer(func):
+    @_default_gate
+    @_default_layer
+    @wraps(func)
+    def __add_default_gate_and_default_layer(*args, **kwargs):
+        return func(*args, **kwargs)
+    return __add_default_gate_and_default_layer
+
+def _enable_gate_aliases(func):
+    @wraps(func)
+    def __allow_gate_aliases(*args, **kwargs):
+        if "gate" in kwargs:
+            gate = kwargs["gate"]
+            from ._settings import settings
+            if gate in settings.gate_aliases:
+                kwargs["gate"] = settings.gate_aliases[gate]
+                print(f"Using the provided gate alias {gate} for gate {kwargs['gate']}")
+        return func(*args, **kwargs)
+    return __allow_gate_aliases
+
 def _check_gate_name(gate: str) -> None:
     if gate.startswith(GATE_SEPARATOR) or gate.endswith(GATE_SEPARATOR):
         raise GateNameError(GATE_SEPARATOR)
@@ -411,6 +440,32 @@ def _fetch_fluo_channels(adata: AnnData) -> list[str]:
 def subset_fluo_channels(adata: AnnData,
                          as_view: bool = False,
                          copy: bool = False) -> AnnData:
+    """\
+    Subsets only channels that are of type 'fluo'.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    as_view
+        If True, returns an AnnDataView object.
+    copy
+        Whether to copy the dataset.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.subset_fluo_channels(dataset)
+
+    """
     adata = adata.copy() if copy else adata
     if as_view:
         return adata[:, adata.var["type"] == "fluo"]
@@ -439,63 +494,146 @@ def subset_channels(adata: AnnData,
     return adata if copy else None
 
 def subset_gate(adata: AnnData,
-                gate: Optional[str] = None,
-                gate_path: Optional[str] = None,
+                gate: str,
                 as_view: bool = False,
                 copy: bool = False) -> AnnData:
-    adata = adata.copy() if copy else adata
+    """\
+    Subsets the dataset to a specific population.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    gate
+        The gate to be subset to. Can be passed as a population name (e.g. 'CD45+'),
+        a partial gate path (e.g. 'live/CD45+') or a complete gate path
+        (e.g. 'root/cells/live/CD45+')
+    as_view
+        If True, returns an AnnDataView object.
+    copy
+        Whether to copy the dataset.
     
-    if gate is None and gate_path is None:
-        raise TypeError("Please provide either a gate name or a gate path.")
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.subset_gate(dataset, "CD45+")
+    
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.subset_gate(dataset, 'live/CD45+')
+ 
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.subset_gate(dataset, 'root/cells/live/CD45+')
+   
+    """
+    adata = adata.copy() if copy else adata
     
     gates: list[str] = adata.uns["gating_cols"].to_list()
     
-    if gate:
-        gate_path = _find_gate_path_of_gate(adata, gate)
+    gate_path = _find_gate_path_of_gate(adata, gate)
 
     gate_idx = gates.index(gate_path)
 
+    subset = adata[adata.obsm["gating"][:,gate_idx] == True,:]
     if as_view:
-        return  adata[adata.obsm["gating"][:,gate_idx] == True,:]
-    ### basically copying the individual steps from AnnData._inplace_subset_var
-    ### potentially PR?
-    subset = adata[adata.obsm["gating"][:,gate_idx] == True,:].copy()
+        return subset
+    subset = subset.copy()
     adata._init_as_actual(subset, dtype = None)
     return adata if copy else None
 
-def equalize_groups(data: AnnData,
+def equalize_groups(adata: AnnData,
                     fraction: Optional[float] = None,
                     n_obs: Optional[int] = None,
                     on: Union[str, list[str]] = None, 
                     random_state: int = 187,
+                    as_view: bool = False,
                     copy: bool = False
                     ) -> Optional[AnnData]:
+    """\
+    Equalizes the cell count between groups. If there are discrepancies in cell numbers
+    between samples or conditions, this function allows to equalize the cell counts in 
+    order to avoid over-/underrepresentation of samples. Subsampling is done by random
+    selection of cell indices per group.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    fraction
+        Fraction of cells to be kept. By default, the group with the smallest cell 
+        count is selected to calculate the final cell number per group by using n_cells * fraction.
+    n_obs
+        Absolute number of cells per group to be kept. If this number is greater than the cell
+        count in one group, a warning will be issued and all cells of that group are kept.
+    on
+        The group variable. Select to the group to equalize. Defaults to `sample_ID`, but can be 
+        any column in the `.obs` slot.
+    random_state
+        Controls the random state for reproducible analysis.
+    as_view
+        If True, returns an AnnDataView object.
+    copy
+        Whether to copy the dataset.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.equalize_groups(dataset, n_obs = 300_000, on = "disease_group")
+        
+    """
     #TODO: add "min" as a parameter
     np.random.seed(random_state)
+    if n_obs and fraction:
+        raise ValueError("Please provide either `n_obs` or `fraction`")
     if n_obs is not None:
         new_n_obs = n_obs
     elif fraction is not None:
         if fraction > 1 or fraction < 0:
             raise ValueError(f'`fraction` needs to be within [0, 1], not {fraction}')
-        new_n_obs = int(data.obs.value_counts(on).min() * fraction)
-    else:
-        raise ValueError('Either pass `n_obs` or `fraction`.')
+        new_n_obs = int(adata.obs.value_counts(on).min() * fraction)
     
     if on is None:
         warnings.warn("Equalizing... groups to equalize are set to 'sample_ID'")
         on = "sample_ID"
 
-    obs_indices = data.obs.groupby(on).sample(new_n_obs).index.to_numpy()
+    # we check if there are enough cells per group
+    n_cells_per_group = adata.obs.groupby(on, observed = True).size()
+    groups_below_n_obs = n_cells_per_group[n_cells_per_group < new_n_obs].index.tolist()
+    groups_above_n_obs = n_cells_per_group[n_cells_per_group >= new_n_obs].index.tolist()
 
-    if isinstance(data, AnnData):
-        if copy:
-            return data[obs_indices].copy()
-        else:
-            data._inplace_subset_obs(obs_indices)
+    if groups_below_n_obs:
+        warnings.warn(
+            f"There are groups with n_cells smaller than the requested number of cells. These are {groups_below_n_obs} of group {on}",
+            UserWarning
+        )
+        obs_indices_above_n_obs = adata[adata.obs[on].isin(groups_above_n_obs)].obs.groupby(on, observed = True).sample(new_n_obs).index.to_numpy()
+        obs_indices_below_n_obs = adata[adata.obs[on].isin(groups_below_n_obs)].obs.index.to_numpy()
+        obs_indices = np.concatenate([obs_indices_above_n_obs, obs_indices_below_n_obs], axis = 0)
     else:
-        X = data
-        return X[obs_indices], obs_indices
+        obs_indices = adata.obs.groupby(on, observed = True).sample(new_n_obs).index.to_numpy()
+
+    if as_view:
+        return adata[obs_indices]
     
+    adata._inplace_subset_obs(obs_indices)
+    return adata if copy else None
+
 def contains_only_fluo(adata: AnnData) -> bool:
     return all(adata.var["type"] == "fluo")
 
@@ -504,7 +642,40 @@ def get_idx_loc(adata: AnnData,
     return np.array([adata.obs_names.get_loc(idx) for idx in idx_to_loc])
 
 def remove_unnamed_channels(adata: AnnData,
+                            as_view: bool = False,
                             copy: bool = False) -> Optional[AnnData]:
+    """\
+    Removes unnamed channels. Unnamed channels are defined as channels that have the same 
+    value in the 'pnn' field as the 'pns' field in `adata.var`. This happens when channels
+    were recorded and saved to the .fcs file that were not given a name via the panel. Scatter- 
+    and technical channels are kept, regardless of their definition in the Panel object.
+
+    This function removes these channels in order to not include empty channels in further analysis.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    as_view
+        If True, returns an AnnDataView object.
+    copy
+        Whether to copy the dataset.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.remove_unnamed_channels(dataset)
+
+    """
+
+    adata = adata.copy() if copy else adata
     
     unnamed_channels = [channel for channel in adata.var.index if
                         channel not in adata.uns["panel"].dataframe["antigens"].to_list() and
@@ -513,9 +684,11 @@ def remove_unnamed_channels(adata: AnnData,
                       channel not in unnamed_channels]
     non_fluo_channels = adata.var[adata.var["type"] != "fluo"].index.to_list()
 
-    adata = adata.copy() if copy else adata
-    adata._inplace_subset_var(list(set(named_channels + non_fluo_channels)))
-    
+    channels_to_keep = list(set(named_channels + non_fluo_channels))
+
+    if as_view:
+        return adata[:, adata.var.index.isin(channels_to_keep)]
+    adata._inplace_subset_var(channels_to_keep)
     return adata if copy else None
 
 def _flatten_nested_list(l):
@@ -548,11 +721,55 @@ def _create_comparisons(data: pd.DataFrame,
     return list(combinations(vals, n))
 
 def convert_cluster_to_gate(adata: AnnData,
-                            obs_column: str,
+                            cluster_key: str,
                             positive_cluster: Union[int, str, list[int], list[str]],
                             population_name: Optional[str],
                             parent_name: str,
                             copy: bool = False) -> Optional[AnnData]:
+    """\
+    Converts cluster information to gates. Select positive clusters and define a population 
+    from the positive clusters. The population will be added as a gate to perform analyses on.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    cluster_key
+        The name of the `.obs` columns where the cluster information is stored.
+    positive_cluster
+        The values of the clusters to be defined as a population. In order to select multiple 
+        clusters, pass a list.
+    population name
+        The name of the newly defined population.
+    parent_name
+        The name of the parent population in order to define a bona-fide gating path.
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.settings.default_gate = "CD45+"
+    >>> fp.settings.default_layer = "transformed"
+    >>> fp.tl.pca(dataset)
+    >>> fp.tl.neighbors(dataset)
+    >>> fp.tl.parc(dataset)
+    >>> fp.convert_cluster_to_gate(
+    ...     dataset,
+    ...     cluster_key = "CD45+_transformed_parc",
+    ...     positive_cluster = ["1", "4", "6"],
+    ...     population_name = "Neutrophils",
+    ...     parent_name = "CD45+"
+    ... )
+    
+    """
     from scipy.sparse import csr_matrix, hstack
     adata = adata.copy() if copy else adata
     full_parent = _find_gate_path_of_gate(adata, parent_name)
@@ -562,7 +779,7 @@ def convert_cluster_to_gate(adata: AnnData,
 
     if not isinstance(positive_cluster, list):
         positive_cluster = [positive_cluster]
-    gate_list = adata.obs[obs_column]
+    gate_list = adata.obs[cluster_key]
     uniques = gate_list.unique()
     mapping = {cluster: cluster in positive_cluster for cluster in uniques}
     gate_matrix = csr_matrix(gate_list.map(mapping).values.reshape(len(gate_list), 1), dtype = bool)
@@ -571,59 +788,103 @@ def convert_cluster_to_gate(adata: AnnData,
     adata.uns["gating_cols"] = adata.uns["gating_cols"].append(pd.Index([full_gate]))
 
     return adata if copy else None
-    
+
+@_enable_gate_aliases 
 def convert_gate_to_obs(adata: AnnData,
                         gate: str,
                         key_added: Optional[str] = None,
                         copy: bool = False) -> Optional[AnnData]:
+    """\
+    Converts the gate information stored in `.obsm["gating"]` into an `.obs` column.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    gate
+        The gate to transfer. Must be in `adata.uns["gating_cols"]`. Can be specified
+        as a population, as a partial gate path or a full gate path. Also allows for gate
+        aliasing. If a gate alias is provided, pass the key_added parameter in order to 
+        pass that alias forward. Otherwise, the full gate path is used for the `.obs` column.
+    key_added
+        The name of the corresponding `.obs` column. Positive events will be stored as specified 
+        in `key_added`, negative events will be stored as `other`.
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.convert_gate_to_obs(dataset, "CD45+", key_added = "leukocytes")
+    >>> fp.tl.pca(dataset, gate = "live", layer = "compensated")
+    >>> fp.pl.pca(dataset, color = "leukocytes")
+     
+    """
     adata = adata.copy() if copy else adata
 
     gate_path = _find_gate_path_of_gate(adata, gate)
     gate_index = _find_gate_indices(adata, gate_path)
     gate_id = key_added or gate
-    adata.obs[gate_id] = adata.obsm["gating"][:,gate_index].todense()
+    adata.obs[gate_id] = adata.obsm["gating"][:,gate_index].toarray()
     adata.obs[gate_id] = adata.obs[gate_id].map({True: gate_id, False: "other"})
     adata.obs[gate_id] = adata.obs[gate_id].astype("category")
     adata.obs[gate_id] = adata.obs[gate_id].cat.set_categories([gate_id, "other"])
-    return adata if copy else None
-
-def convert_gates_to_obs(adata: AnnData,
-                         copy: bool = False) -> Optional[AnnData]:
-    adata = adata.copy() if copy else adata
-    for gate in adata.uns["gating_cols"]:
-        convert_gate_to_obs(adata,
-                            _find_current_population(gate),
-                            copy = False)
-    return adata if copy else None
-
-def add_metadata_to_obs(adata: AnnData,
-                        metadata_column: str,
-                        copy: bool = False) -> Optional[AnnData]:
-    adata = adata.copy() if copy else adata
-    metadata = adata.uns["metadata"].dataframe.copy()
-    metadata["sample_ID"] = metadata["sample_ID"].astype(adata.obs["sample_ID"].cat.categories.dtype)
-    metadata = metadata.set_index("sample_ID")
-    mapping = metadata.to_dict()
-    specific_mapping = mapping[metadata_column]
-    adata.obs[metadata_column] = adata.obs["sample_ID"].map(specific_mapping)
     return adata if copy else None
 
 def rename_channel(adata: AnnData,
                    old_channel_name: str,
                    new_channel_name: str,
                    copy: bool = False) -> Optional[AnnData]:
+    """\
+    Renames a channel name.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    current_channel_name
+        Current channel name. Has to be in `adata.var_names`.
+    new_channel_name
+        The name that the current channel name is replaced with.
+    copy
+        Whether to copy the dataset.
+    
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.remove_channel(dataset, "CD16")
+
+    
+    """
     adata = adata.copy() if copy else adata
     # we need to rename it in the panel, the cofactors and var
-    current_var_names = adata.var_names
-    new_var_names = [var if var != old_channel_name else new_channel_name for var in current_var_names]
-    adata.var.index = new_var_names
-    adata.var["pns"] = adata.var.index.to_list()
+    adata.var = adata.var.replace(old_channel_name, new_channel_name)
+    adata.var = adata.var.set_index("pns", drop = False)
+    adata.var.index.name = "" # just to keep the index clean :)
 
     if "panel" in adata.uns and len(adata.uns["panel"].dataframe) > 0:
-        adata.uns["panel"].rename_channel(old_channel_name, new_channel_name)
+        from .dataset._supplements import Panel
+        panel: Panel = adata.uns["panel"]
+        panel.rename_antigen(old_channel_name, new_channel_name)
     
     if "cofactors" in adata.uns and len(adata.uns["cofactors"].dataframe) > 0:
-        adata.uns["cofactors"].rename_channel(old_channel_name, new_channel_name)
+        from .dataset._supplements import CofactorTable
+        cofactors: CofactorTable = adata.uns["cofactors"]
+        cofactors.rename_channel(old_channel_name, new_channel_name)
 
     return adata if copy else None
 
@@ -631,15 +892,50 @@ def remove_channel(adata: AnnData,
                    channel: Union[str, list[str]],
                    as_view: bool = False,
                    copy: bool = False) -> Optional[AnnData]:
+    """\
+    Removes a channel from the dataset. This function will only subset the AnnData object.
+    Use in conjunction with fp.sync.synchronize_dataset() to update the analyzed data and
+    the accompanying metadata with it.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    channel
+        The channel to remove. Has to be in `adata.var_names`. Pass a list of channels to
+        subset multiple channels at once.
+    as_view
+        If True, returns an AnnDataView object.
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> fp.remove_channel(dataset, "CD16")
+
+ 
+    """
+    adata = adata.copy() if copy else adata
+
     if not isinstance(channel, list):
         channel = [channel]
-    adata = adata.copy() if copy else adata
+    
+    if any(ch not in adata.var_names for ch in channel):
+        raise ValueError("One of the provided channels was not found.")
+
     if as_view:
         return adata[:, ~adata.var_names.isin(channel)]
-    else:
-        adata._inplace_subset_var(
-            [var for var in adata.var_names if var not in channel]
-        )
+    adata._inplace_subset_var(
+        [var for var in adata.var_names if var not in channel]
+    )
     return adata if copy else None
 
 def convert_var_to_panel(adata: AnnData,
@@ -662,34 +958,6 @@ def _default_layer(func):
         return func(*args, **kwargs)
     return __add_default_layer
 
-def _default_gate(func):
-    @wraps(func)
-    def __add_default_gate(*args, **kwargs):
-        if "gate" in kwargs and kwargs["gate"] is None or "gate" not in kwargs:
-            from ._settings import settings
-            kwargs["gate"] = settings._default_gate
-        return func(*args, **kwargs)
-    return __add_default_gate
-
-def _default_gate_and_default_layer(func):
-    @_default_gate
-    @_default_layer
-    @wraps(func)
-    def __add_default_gate_and_default_layer(*args, **kwargs):
-        return func(*args, **kwargs)
-    return __add_default_gate_and_default_layer
-
-def _enable_gate_aliases(func):
-    @wraps(func)
-    def __allow_gate_aliases(*args, **kwargs):
-        if "gate" in kwargs:
-            gate = kwargs["gate"]
-            from ._settings import settings
-            if gate in settings.gate_aliases:
-                kwargs["gate"] = settings.gate_aliases[gate]
-                print(f"Using the provided gate alias {gate} for gate {kwargs['gate']}")
-        return func(*args, **kwargs)
-    return __allow_gate_aliases
 
 #def _default_layer(func):
 #    argspec = inspect.getfullargspec(func)

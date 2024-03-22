@@ -35,6 +35,61 @@ from FACSPy.exceptions._exceptions import (GateAmbiguityError,
                                            ExhaustedGatePathError,
                                            GateNameError)
 
+from FACSPy.dataset._supplements import Panel, Metadata
+from FACSPy.dataset._workspaces import FlowJoWorkspace
+import os
+WSP_FILE_PATH = "FACSPy/_resources/"
+WSP_FILE_NAME = "test_wsp.wsp"
+
+def create_supplement_objects():
+    INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
+    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
+    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
+    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
+    return INPUT_DIRECTORY, panel, metadata, workspace
+
+@pytest.fixture
+def mock_dataset() -> AnnData:
+    input_directory, panel, metadata, workspace = create_supplement_objects()
+    adata = fp.create_dataset(input_directory = input_directory,
+                              panel = panel,
+                              metadata = metadata,
+                              workspace = workspace,
+                              subsample_fcs_to = 100)
+    adata.layers["transformed"] = adata.layers["compensated"].copy()
+    fp.tl.mfi(adata)
+    return adata
+
+@pytest.fixture
+def mock_dataset_incomplete_panel() -> AnnData:
+    input_directory, panel, metadata, workspace = create_supplement_objects()
+    panel.select_channels([ch for ch in panel.get_antigens() if ch not in ["CXCR2", "TNFR2"]])
+    adata = fp.create_dataset(input_directory = input_directory,
+                              panel = panel,
+                              metadata = metadata,
+                              workspace = workspace,
+                              subsample_fcs_to = 100)
+    adata.layers["transformed"] = adata.layers["compensated"].copy()
+    fp.tl.mfi(adata)
+    return adata
+
+@pytest.fixture
+def mock_anndata_gate_subset() -> AnnData:
+    return AnnData(
+        X = np.zeros((7,7), dtype = np.float64),
+        var = pd.DataFrame(
+            data = {
+                "pns": ["FSC-A", "FSC-H", "SSC-A", "SSC-H", "CD3", "time", "CD8"],
+                "type": ["scatter", "scatter", "scatter", "scatter", "fluo", "time", "fluo"]
+            },
+            index = ["FSC-A", "FSC-H", "SSC-A", "SSC-H", "BUV 395-A", "Time", "APC-Cy7-A"]
+        ),
+        uns = {"gating_cols": pd.Index(["root/singlets", "root/singlets/T_cells"])},
+        obsm = {"gating": np.array([[1,1,1,1,1,0,0], [1,1,1,0,0,0,0]], dtype = np.float64).T},
+        dtype = np.int32
+    )
+
+
 # QUICKFIND: Gates
 @pytest.fixture
 def mock_anndata_gating() -> AnnData:
@@ -268,6 +323,45 @@ def mock_anndata() -> AnnData:
     concatenated.obs_names_make_unique()
     return concatenated
 
+def test_equaling_sample_ID_real_dataset_n_obs_smaller_than_smallest_group(mock_dataset: AnnData):
+    # smallest group is 200
+    adata = mock_dataset
+    equalize_groups(adata, n_obs = 100, on = "condition2")
+    assert all(adata.obs.groupby("condition2").size() == 100)
+
+def test_equaling_sample_ID_real_dataset_n_obs_equal_to_smallest_group(mock_dataset: AnnData):
+    # smallest group is 200
+    adata = mock_dataset
+    equalize_groups(adata, n_obs = 200, on = "condition2")
+    assert all(adata.obs.groupby("condition2").size() == 200)
+
+def test_equaling_sample_ID_real_dataset_n_obs_larger_than_smallest_group(mock_dataset: AnnData):
+    # smallest group is 200
+    adata = mock_dataset
+    with pytest.warns(UserWarning):
+        equalize_groups(adata, n_obs = 300, on = "condition2")
+    res = adata.obs.groupby("condition2").size()
+    assert res.loc[res.index == "x"].iloc[0] == 300
+    assert res.loc[res.index == "y"].iloc[0] == 200
+
+def test_equalizing_groups_as_view(mock_dataset: AnnData):
+    adata = mock_dataset
+    equalized = equalize_groups(adata, n_obs = 200, on = "condition2", as_view = True)
+    assert equalized.is_view
+
+def test_equalizing_groups_copy(mock_dataset: AnnData):
+    adata = mock_dataset
+    equalized = equalize_groups(adata, n_obs = 200, on = "condition2", copy = True)
+    assert not equalized.is_view
+    assert isinstance(equalized, AnnData)
+
+def test_equalizing_groups_copy_false(mock_dataset: AnnData):
+    adata = mock_dataset
+    equalized = equalize_groups(adata, n_obs = 200, on = "condition2", copy = False)
+    assert equalized is None
+
+
+
 def test_equalizing_sample_ID(mock_anndata):
     equalize_groups(mock_anndata, fraction = 0.1)
     assert mock_anndata.shape[0] == 3 ## smallest group has 10
@@ -276,9 +370,8 @@ def test_equalizing_something(mock_anndata):
     equalize_groups(mock_anndata, n_obs = 10)
     assert mock_anndata.shape[0] == 30
 
-
 def test_too_much_to_sample_per_group(mock_anndata):
-    with pytest.raises(ValueError):
+    with pytest.warns(UserWarning):
         equalize_groups(mock_anndata, n_obs = 11)
 
 def test_value_error(mock_anndata):
@@ -286,7 +379,7 @@ def test_value_error(mock_anndata):
         equalize_groups(mock_anndata, fraction = 0.1, n_obs = 100)
 
 def test_too_much_to_sample(mock_anndata):
-    with pytest.raises(ValueError):
+    with pytest.warns(UserWarning):
         equalize_groups(mock_anndata, n_obs = 10_000)
 
 # QUICKFIND: Population
@@ -381,16 +474,309 @@ def test_flatten_nested_list():
     test_list = [["some", "strings", 2], ["some", "other", "ints"]]
     assert _flatten_nested_list(test_list) == ["some", "strings", 2, "some", "other", "ints"]
 
+
+def test_subset_gate_by_population(mock_dataset: AnnData):
+    adata = mock_dataset
+    gate = "live"
+    gates: list[str] = adata.uns["gating_cols"].tolist()
+    gate_path = _find_gate_path_of_gate(adata, gate)
+    parents = _find_parents_recursively(gate_path)
+    gate_indices = []
+    gate_matrix = adata.obsm["gating"].toarray()
+    target_shape = gate_matrix[:, gates.index(gate_path)].sum()
+    for _gate in parents + [gate_path]:
+        if _gate == "root":
+            continue
+        gate_indices.append(gates.index(_gate))
+    fp.subset_gate(adata, gate)
+    assert adata.shape[0] == target_shape
+    gates = adata.obsm["gating"].toarray()
+    # all parents and the gate we subset to have to be all positive.
+    assert all(np.sum(gates, axis = 0)[gate_indices] == adata.shape[0])
+
+def test_subset_gate_by_full_gate_path(mock_dataset: AnnData):
+    adata = mock_dataset
+    gate = 'root/FSC_SSC/FSC_singlets/SSC_singlets/live'
+    gates: list[str] = adata.uns["gating_cols"].tolist()
+    gate_path = _find_gate_path_of_gate(adata, gate)
+    parents = _find_parents_recursively(gate_path)
+    gate_indices = []
+    gate_matrix = adata.obsm["gating"].toarray()
+    target_shape = gate_matrix[:, gates.index(gate_path)].sum()
+    for _gate in parents + [gate_path]:
+        if _gate == "root":
+            continue
+        gate_indices.append(gates.index(_gate))
+    fp.subset_gate(adata, gate)
+    assert adata.shape[0] == target_shape
+    gates = adata.obsm["gating"].toarray()
+    # all parents and the gate we subset to have to be all positive.
+    assert all(np.sum(gates, axis = 0)[gate_indices] == adata.shape[0])
+
+def test_subset_gate_by_partial_gate_path(mock_dataset: AnnData):
+    adata = mock_dataset
+    gate = 'FSC_singlets/SSC_singlets/live'
+    gates: list[str] = adata.uns["gating_cols"].tolist()
+    gate_path = _find_gate_path_of_gate(adata, gate)
+    parents = _find_parents_recursively(gate_path)
+    gate_indices = []
+    gate_matrix = adata.obsm["gating"].toarray()
+    target_shape = gate_matrix[:, gates.index(gate_path)].sum()
+    for _gate in parents + [gate_path]:
+        if _gate == "root":
+            continue
+        gate_indices.append(gates.index(_gate))
+    fp.subset_gate(adata, gate)
+    assert adata.shape[0] == target_shape
+    gates = adata.obsm["gating"].toarray()
+    # all parents and the gate we subset to have to be all positive.
+    assert all(np.sum(gates, axis = 0)[gate_indices] == adata.shape[0])
+
+def test_gate_subset_as_view(mock_dataset: AnnData):
+    adata = mock_dataset
+    subset_adata = fp.subset_gate(adata, "live", as_view = True)
+    assert subset_adata.is_view
+
+def test_gate_subset_copy(mock_dataset: AnnData):
+    adata = mock_dataset
+    subset_adata = fp.subset_gate(adata, "live", copy = True)
+    assert subset_adata is not None
+    subset_adata = fp.subset_gate(adata, "live", copy = False)
+    assert subset_adata is None
+
+def test_gate_subset_copy_function(mock_anndata_gate_subset):
+    subset_gate(mock_anndata_gate_subset,
+                gate = "T_cells",
+                copy = False)
+    assert mock_anndata_gate_subset.shape[0] == 3
+
+def test_gate_subset_copy_function_2(mock_anndata_gate_subset):
+    subset_gate(mock_anndata_gate_subset,
+                gate = "singlets",
+                copy = False)
+    assert mock_anndata_gate_subset.shape[0] == 5
+
+def test_gate_subset_return(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
+                          gate = "T_cells",
+                          copy = True)
+    assert dataset.shape[0] == 3
+
+def test_gate_subset_return_2(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
+                          gate = "singlets",
+                          copy = True)
+    assert dataset.shape[0] == 5
+
+def test_gate_subset_gate_path(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
+                          gate = "root/singlets/T_cells",
+                          copy = True)
+    assert dataset.shape[0] == 3
+
+def test_gate_subset_gate_path_2(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
+                          gate = "root/singlets",
+                          copy = True)
+    assert dataset.shape[0] == 5
+
+def test_gate_subset_gate_path_as_gate(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
+                          gate = "root/singlets/T_cells",
+                          copy = True)
+    assert dataset.shape[0] == 3
+
+def test_gate_subset_gate_path_as_gate_2(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
+                          gate = "root/singlets",
+                          copy = True)
+    assert dataset.shape[0] == 5
+
+def test_gate_subset_gate_path_as_partial_gate(mock_anndata_gate_subset):
+    dataset = subset_gate(mock_anndata_gate_subset,
+                          gate = "singlets/T_cells",
+                          copy = True)
+    assert dataset.shape[0] == 3
+
+def test_gate_subset_wrong_inputs(mock_anndata_gate_subset):
+    with pytest.raises(TypeError):
+        subset_gate(mock_anndata_gate_subset)
+
+def test_subset_fluo_channels(mock_dataset: AnnData):
+    adata = mock_dataset
+    n_fluo_channels = adata.var[adata.var["type"] == "fluo"].shape[0]
+    fp.subset_fluo_channels(adata)
+    assert adata.var["type"].unique().tolist() == ["fluo"]
+    assert adata.shape[1] == n_fluo_channels
+
+def test_subset_fluo_channels_as_view(mock_dataset: AnnData):
+    adata = mock_dataset
+    n_fluo_channels = adata.var[adata.var["type"] == "fluo"].shape[0]
+    subset_adata = fp.subset_fluo_channels(adata, as_view = True)
+    assert subset_adata.is_view
+    assert subset_adata.var["type"].unique().tolist() == ["fluo"]
+    assert subset_adata.shape[1] == n_fluo_channels
+
+def test_subset_fluo_channels_copy(mock_dataset: AnnData):
+    adata = mock_dataset
+    n_fluo_channels = adata.var[adata.var["type"] == "fluo"].shape[0]
+    subset_adata = fp.subset_fluo_channels(adata, copy = True)
+    assert not subset_adata.is_view
+    assert subset_adata.var["type"].unique().tolist() == ["fluo"]
+    assert subset_adata.shape[1] == n_fluo_channels
+
+def test_subset_fluo_channels_copy_false(mock_dataset: AnnData):
+    adata = mock_dataset
+    n_fluo_channels = adata.var[adata.var["type"] == "fluo"].shape[0]
+    subset_adata = fp.subset_fluo_channels(adata, copy = False)
+    assert subset_adata is None
+    assert adata.var["type"].unique().tolist() == ["fluo"]
+    assert adata.shape[1] == n_fluo_channels
+
+def test_remove_unnamed_channels(mock_dataset_incomplete_panel: AnnData):
+    # we artificially create unnamed channels by removing them from the panel
+    # We excluded TNFR2 and CXCR2
+    adata = mock_dataset_incomplete_panel
+    adata_shape = adata.shape
+    fp.remove_unnamed_channels(adata)
+    assert adata.shape[1] == adata_shape[1] - 2
+    for antigen, channel, type in zip(adata.var["pns"].tolist(), adata.var["pnn"].tolist(), adata.var["type"].tolist()):
+        if type == "fluo":
+            assert antigen != channel
+        else:
+            assert antigen == channel
+
+def test_remove_unnamed_channels_as_view(mock_dataset_incomplete_panel: AnnData):
+    # we artificially create unnamed channels by removing them from the panel
+    # We excluded TNFR2 and CXCR2
+    adata = mock_dataset_incomplete_panel
+    adata_shape = adata.shape
+    subset_adata = fp.remove_unnamed_channels(adata, as_view = True)
+    assert subset_adata.is_view
+    assert subset_adata.shape[1] == adata_shape[1] - 2
+    for antigen, channel, type in zip(subset_adata.var["pns"].tolist(), subset_adata.var["pnn"].tolist(), subset_adata.var["type"].tolist()):
+        if type == "fluo":
+            assert antigen != channel
+        else:
+            assert antigen == channel
+
+def test_remove_unnamed_channels_copy(mock_dataset_incomplete_panel: AnnData):
+    # we artificially create unnamed channels by removing them from the panel
+    # We excluded TNFR2 and CXCR2
+    adata = mock_dataset_incomplete_panel
+    adata_shape = adata.shape
+    subset_adata = fp.remove_unnamed_channels(adata, copy = True)
+    assert not subset_adata.is_view
+    assert subset_adata.shape[1] == adata_shape[1] - 2
+    for antigen, channel, type in zip(subset_adata.var["pns"].tolist(), subset_adata.var["pnn"].tolist(), subset_adata.var["type"].tolist()):
+        if type == "fluo":
+            assert antigen != channel
+        else:
+            assert antigen == channel
+
+def test_remove_unnamed_channels_copy_false(mock_dataset_incomplete_panel: AnnData):
+    # we artificially create unnamed channels by removing them from the panel
+    # We excluded TNFR2 and CXCR2
+    adata = mock_dataset_incomplete_panel
+    adata_shape = adata.shape
+    subset_adata = fp.remove_unnamed_channels(adata, copy = False)
+    assert subset_adata is None
+    assert adata.shape[1] == adata_shape[1] - 2
+    for antigen, channel, type in zip(adata.var["pns"].tolist(), adata.var["pnn"].tolist(), adata.var["type"].tolist()):
+        if type == "fluo":
+            assert antigen != channel
+        else:
+            assert antigen == channel
+
+def test_remove_channel(mock_dataset: AnnData):
+    adata = mock_dataset
+    fp.remove_channel(adata, "CXCR2")
+    assert "CXCR2" not in adata.var_names
+    assert "CXCR2" not in adata.var["pns"].tolist()
+
+def test_remove_channel_valueerror(mock_dataset: AnnData):
+    adata = mock_dataset
+    with pytest.raises(ValueError):
+        fp.remove_channel(adata, "whatever")
+
+def test_remove_channel_multiple(mock_dataset: AnnData):
+    adata = mock_dataset
+    fp.remove_channel(adata, channel = ["CXCR2", "TNFR2"])
+    assert "CXCR2" not in adata.var_names
+    assert "TNFR2" not in adata.var_names
+    assert "CXCR2" not in adata.var["pns"].tolist()
+    assert "TNFR2" not in adata.var["pns"].tolist()
+
+def test_remove_channel_as_view(mock_dataset: AnnData):
+    adata = mock_dataset
+    subset_adata = fp.remove_channel(adata, "CXCR2", as_view = True)
+    assert subset_adata.is_view
+    assert "CXCR2" not in subset_adata.var_names
+    assert "CXCR2" not in subset_adata.var["pns"].tolist()
+
+def test_remove_channel_copy(mock_dataset: AnnData):
+    adata = mock_dataset
+    subset_adata = fp.remove_channel(adata, "CXCR2", copy = True)
+    assert not subset_adata.is_view
+    assert "CXCR2" not in subset_adata.var_names
+    assert "CXCR2" not in subset_adata.var["pns"].tolist()
+
+def test_remove_channel_copy_false(mock_dataset: AnnData):
+    adata = mock_dataset
+    subset_adata = fp.remove_channel(adata, "CXCR2", copy = False)
+    assert subset_adata is None
+    assert "CXCR2" not in adata.var_names
+    assert "CXCR2" not in adata.var["pns"].tolist()
+
+def test_convert_gate_to_obs(mock_dataset: AnnData):
+    adata = mock_dataset
+    fp.convert_gate_to_obs(adata, "live")
+    assert "live" in adata.obs.columns
+    assert all(k in adata.obs["live"].unique() for k in ["live", "other"])
+
+def test_convert_gate_to_obs_full_gate_path(mock_dataset: AnnData):
+    adata = mock_dataset
+    gate = 'root/FSC_SSC/FSC_singlets/SSC_singlets/live'
+    fp.convert_gate_to_obs(adata, gate)
+    assert gate in adata.obs.columns
+    assert all(k in adata.obs[gate].unique() for k in [gate, "other"])
+
+def test_convert_gate_to_obs_gate_alias(mock_dataset: AnnData):
+    adata = mock_dataset
+    fp.settings.add_new_alias('root/FSC_SSC/FSC_singlets/SSC_singlets/live', "favorites")
+    gate = "favorites"
+    fp.convert_gate_to_obs(adata, gate = gate, key_added = "favorites")
+    assert gate in adata.obs.columns
+    assert all(k in adata.obs[gate].unique() for k in [gate, "other"])
+
+def test_convert_gate_to_obs_partial_gate_path(mock_dataset: AnnData):
+    adata = mock_dataset
+    gate = 'FSC_singlets/SSC_singlets/live'
+    fp.convert_gate_to_obs(adata, gate)
+    assert gate in adata.obs.columns
+    assert all(k in adata.obs[gate].unique() for k in [gate, "other"])
+
+def test_convert_gate_to_obs_key_added(mock_dataset: AnnData):
+    adata = mock_dataset
+    fp.convert_gate_to_obs(adata, "live", key_added = "live_cells")
+    assert "live_cells" in adata.obs.columns
+    assert all(k in adata.obs["live_cells"].unique() for k in ["live_cells", "other"])
+
+
+
+
+
+
+
+
+
 def test_fetch_fluo_channels(): pass
 def test_subset_channels(): pass
-def test_subset_gate(): pass
 def test_annotate_metadata_samplewise(): pass
 def test_contains_only_fluo(): pass
 def test_get_idx_loc(): pass
-def test_remove_unnamed_channels(): pass
 def test_get_filename(): pass
 def test_create_comparisons(): pass
-def test_convert_gate_to_obs(): pass
 def test_convert_gates_to_obs(): pass
 
 
@@ -425,80 +811,35 @@ def test_fluo_channel_subset_2(mock_anndata_subset):
     assert "APC-Cy7-A" in dataset.var.index
     assert "Time" not in dataset.var.index
 
+def test_rename_channel(mock_dataset: AnnData):
+    adata = mock_dataset
+    fp.rename_channel(adata, "CXCR4", "something")
+    print(adata.var_names.tolist())
+    for entry in adata.var_names.tolist():
+        if entry == "something":
+            print("got it.")
+    assert "something" in adata.var_names.tolist()
+    assert "CXCR4" not in adata.var_names.tolist()
+    assert "something" in adata.var["pns"].tolist()
+    assert "CXCR4" not in adata.var["pns"].tolist()
+    # check if the panel has been adjusted
+    assert "something" in adata.uns["panel"].dataframe["antigens"].tolist()
+    assert "CXCR4" not in adata.uns["panel"].dataframe["antigens"].tolist()
 
-@pytest.fixture
-def mock_anndata_gate_subset() -> AnnData:
-    return AnnData(
-        X = np.zeros((7,7), dtype = np.float64),
-        var = pd.DataFrame(
-            data = {
-                "pns": ["FSC-A", "FSC-H", "SSC-A", "SSC-H", "CD3", "time", "CD8"],
-                "type": ["scatter", "scatter", "scatter", "scatter", "fluo", "time", "fluo"]
-            },
-            index = ["FSC-A", "FSC-H", "SSC-A", "SSC-H", "BUV 395-A", "Time", "APC-Cy7-A"]
-        ),
-        uns = {"gating_cols": pd.Index(["root/singlets", "root/singlets/T_cells"])},
-        obsm = {"gating": np.array([[1,1,1,1,1,0,0], [1,1,1,0,0,0,0]], dtype = np.float64).T},
-        dtype = np.int32
-    )
-
-def test_gate_subset_copy_function(mock_anndata_gate_subset):
-    subset_gate(mock_anndata_gate_subset,
-                gate = "T_cells",
-                copy = False)
-    assert mock_anndata_gate_subset.shape[0] == 3
-
-def test_gate_subset_copy_function_2(mock_anndata_gate_subset):
-    subset_gate(mock_anndata_gate_subset,
-                gate = "singlets",
-                copy = False)
-    assert mock_anndata_gate_subset.shape[0] == 5
-
-def test_gate_subset_return(mock_anndata_gate_subset):
-    dataset = subset_gate(mock_anndata_gate_subset,
-                          gate = "T_cells",
-                          copy = True)
-    assert dataset.shape[0] == 3
-
-def test_gate_subset_return(mock_anndata_gate_subset):
-    dataset = subset_gate(mock_anndata_gate_subset,
-                          gate = "singlets",
-                          copy = True)
-    assert dataset.shape[0] == 5
-
-def test_gate_subset_gate_path(mock_anndata_gate_subset):
-    dataset = subset_gate(mock_anndata_gate_subset,
-                          gate_path = "root/singlets/T_cells",
-                          copy = True)
-    assert dataset.shape[0] == 3
-
-def test_gate_subset_gate_path(mock_anndata_gate_subset):
-    dataset = subset_gate(mock_anndata_gate_subset,
-                          gate_path = "root/singlets",
-                          copy = True)
-    assert dataset.shape[0] == 5
-
-def test_gate_subset_gate_path_as_gate(mock_anndata_gate_subset):
-    dataset = subset_gate(mock_anndata_gate_subset,
-                          gate = "root/singlets/T_cells",
-                          copy = True)
-    assert dataset.shape[0] == 3
-
-def test_gate_subset_gate_path_as_gate_2(mock_anndata_gate_subset):
-    dataset = subset_gate(mock_anndata_gate_subset,
-                          gate = "root/singlets",
-                          copy = True)
-    assert dataset.shape[0] == 5
-
-def test_gate_subset_gate_path_as_partial_gate(mock_anndata_gate_subset):
-    dataset = subset_gate(mock_anndata_gate_subset,
-                          gate = "singlets/T_cells",
-                          copy = True)
-    assert dataset.shape[0] == 3
-
-def test_gate_subset_wrong_inputs(mock_anndata_gate_subset):
-    with pytest.raises(TypeError):
-        subset_gate(mock_anndata_gate_subset)
+def test_convert_cluster_to_gate(mock_dataset: AnnData):
+    adata = mock_dataset
+    adata.obs["cluster_col"] = np.random.randint(0, 5, adata.shape[0])
+    cluster_idxs = adata.obs[adata.obs["cluster_col"] == 1].index.to_numpy()
+    cluster_bool = adata.obs["cluster_col"] == 1
+    cluster_bool = cluster_bool.to_numpy().flatten()
+    fp.convert_cluster_to_gate(adata, "cluster_col", 1, "my_pop", "live")
+    gate_matrix = adata.obsm["gating"]
+    gates: list[str] = adata.uns["gating_cols"].tolist()
+    full_gate_path = fp._utils._find_gate_path_of_gate(adata, "live") + "/my_pop"
+    assert full_gate_path in gates
+    gate_idx = gates.index(full_gate_path)
+    assert all(gate_matrix[:, gate_idx].toarray().flatten() == cluster_bool)
+    assert np.sum(gate_matrix[:, gate_idx].toarray()) == len(cluster_idxs)
 
 def test_default_layer_decorator(mock_anndata):
 
