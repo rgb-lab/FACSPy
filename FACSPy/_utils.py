@@ -1039,6 +1039,3 @@ def _default_layer(func):
 #        kwargs = {**used_kwargs, **defaults}
 #        return func(*args, **kwargs)
 #    return add_default_gate
-#
-#
-#
