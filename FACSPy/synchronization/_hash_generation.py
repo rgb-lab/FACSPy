@@ -25,7 +25,7 @@ def _generate_hash_dict(adata: AnnData):
         "panel_var_names": HASH_FUNCTION_DICT["panel_var_names"](adata)
     }
 
-def _generate_dataset_obs_hash(adata: AnnData):
+def _generate_dataset_obs_hash(adata: AnnData) -> int:
     """
     Creates a hash based on the obs_names of the dataset
 

@@ -1,7 +1,6 @@
 import warnings
 from anndata import AnnData
-from typing import Union, Optional
-import pandas as pd
+from typing import Optional
 
 from ._hash_generation import _generate_hash_dict
 from ._sample_sync import (_sync_sample_ids_from_obs,
@@ -43,8 +42,9 @@ def _get_modified_entities(adata) -> list[str]:
     ]
 
 def synchronize_dataset(adata: AnnData,
-                        copy: bool = False,
-                        recalculate: bool = False) -> Optional[AnnData]:
+                        recalculate: bool = False,
+                        copy: bool = False
+                        ) -> Optional[AnnData]:
     """
     This function is used to synchronize the unstructured metadata 
     with the underlying data.
@@ -52,7 +52,7 @@ def synchronize_dataset(adata: AnnData,
     data are subset or changed in any way.
 
     To detect a changed dataset, we generate a hash that is based on the
-    individual things that we want to compare. If this hash changes, the dataset
+    individual entries that we want to compare. If this hash changes, the dataset
     has been modified in some way.
 
     This function will only trigger modifications if the hash is not identical.
@@ -62,6 +62,35 @@ def synchronize_dataset(adata: AnnData,
     adata.uns["dataset_status_hashs"] is a dictionary where multiple entries can
     be inserted.
 
+    Currently, `adata.obs_names`, `adata.var_names`, unique `sample_ID` in 
+    `.obs` and in `.uns["metadata"] as well as the columns in `.obs` and in 
+    `.uns["metadata"]` are hashed.
+
+    Parameters
+    ----------
+
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels
+    recalculate
+        If True, recalculates data stored in `adata.uns` based on the settings as stored
+        in `adata.uns["settings"]`
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    :class:`~anndata.AnnData` or None, depending on `copy`.
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.create_dataset(...)
+    >>> dataset = dataset[dataset.obs["sample_ID"].isin(["1", "2"]),:]
+    >>> fp.sync.synchronize_dataset(dataset)
+
+    
     """
     adata = adata.copy() if copy else adata
     

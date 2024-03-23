@@ -16,6 +16,7 @@ plotting
 model
 dataset
 io
+synchronization
 
 ```
 

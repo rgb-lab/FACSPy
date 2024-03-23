@@ -134,8 +134,8 @@ class ModificationAmbiguityError(Exception):
         )
         if param == "sample_ids" and mod_1 == "obs" and mod_2 == "metadata":
             self.message += (
-                "Please run either fp.sync.sample_ids_from_obs_to_metadata() " +
-                "or fp.sync.sample_ids_from_metadata_to_obs() in order to resolve " +
+                "Please run either fp.sync.sample_ids_from_obs() " +
+                "or fp.sync.sample_ids_from_metadata() in order to resolve " +
                 "that problem. You can then run fp.sync.synchronize_dataset() again."
             )
 
