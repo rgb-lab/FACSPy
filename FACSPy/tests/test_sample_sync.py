@@ -254,7 +254,7 @@ def test_synchronize_obs_w_recalc(mock_dataset_analyzed: AnnData):
     df: pd.DataFrame = adata.uns["mfi_sample_ID_compensated"]
     assert all(k in df.columns for k in ["MDS1", "MDS2", "MDS3"])
 
-    adata = adata[adata.obs["condition1"].isin(["x", "y"]),:].copy()
+    adata= adata[adata.obs["condition1"].isin(["x", "y"]),:].copy()
     assert _dataset_has_been_modified(adata)
     _sync_uns_frames(adata,
                      recalculate = True)

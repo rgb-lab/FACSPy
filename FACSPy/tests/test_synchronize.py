@@ -1,10 +1,7 @@
 import pytest
 import os
-import pandas as pd
-import numpy as np
 
 from anndata import AnnData
-import anndata as ad
 import FACSPy as fp
 from FACSPy.synchronization._synchronize import _dataset_has_been_modified
 from FACSPy.dataset._supplements import Metadata, Panel
