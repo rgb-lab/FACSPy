@@ -103,7 +103,7 @@ def flowsom(adata: AnnData,
         kwargs = {
             "x_dim": 50,
             "y_dim": 50,
-            "n_jobs": min(1, cpu_count() - 2)
+            "n_jobs": max(1, cpu_count() - 2)
         }
 
     if "consensus_cluster_max_n" not in kwargs:
