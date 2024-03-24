@@ -1,10 +1,11 @@
 from functools import wraps
 from anndata import AnnData
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 import warnings
 import numpy as np
 import pandas as pd
 from itertools import combinations
+import inspect
 
 from .exceptions._exceptions import (ChannelSubsetError,
                                      GateNotFoundError,
@@ -37,34 +38,282 @@ scatter_channels = ["FSC", "SSC", "fsc", "ssc"]
 time_channels = ["time", "Time"]
 spectral_flow_technical_channels = ["AF"]
 
-def _default_gate(func):
+def _replace_in_args(args: tuple,
+                     value: str,
+                     replacement: str) -> tuple:
+    arglist = list(args)
+    arg_idx = [i for i, idx in enumerate(arglist)
+               if isinstance(idx, str) and idx == value][0]
+    arglist[arg_idx] = replacement
+    return tuple(arglist)
+
+def _enable_gate_aliases(func: Callable):
+    """\
+    Decorator function in order to enable gate aliasing.
+    The passed gate is checked against a dictionary stored in
+    FACSPy.settings.gate_aliases. If there is an entry present,
+    the alias will be passed down.
+
+    This function is only meant for internal use. There are no
+    checks for the presence of the `gate` argument in the function
+    signature.
+
+    Note that if you want to combine it with @_default_gate or
+    @_default_gate_and_default_layer, the @_enable_gate_alias has
+    to be second.
+
+    Parameters
+    ----------
+    func
+        The function to be decorated.
+
+    Returns
+    -------
+    A function where the `gate` argument has been set using aliases
+    obtained from FACSPy.settings.
+
+    Examples
+    --------
+    >>> @_enable_gate_aliases
+    ... def my_custom_facspy_function(
+    ...     adata: AnnData,
+    ...     gate: Optional[str] = None,
+    ...     *args,
+    ...     **kwargs
+    ... )
+    >>> @_default_gate
+    ... @_enable_gate_aliases
+    ... def my_custom_facspy_function(
+    ...     adata: AnnData,
+    ...     gate: Optional[str] = None,
+    ...     *args,
+    ...     **kwargs
+    ... )
+    >>> @_default_gate_and_default_layer
+    ... @_enable_gate_aliases
+    ... def my_custom_facspy_function(
+    ...     adata: AnnData,
+    ...     gate: Optional[str] = None,
+    ...     *args,
+    ...     **kwargs
+    ... )
+
+    """
+    argspec = inspect.getfullargspec(func)
+    sig = inspect.signature(func)
+    @wraps(func)
+    def __allow_gate_aliases(*args, **kwargs):
+        # we first build a dictionary with the passed positional arguments
+        function_parameters = argspec[0]
+        if not function_parameters:
+            function_parameters = list(sig.parameters.keys())
+
+        named_pos_args = {arg: val for arg, val in zip(function_parameters, args)}
+
+        if "gate" in named_pos_args and "gate" in kwargs:
+            raise ValueError("This shouldnt happen. Please provide a bugreport")
+
+        from ._settings import settings
+
+        _gate = None
+        # we now check if `gate` has been passed as a positional argument
+        if "gate" in named_pos_args:
+            _gate = named_pos_args["gate"]
+            arglist = list(args)
+            # sidenote: we can't use .index since AnnData does not support equality
+            arg_idx = [i for i, idx in enumerate(arglist)
+                       if isinstance(idx, str) and idx == _gate][0]
+
+            # if so, we check if there is a gate alias stored in fp.settings...
+            if _gate in settings.gate_aliases:
+                # ... and update args
+                arglist[arg_idx] = settings.gate_aliases[_gate]
+                args = tuple(arglist)
+
+        # we now check if `gate` has been passed as a keyword argument
+        elif "gate" in kwargs:
+            _gate = kwargs["gate"]
+            # if so, we check if there is a gate alias stored in fp.settings...
+            if _gate in settings.gate_aliases:
+                # ... and update the kwargs
+                kwargs["gate"] = settings.gate_aliases[_gate]
+
+        return func(*args, **kwargs)
+    return __allow_gate_aliases
+
+def _default_layer(func: Callable):
+    """\
+    Decorator function in order to pass a default value for the
+    `layer` argument. This function checks if `layer` was either
+    passed as a positional or keyword argument. If it wasn't,
+    the default_gate value of fp.settings is passed as a keyword
+    argument.
+
+    This function is only meant for internal use. There are no
+    checks for the presence of the `layer` argument in the function
+    signature.
+
+    Parameters
+    ----------
+    func
+        The function to be decorated.
+
+    Returns
+    -------
+    A function where the `layer` argument has been set.
+
+    Examples
+    --------
+    >>> @_default_layer
+    ... def my_custom_facspy_function(
+    ...     adata: AnnData,
+    ...     layer: Optional[str] = None,
+    ...     *args,
+    ...     **kwargs
+    ... )
+
+    """
+
+    sig = inspect.signature(func)
+    @wraps(func)
+    def __add_default_layer(*args, **kwargs):
+        # we first build a dictionary with the passed positional arguments
+        function_parameters = list(sig.parameters.keys())
+        named_pos_args = {arg: val for arg, val in zip(function_parameters, args)}
+
+
+        # we now check if `layer` has been passed as a positional or keyword argument
+        # if it has, we return the function as the user is allowed to overwrite it
+        if "layer" in named_pos_args or "layer" in kwargs:
+            return func(*args, **kwargs)
+
+        #alternatively, we set the `layer` kwarg as specified in the defaults.
+        from ._settings import settings
+        kwargs["layer"] = settings.default_layer
+        return func(*args, **kwargs)
+    return __add_default_layer
+
+def _default_gate(func: Callable):
+    """\
+    Decorator function in order to pass a default value for the
+    `gate` argument. This function checks if `gate` was either
+    passed as a positional or keyword argument. If it wasn't,
+    the default_gate value of fp.settings is passed as a keyword
+    argument.
+
+    This function is only meant for internal use. There are no
+    checks for the presence of the `gate` argument in the function
+    signature.
+
+    Parameters
+    ----------
+    func
+        The function to be decorated.
+
+    Returns
+    -------
+    A function where the `gate` argument has been set.
+
+    Examples
+    --------
+    >>> @_default_gate
+    ... def my_custom_facspy_function(
+    ...     adata: AnnData,
+    ...     gate: Optional[str] = None,
+    ...     *args,
+    ...     **kwargs
+    ... )
+
+    """
+
+    sig = inspect.signature(func)
     @wraps(func)
     def __add_default_gate(*args, **kwargs):
-        if "gate" in kwargs and kwargs["gate"] is None or "gate" not in kwargs:
-            from ._settings import settings
-            kwargs["gate"] = settings._default_gate
+        # we first build a dictionary with the passed positional arguments
+        function_parameters = list(sig.parameters.keys())
+        named_pos_args = {arg: val for arg, val in zip(function_parameters, args)}
+
+
+        # we now check if `gate` has been passed as a positional or keyword argument
+        # if it has, we return the function as the user is allowed to overwrite it
+        if "gate" in named_pos_args or "gate" in kwargs:
+            return func(*args, **kwargs)
+
+        #alternatively, we set the `gate` kwarg as specified in the defaults.
+        from ._settings import settings
+        kwargs["gate"] = settings.default_gate
         return func(*args, **kwargs)
     return __add_default_gate
 
-def _default_gate_and_default_layer(func):
-    @_default_gate
-    @_default_layer
+def _default_gate_and_default_layer(func: Callable):
+    """\
+    Decorator function in order to pass a default value for the
+    `gate` and `layer` argument. This function checks if `layer` and `gate`
+    were either passed as a positional or keyword argument. If they weren't,
+    the `default_gate` and `default_layer` value of fp.settings are passed as keyword
+    arguments.
+
+    This function is only meant for internal use. There are no
+    checks for the presence of the `layer` or `gate` argument in the function
+    signature.
+
+    Devnote: The complicated syntax is due to the fact that chained
+    decorators did not really work. This can be fixed in the future. The problem
+    is, that a function passed through one decorator loses the argspec obtained
+    by inspect.getfullargspec.
+
+    Parameters
+    ----------
+    func
+        The function to be decorated
+
+    Returns
+    -------
+    A function where the `layer` and `gate` argument have been set.
+
+    Examples
+    --------
+    >>> @_default_gate_and_default_layer
+    ... def my_custom_facspy_function(
+    ...     adata: AnnData,
+    ...     gate: Optional[str] = None,
+    ...     layer: Optional[str] = None,
+    ...     *args,
+    ...     **kwargs
+    ... )
+
+    """
+
+    sig = inspect.signature(func)
     @wraps(func)
     def __add_default_gate_and_default_layer(*args, **kwargs):
-        return func(*args, **kwargs)
-    return __add_default_gate_and_default_layer
+        # we first build a dictionary with the passed positional arguments
 
-def _enable_gate_aliases(func):
-    @wraps(func)
-    def __allow_gate_aliases(*args, **kwargs):
-        if "gate" in kwargs:
-            gate = kwargs["gate"]
-            from ._settings import settings
-            if gate in settings.gate_aliases:
-                kwargs["gate"] = settings.gate_aliases[gate]
-                print(f"Using the provided gate alias {gate} for gate {kwargs['gate']}")
+        function_parameters = list(sig.parameters.keys())
+        named_pos_args = {arg: val for arg, val in zip(function_parameters, args)}
+
+        # we now check if `layer` has been passed as a positional or keyword argument
+        # if it has, we return the function as the user is allowed to overwrite it
+        user_set_layer = "layer" in named_pos_args or "layer" in kwargs
+        user_set_gate = "gate" in named_pos_args or "gate" in kwargs
+        if user_set_layer and user_set_gate:
+            return func(*args, **kwargs)
+
+        #alternatively, we set the `layer` and `gate` kwarg as specified in the defaults.
+        from ._settings import settings
+        if not user_set_layer:
+            if "layer" in named_pos_args:
+                args = _replace_in_args(args, "layer", settings.default_layer)
+            else:
+                kwargs["layer"] = settings.default_layer
+        if not user_set_gate:
+            if "gate" in named_pos_args:
+                args = _replace_in_args(args, "gate", settings.default_gate)
+            else:
+                kwargs["gate"] = settings.default_gate
         return func(*args, **kwargs)
-    return __allow_gate_aliases
+
+    return __add_default_gate_and_default_layer
 
 def _check_gate_name(gate: str) -> None:
     if gate.startswith(GATE_SEPARATOR) or gate.endswith(GATE_SEPARATOR):
@@ -948,94 +1197,3 @@ def convert_var_to_panel(adata: AnnData,
     adata.uns["panel"] = Panel(panel = new_panel)
     
     return adata if copy else None
-
-def _default_layer(func):
-    @wraps(func)
-    def __add_default_layer(*args, **kwargs):
-        if "layer" in kwargs and kwargs["layer"] is None or "layer" not in kwargs:
-            from ._settings import settings
-            kwargs["layer"] = settings.default_layer
-        return func(*args, **kwargs)
-    return __add_default_layer
-
-
-#def _default_layer(func):
-#    argspec = inspect.getfullargspec(func)
-#    position_count = len(argspec.args) - len(argspec.defaults)
-#
-#    def add_default_layer(*args, **kwargs):
-#        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
-#
-#        used_kwargs = kwargs.copy()
-#        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
-#        
-#        # we delete every default that is overwritten by the user
-#        defaults = {
-#            k: v for (k,v) in defaults.items()
-#            if k not in used_kwargs
-#        }
-#
-#        # if its still in defaults, its not set by the user 
-#        # and we can set the settings default
-#        from . import settings
-#        if "layer" in defaults: 
-#            defaults["layer"] = settings.default_layer
-#        kwargs = {**used_kwargs, **defaults}
-#        return func(*args, **kwargs)
-#    return add_default_layer
-#
-#def _default_gate(func):
-#    argspec = inspect.getfullargspec(func)
-#    position_count = len(argspec.args) - len(argspec.defaults)
-#
-#    def add_default_gate(*args, **kwargs):
-#        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
-#
-#        used_kwargs = kwargs.copy()
-#        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
-#        
-#        # we delete every default that is overwritten by the user
-#        defaults = {
-#            k: v for (k,v) in defaults.items()
-#            if k not in used_kwargs
-#        }
-#
-#        # if its still in defaults, its not set by the user 
-#        # and we can set the settings default
-#        from . import settings
-#        if "gate" in defaults: 
-#            defaults["gate"] = settings.default_gate
-#        kwargs = {**used_kwargs, **defaults}
-#        return func(*args, **kwargs)
-#    return add_default_gate
-#
-#def _default_gate_and_default_layer(func):
-#    """
-#    combines the functionality of _default_gate and _default_layer
-#    until we fix this to be a chained decorator we have to live with code duplication...
-#    """
-#    argspec = inspect.getfullargspec(func)
-#    position_count = len(argspec.args) - len(argspec.defaults)
-#
-#    def add_default_gate(*args, **kwargs):
-#        defaults = dict(zip(argspec.args[position_count:], argspec.defaults))
-#
-#        used_kwargs = kwargs.copy()
-#        used_kwargs.update(zip(argspec.args[position_count:], args[position_count:]))
-#        
-#        # we delete every default that is overwritten by the user
-#        defaults = {
-#            k: v for (k,v) in defaults.items()
-#            if k not in used_kwargs
-#        }
-#
-#        # if its still in defaults, its not set by the user 
-#        # and we can set the settings default
-#        from . import settings
-#        if "gate" in defaults: 
-#            defaults["gate"] = settings.default_gate
-#        if "layer" in defaults: 
-#            defaults["layer"] = settings.default_layer
-#        kwargs = {**used_kwargs, **defaults}
-#        return func(*args, **kwargs)
-#    return add_default_gate

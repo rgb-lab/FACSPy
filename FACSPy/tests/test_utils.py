@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 from anndata import AnnData
 import anndata as ad
+from scipy.sparse import csr_matrix
 import FACSPy as fp
+from typing import Optional
 from FACSPy._utils import (GATE_SEPARATOR,
                            _check_gate_name,
                            _check_gate_path,
@@ -25,7 +27,8 @@ from FACSPy._utils import (GATE_SEPARATOR,
                            subset_gate,
                            _default_layer,
                            _default_gate,
-                           _default_gate_and_default_layer)
+                           _default_gate_and_default_layer,
+                           _enable_gate_aliases)
 
 from FACSPy.exceptions._utils import (GateNotProvidedError,
                                       ExhaustedHierarchyError)
@@ -749,6 +752,14 @@ def test_convert_gate_to_obs_gate_alias(mock_dataset: AnnData):
     assert gate in adata.obs.columns
     assert all(k in adata.obs[gate].unique() for k in [gate, "other"])
 
+def test_convert_gate_to_obs_gate_alias_positional_argument(mock_dataset: AnnData):
+    adata = mock_dataset
+    fp.settings.add_new_alias('root/FSC_SSC/FSC_singlets/SSC_singlets/live', "favorites")
+    gate = "favorites"
+    fp.convert_gate_to_obs(adata, gate, key_added = "favorites")
+    assert gate in adata.obs.columns
+    assert all(k in adata.obs[gate].unique() for k in [gate, "other"])
+
 def test_convert_gate_to_obs_partial_gate_path(mock_dataset: AnnData):
     adata = mock_dataset
     gate = 'FSC_singlets/SSC_singlets/live'
@@ -814,10 +825,6 @@ def test_fluo_channel_subset_2(mock_anndata_subset):
 def test_rename_channel(mock_dataset: AnnData):
     adata = mock_dataset
     fp.rename_channel(adata, "CXCR4", "something")
-    print(adata.var_names.tolist())
-    for entry in adata.var_names.tolist():
-        if entry == "something":
-            print("got it.")
     assert "something" in adata.var_names.tolist()
     assert "CXCR4" not in adata.var_names.tolist()
     assert "something" in adata.var["pns"].tolist()
@@ -833,7 +840,7 @@ def test_convert_cluster_to_gate(mock_dataset: AnnData):
     cluster_bool = adata.obs["cluster_col"] == 1
     cluster_bool = cluster_bool.to_numpy().flatten()
     fp.convert_cluster_to_gate(adata, "cluster_col", 1, "my_pop", "live")
-    gate_matrix = adata.obsm["gating"]
+    gate_matrix: csr_matrix = adata.obsm["gating"]
     gates: list[str] = adata.uns["gating_cols"].tolist()
     full_gate_path = fp._utils._find_gate_path_of_gate(adata, "live") + "/my_pop"
     assert full_gate_path in gates
@@ -841,174 +848,3344 @@ def test_convert_cluster_to_gate(mock_dataset: AnnData):
     assert all(gate_matrix[:, gate_idx].toarray().flatten() == cluster_bool)
     assert np.sum(gate_matrix[:, gate_idx].toarray()) == len(cluster_idxs)
 
-def test_default_layer_decorator(mock_anndata):
+# decorator tests
+@pytest.fixture
+def empty_adata():
+    return AnnData()
 
+def test_default_layer_decorator_return_all_defaults(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is not passed.
+    """
     @_default_layer
     def my_func_decorated(adata: AnnData,
-                          layer: str = None,
-                          some: str = "some",
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
+        _ = adata
         return layer, some, other, keyword_arg
     
     def my_func(adata: AnnData,
-                layer: str = None,
-                some: str = "some",
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
                 other: str = "other",
                 keyword_arg: str = "keyword_arg"):
+        _ = adata
         return layer, some, other, keyword_arg
     
-    layer, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
-                                                        layer = "my_layer")
-    assert layer == "my_layer"
+    layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata)
+    # we expect all defaults, so layer should be the FACSPy default
+    assert layer == fp.settings.default_layer
     assert some == "some"
     assert other == "other"
     assert keyword_arg == "keyword_arg"
 
-    fp.settings.default_layer = "transformed"
-    layer, some, other, keyword_arg = my_func_decorated(adata = mock_anndata)
-    assert layer == "transformed"
-    assert some == "some"
-    assert other == "other"
-    assert keyword_arg == "keyword_arg"
-
-    layer, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
-                                                        some = "some_other",
-                                                        other = "actually_same")
-    assert layer == "transformed"
-    assert some == "some_other"
-    assert other == "actually_same"
-    assert keyword_arg == "keyword_arg"
-     
-    layer, some, other, keyword_arg = my_func(adata = mock_anndata,
-                                              layer = "my_layer")
-    assert layer == "my_layer"
-    assert some == "some"
-    assert other == "other"
-    assert keyword_arg == "keyword_arg"
-
-    layer, some, other, keyword_arg = my_func(adata = mock_anndata,
-                                              some = "some_other",
-                                              other = "actually_same")
+    layer, some, other, keyword_arg = my_func(adata = empty_adata)
+    # we expect all defaults, so layer should be None
     assert layer is None
-    assert some == "some_other"
-    assert other == "actually_same"
+    assert some == "some"
+    assert other == "other"
     assert keyword_arg == "keyword_arg"
 
-def test_default_gate_decorator(mock_anndata):
+def test_default_layer_decorator_return_all_defaults_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is not passed.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    assert layer == fp.settings.default_layer
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
 
+    layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer is None
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_layer_decorator_pass_as_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                        layer = "my_layer")
+    # we expect all defaults, so layer should be None
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                              layer = "my_layer")
+    # we expect all defaults, so layer should be None
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_pass_as_kwargs_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                        layer = "my_layer",
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                              layer = "my_layer",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_layer_decorator_pass_as_kwargs_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "placeholder",
+                                                        layer = "my_layer")
+    # we expect all defaults, so layer should be None
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              layer = "my_layer")
+    # we expect all defaults, so layer should be None
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_pass_as_kwargs_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "placeholder",
+                                                        layer = "my_layer",
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              layer = "my_layer",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_layer_decorator_pass_as_args(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a positional argument.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "my_layer")
+    # we expect all defaults, so layer should be None
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "my_layer")
+    # we expect all defaults, so layer should be None
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_pass_as_args_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a positional argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "my_layer",
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              layer = "my_layer",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+                                                        
+def test_default_layer_decorator_pass_as_args_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a positional argument
+    on position three.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "placeholder",
+                                                        "my_layer")
+    # we expect all defaults, so layer should be None
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              "my_layer")
+    # we expect all defaults, so layer should be None
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_pass_as_args_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a positional argument
+    on position three.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "placeholder",
+                                                        "my_layer",
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              layer = "my_layer",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_layer_decorator_return_facspy_defaults(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is not passed.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata)
+    # we expect the facspy default, so layer should be 'facspy_default'
+    assert layer == "facspy_default"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(adata = empty_adata)
+    # we expect all defaults without the decorator, so layer should be None
+    assert layer is None
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_return_facspy_defaults_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is not passed.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    # we expect the facspy default, so layer should be 'facspy_default'
+    assert layer == "facspy_default"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    # we expect all defaults without the decorator, so layer should be None
+    assert layer is None
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_layer_decorator_return_facspy_defaults_kwarg_passing(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                        layer = "overriding")
+    # we expect the user override, so layer should be 'overriding'
+    assert layer == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                              layer = "overriding")
+    assert layer == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_return_facspy_defaults_kwarg_passing_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                        layer = "overriding",
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                              layer = "overriding",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+    
+def test_default_layer_decorator_return_facspy_defaults_kwarg_passing_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "placeholder",
+                                                        layer = "overriding")
+    # we expect the user override, so layer should be 'overriding'
+    assert layer == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              layer = "overriding")
+    # we expect all defaults without the decorator, so layer should be None
+    assert layer == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_return_facspy_defaults_kwarg_passing_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "placeholder",
+                                                        layer = "overriding",
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              layer = "overriding",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_layer_decorator_return_facspy_defaults_arg_passing(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed as an positional argument.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "overriding")
+    # we expect the user override, so layer should be 'overriding'
+    assert layer == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "overriding")
+    # we expect all defaults without the decorator, so layer should be None
+    assert layer == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_return_facspy_defaults_arg_passing_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed as an positional argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "overriding",
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "overriding",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+    
+def test_default_layer_decorator_return_facspy_defaults_arg_passing_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via positional arguments.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "placeholder",
+                                                        "overriding")
+    # we expect the user override, so layer should be 'overriding'
+    assert layer == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              "overriding")
+    # we expect all defaults without the decorator, so layer should be None
+    assert layer == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_layer_decorator_return_facspy_defaults_arg_passing_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via positional arguments.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return layer, some, other, keyword_arg
+
+    fp.settings.default_layer = "facspy_default"
+    
+    layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                        "placeholder",
+                                                        "overriding",
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    layer, some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              "overriding",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_decorator_return_all_defaults(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and gate is not passed.
+    """
     @_default_gate
     def my_func_decorated(adata: AnnData,
-                          gate: str = None,
-                          some: str = "some",
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
-        return gate, some, other, keyword_arg
-
-    def my_func(adata: AnnData,
-                gate: str = None,
-                some: str = "some",
-                other: str = "other",
-                keyword_arg: str = "keyword_arg"):
+        _ = adata
         return gate, some, other, keyword_arg
     
-    gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
-                                                        gate = "my_gate")
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(adata = empty_adata)
+    # we expect all defaults, so layer should be the FACSPy default
+    assert gate == fp.settings.default_gate
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(adata = empty_adata)
+    # we expect all defaults, so layer should be None
+    assert gate is None
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_return_all_defaults_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is not passed.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                        some = "any",
+                                                        other = "actually same",
+                                                        keyword_arg = "positional_arg")
+    assert gate == fp.settings.default_gate
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(adata = empty_adata,
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert gate is None
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_decorator_pass_as_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                       gate = "my_gate")
     assert gate == "my_gate"
     assert some == "some"
     assert other == "other"
     assert keyword_arg == "keyword_arg"
 
-    fp.settings.default_gate = "t_cells"
-    gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata)
-    assert gate == "t_cells"
-    assert some == "some"
-    assert other == "other"
-    assert keyword_arg == "keyword_arg"
-
-    gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
-                                                       some = "some_other",
-                                                       other = "actually_same")
-    assert gate == "t_cells"
-    assert some == "some_other"
-    assert other == "actually_same"
-    assert keyword_arg == "keyword_arg"
-     
-    gate, some, other, keyword_arg = my_func(adata = mock_anndata,
+    gate, some, other, keyword_arg = my_func(adata = empty_adata,
                                              gate = "my_gate")
     assert gate == "my_gate"
     assert some == "some"
     assert other == "other"
     assert keyword_arg == "keyword_arg"
 
-    gate, some, other, keyword_arg = my_func(adata = mock_anndata,
-                                             some = "some_other",
-                                             other = "actually_same")
-    assert gate is None
-    assert some == "some_other"
-    assert other == "actually_same"
-    assert keyword_arg == "keyword_arg"
-
-def test_default_gate_and_layerdecorator(mock_anndata):
-
-    @_default_gate_and_default_layer
+def test_default_gate_decorator_pass_as_kwargs_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and gate is passed as a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
     def my_func_decorated(adata: AnnData,
-                          layer: str = None,
-                          gate: str = None,
-                          some: str = "some",
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
-        return layer, gate, some, other, keyword_arg
-
+        _ = adata
+        return gate, some, other, keyword_arg
+    
     def my_func(adata: AnnData,
-                layer: str = None,
-                gate: str = None,
-                some: str = "some",
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
                 other: str = "other",
                 keyword_arg: str = "keyword_arg"):
-        return layer, gate, some, other, keyword_arg
+        _ = adata
+        return gate, some, other, keyword_arg
     
-    layer, gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
+    gate, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                       gate = "my_gate",
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(adata = empty_adata,
+                                             gate= "my_gate",
+                                             some = "any",
+                                             other = "actually same",
+                                             keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_decorator_pass_as_kwargs_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "placeholder",
+                                                       gate = "my_gate")
+    # we expect all defaults, so layer should be None
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "placeholder",
+                                             gate = "my_gate")
+    # we expect all defaults, so layer should be None
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_pass_as_kwargs_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "placeholder",
+                                                       gate = "my_gate",
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "placeholder",
+                                             gate = "my_gate",
+                                             some = "any",
+                                             other = "actually same",
+                                             keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_decorator_pass_as_args(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a positional argument.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "my_gate")
+    # we expect all defaults, so layer should be None
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "my_gate")
+    # we expect all defaults, so layer should be None
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_pass_as_args_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and gate is passed as a positional argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "my_gate",
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+
+    assert gate == "my_gate"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             gate = "my_gate",
+                                             some = "any",
+                                             other = "actually same",
+                                             keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+                                                        
+def test_default_gate_decorator_pass_as_args_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a positional argument
+    on position three.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "placeholder",
+                                                       "my_gate")
+    # we expect all defaults, so layer should be None
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "placeholder",
+                                             "my_gate")
+    # we expect all defaults, so layer should be None
+    assert gate == "my_gate"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_pass_as_args_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and gate is passed as a positional argument
+    on position three.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "placeholder",
+                                                       "my_gate",
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+
+    assert gate == "my_gate"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "placeholder",
+                                             "my_gate",
+                                             some = "any",
+                                             other = "actually same",
+                                             keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_decorator_return_facspy_defaults(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is not passed.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(adata = empty_adata)
+    # we expect the facspy default, so layer should be 'facspy_default'
+    assert gate == "facspy_default"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(adata = empty_adata)
+    # we expect all defaults without the decorator, so layer should be None
+    assert gate is None
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_return_facspy_defaults_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is not passed.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+    # we expect the facspy default, so layer should be 'facspy_default'
+    assert gate == "facspy_default"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(adata = empty_adata,
+                                             some = "any",
+                                             other = "actually same",
+                                             keyword_arg = "positional_arg")
+    # we expect all defaults without the decorator, so layer should be None
+    assert gate is None
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_decorator_return_facspy_defaults_kwarg_passing(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                       gate = "overriding")
+    # we expect the user override, so layer should be 'overriding'
+    assert gate == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(adata = empty_adata,
+                                             gate = "overriding")
+    assert gate == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_return_facspy_defaults_kwarg_passing_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                       gate = "overriding",
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(adata = empty_adata,
+                                             gate = "overriding",
+                                             some = "any",
+                                             other = "actually same",
+                                             keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+    
+def test_default_gate_decorator_return_facspy_defaults_kwarg_passing_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate= "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "placeholder",
+                                                       gate = "overriding")
+    assert gate == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "placeholder",
+                                             gate = "overriding")
+    assert gate == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_return_facspy_defaults_kwarg_passing_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "placeholder",
+                                                       gate= "overriding",
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate , some, other, keyword_arg = my_func(empty_adata,
+                                              "placeholder",
+                                              gate = "overriding",
+                                              some = "any",
+                                              other = "actually same",
+                                              keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_decorator_return_facspy_defaults_arg_passing(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed as an positional argument.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "overriding")
+    # we expect the user override, so layer should be 'overriding'
+    assert gate == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "overriding")
+    # we expect all defaults without the decorator, so layer should be None
+    assert gate == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_return_facspy_defaults_arg_passing_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and gate is passed as an positional argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "overriding",
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "overriding",
+                                             some = "any",
+                                             other = "actually same",
+                                             keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+    
+def test_default_gate_decorator_return_facspy_defaults_arg_passing_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via positional arguments.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "placeholder",
+                                                       "overriding")
+    assert gate == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "placeholder",
+                                             "overriding")
+    assert gate == "overriding"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_decorator_return_facspy_defaults_arg_passing_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via positional arguments.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    
+    gate, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                       "placeholder",
+                                                       "overriding",
+                                                       some = "any",
+                                                       other = "actually same",
+                                                       keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, some, other, keyword_arg = my_func(empty_adata,
+                                             "placeholder",
+                                             "overriding",
+                                             some = "any",
+                                             other = "actually same",
+                                             keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_and_layer_decorator_return_all_defaults(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and gate is not passed.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata)
+    # we expect all defaults, so layer should be the FACSPy default
+    assert gate == fp.settings.default_gate
+    assert layer == fp.settings.default_layer
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(adata = empty_adata)
+    # we expect all defaults, so layer should be None
+    assert gate is None
+    assert layer is None
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_return_all_defaults_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is not passed.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == fp.settings.default_gate
+    assert layer == fp.settings.default_layer
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate is None
+    assert layer is None
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_and_layer_decorator_pass_as_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
                                                               layer = "my_layer",
                                                               gate = "my_gate")
-    assert layer == "my_layer"
     assert gate == "my_gate"
+    assert layer == "my_layer"
     assert some == "some"
     assert other == "other"
     assert keyword_arg == "keyword_arg"
 
-    fp.settings.default_gate = "t_cells"
-    fp.settings.default_layer = "transformed"
-    layer, gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata)
-    assert layer == "transformed"
-    assert gate == "t_cells"
-    assert some == "some"
-    assert other == "other"
-    assert keyword_arg == "keyword_arg"
-
-    layer, gate, some, other, keyword_arg = my_func_decorated(adata = mock_anndata,
-                                                              some = "some_other",
-                                                              other = "actually_same")
-    assert layer == "transformed"
-    assert gate == "t_cells"
-    assert some == "some_other"
-    assert other == "actually_same"
-    assert keyword_arg == "keyword_arg"
-     
-    layer, gate, some, other, keyword_arg = my_func(adata = mock_anndata,
+    gate, layer, some, other, keyword_arg = my_func(adata = empty_adata,
                                                     layer = "my_layer",
                                                     gate = "my_gate")
-    assert layer == "my_layer"
     assert gate == "my_gate"
+    assert layer == "my_layer"
     assert some == "some"
     assert other == "other"
     assert keyword_arg == "keyword_arg"
 
-    layer, gate, some, other, keyword_arg = my_func(adata = mock_anndata,
-                                                    some = "some_other",
-                                                    other = "actually_same")
-    assert layer is None
-    assert gate is None
-    assert some == "some_other"
-    assert other == "actually_same"
+def test_default_gate_and_layer_decorator_pass_as_kwargs_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and gate is passed as a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                              gate = "my_gate",
+                                                              layer = "my_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                                    gate = "my_gate",
+                                                    layer = "my_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_and_layer_decorator_pass_as_kwargs_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              gate = "my_gate",
+                                                              layer = "my_layer")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
     assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    gate = "my_gate",
+                                                    layer = "my_layer")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_pass_as_kwargs_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              gate = "my_gate",
+                                                              layer = "my_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    gate = "my_gate",
+                                                    layer = "my_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_and_layer_decorator_pass_as_args(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a positional argument.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "my_gate",
+                                                              "my_layer")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "my_gate",
+                                                    "my_layer")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layerdecorator_pass_as_args_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and gate is passed as a positional argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "my_gate",
+                                                              "my_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "my_gate",
+                                                    "my_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+                                                        
+def test_default_gate_and_layer_decorator_pass_as_args_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and layer is passed as a positional argument
+    on position three.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "my_gate",
+                                                              "my_layer")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    "my_gate",
+                                                    "my_layer")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_pass_as_args_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is not set
+    and gate is passed as a positional argument
+    on position three.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "my_gate",
+                                                              "my_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    "my_gate",
+                                                    "my_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert layer == "my_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is not passed.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata)
+    # we expect the facspy default, so layer should be 'facspy_default'
+    assert gate == "facspy_default"
+    assert layer == "facspy_default_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(adata = empty_adata)
+    # we expect all defaults without the decorator, so layer should be None
+    assert gate is None
+    assert layer is None
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is not passed.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    # we expect the facspy default, so layer should be 'facspy_default'
+    assert gate == "facspy_default"
+    assert layer == "facspy_default_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    # we expect all defaults without the decorator, so layer should be None
+    assert gate is None
+    assert layer is None
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_kwarg_passing(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                              gate = "overriding",
+                                                              layer = "overriding_layer")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                                    gate = "overriding",
+                                                    layer = "overriding_layer")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_kwarg_passing_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_gate = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(adata = empty_adata,
+                                                              gate = "overriding",
+                                                              layer = "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(adata = empty_adata,
+                                                    gate = "overriding",
+                                                    layer = "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+    
+def test_default_gate_and_layer_decorator_return_facspy_defaults_kwarg_passing_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate= "facspy_default"
+    fp.settings.default_gate= "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              gate = "overriding",
+                                                              layer = "overriding_layer")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    gate = "overriding",
+                                                    layer = "overriding_layer")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_kwarg_passing_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via a keyword argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              gate = "overriding",
+                                                              layer = "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    gate = "overriding",
+                                                    layer = "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_arg_passing(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed as an positional argument.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "overriding",
+                                                              "overriding_layer")
+    # we expect the user override, so layer should be 'overriding'
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "overriding",
+                                                    "overriding_layer")
+    # we expect all defaults without the decorator, so layer should be None
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_arg_passing_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and gate is passed as an positional argument.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "overriding",
+                                                              "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "overriding",
+                                                    "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+    
+def test_default_gate_and_layer_decorator_return_facspy_defaults_arg_passing_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via positional arguments.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "overriding",
+                                                              "overriding_layer")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    "overriding",
+                                                    "overriding_layer")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_arg_passing_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via positional arguments.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "overriding",
+                                                              "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    "overriding",
+                                                    "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_arg_and_kwarg_passing_different_position(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via positional arguments.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "overriding",
+                                                              layer = "overriding_layer")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    "overriding",
+                                                    layer = "overriding_layer")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "some"
+    assert other == "other"
+    assert keyword_arg == "keyword_arg"
+
+def test_default_gate_and_layer_decorator_return_facspy_defaults_arg_and_kwarg_passing_different_position_other_kwargs(empty_adata: AnnData):
+    """
+    Create a situation where default is set via fp.settings
+    and layer is passed via positional arguments.
+    We test if other kwargs are passed as the user wants.
+    """
+    @_default_gate_and_default_layer
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    fp.settings.default_gate = "facspy_default"
+    fp.settings.default_layer = "facspy_default_layer"
+    
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "overriding",
+                                                              layer = "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    "overriding",
+                                                    layer = "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "easy",
+                                                              layer = "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "easy",
+                                                    layer = "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "easy"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_no_alias(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "my_gate",
+                                                              layer = "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "my_gate"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "easy",
+                                                    layer = "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "easy"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_additional_args(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          placeholder_arg,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder_arg,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder_arg
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "easy",
+                                                              layer = "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    "overriding",
+                                                    layer = "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate == "overriding"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_default_gate(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+
+    @_default_gate
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              layer = "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    layer = "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate is None
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_default_gate_and_default_layer(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+    fp.settings.default_layer = "default_layer"
+
+    @_default_gate_and_default_layer
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "default_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate is None
+    assert layer is None
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_default_gate_and_default_layer_pass_gate_as_kwarg(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+    fp.settings.default_layer = "default_layer"
+
+    @_default_gate_and_default_layer
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              gate = "easy",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "default_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+
+def test_enable_gate_alias_decorator_default_gate_and_default_layer_pass_gate_as_arg(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+    fp.settings.default_layer = "default_layer"
+
+    @_default_gate_and_default_layer
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "easy",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "default_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_default_gate_and_default_layer_pass_gate_as_arg_other_arg(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+    fp.settings.default_layer = "default_layer"
+
+    @_default_gate_and_default_layer
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          placeholder: str,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        _ = placeholder
+        return gate, layer, some, other, keyword_arg
+    
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "easy",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "default_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_default_gate_and_default_layer_pass_gate_and_layer_as_arg(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+    fp.settings.default_layer = "default_layer"
+
+    @_default_gate_and_default_layer
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "easy",
+                                                              "overriding",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_default_gate_and_default_layer_pass_gate_and_layer_as_arg_other_arg(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+    fp.settings.default_layer = "default_layer"
+
+    @_default_gate_and_default_layer
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          placeholder: str,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = adata
+        _ = placeholder
+        return gate, layer, some, other, keyword_arg
+    
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              "easy",
+                                                              "overriding",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "overriding"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_default_gate_other_args(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+
+    @_default_gate
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          placeholder: str,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder: str,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+
+        _ = placeholder
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              layer = "overriding_layer",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    layer = "overriding_layer",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate is None
+    assert layer == "overriding_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+def test_enable_gate_alias_decorator_default_gate_and_default_layer_layer_set(empty_adata: AnnData):
+
+    fp.settings.add_new_alias("complicated", "easy")
+    fp.settings.default_gate = "easy"
+    fp.settings.default_layer = "default_layer"
+
+    @_default_gate_and_default_layer
+    @_enable_gate_aliases
+    def my_func_decorated(adata: AnnData,
+                          placeholder: str,
+                          gate: Optional[str] = None,
+                          layer: Optional[str] = None,
+                          some: Optional[str] = "some",
+                          other: str = "other",
+                          keyword_arg: str = "keyword_arg"):
+        _ = placeholder
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+    
+    def my_func(adata: AnnData,
+                placeholder: str,
+                gate: Optional[str] = None,
+                layer: Optional[str] = None,
+                some: Optional[str] = "some",
+                other: str = "other",
+                keyword_arg: str = "keyword_arg"):
+        _ = placeholder
+        _ = adata
+        return gate, layer, some, other, keyword_arg
+
+    gate, layer, some, other, keyword_arg = my_func_decorated(empty_adata,
+                                                              "placeholder",
+                                                              some = "any",
+                                                              other = "actually same",
+                                                              keyword_arg = "positional_arg")
+    assert gate == "complicated"
+    assert layer == "default_layer"
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"
+
+    gate, layer, some, other, keyword_arg = my_func(empty_adata,
+                                                    "placeholder",
+                                                    some = "any",
+                                                    other = "actually same",
+                                                    keyword_arg = "positional_arg")
+    assert gate is None
+    assert layer is None
+    assert some == "any"
+    assert other == "actually same"
+    assert keyword_arg == "positional_arg"

@@ -109,4 +109,49 @@ def test_flowsom_works_as_flowsom_kwargs(mock_dataset: AnnData):
                   exclude = None)
     assert "live_compensated_flowsom" in facspy_adata.obs.columns
     assert all(flowsom_clusters == facspy_adata.obs["live_compensated_flowsom"])
-     
+
+
+def test_decorator_default_gate_and_default_layer(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+
+    fp.tl.flowsom(mock_dataset)
+    assert "live_compensated_flowsom" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_only_gate_provided(mock_dataset: AnnData):
+    fp.settings.default_layer = "compensated"
+
+    fp.tl.flowsom(mock_dataset, gate = "live")
+    assert "live_compensated_flowsom" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_only_layer_provided(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+
+    fp.tl.flowsom(mock_dataset, layer = "compensated")
+    assert "live_compensated_flowsom" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.flowsom(mock_dataset)
+    assert "live_compensated_flowsom" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.flowsom(mock_dataset, "my_personal_gate")
+    assert "live_compensated_flowsom" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.flowsom(mock_dataset, gate = "my_personal_gate")
+    assert "live_compensated_flowsom" in mock_dataset.obs.columns
+
+    
