@@ -416,7 +416,7 @@ def _extract_partial_gate_path_start(gate_path: str,
     return GATE_SEPARATOR.join(gate_path.split("/")[:n_positions])
 
 def _find_gate_indices(adata: AnnData,
-                       gate_columns: Union[str, list[str]]) -> list[int]:
+                       gate_columns: Union[list[str], str]) -> list[int]:
     """Finds the index of provided populations in adata.uns["gating_cols"]
     This function is supposed to index columns provided as a string.
     That way, the indices can be used to access the sparse matrix
@@ -424,10 +424,10 @@ def _find_gate_indices(adata: AnnData,
 
     Parameters
     ----------
-    adata: AnnData
+    adata
         the provided dataset
     
-    gate_columns: Union[str, list[str]]:
+    gate_columns
         the gate columns that are supposed to be looked up
 
     Examples
@@ -804,7 +804,7 @@ def subset_gate(adata: AnnData,
 def equalize_groups(adata: AnnData,
                     fraction: Optional[float] = None,
                     n_obs: Optional[int] = None,
-                    on: Union[str, list[str]] = "sample_ID", 
+                    on: Union[list[str], str] = "sample_ID", 
                     random_state: int = 187,
                     as_view: bool = False,
                     copy: bool = False
@@ -1148,7 +1148,7 @@ def rename_channel(adata: AnnData,
     return adata if copy else None
 
 def remove_channel(adata: AnnData,
-                   channel: Union[str, list[str]],
+                   channel: Union[list[str], str],
                    as_view: bool = False,
                    copy: bool = False) -> Optional[AnnData]:
     """\
