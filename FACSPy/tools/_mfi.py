@@ -14,15 +14,17 @@ def _median(df: pd.DataFrame) -> pd.DataFrame:
     return df.median()
 
 def _calculate_metric_from_frame(input_frame: pd.DataFrame,
-                                 gate,
-                                 fluo_columns,
-                                 groupby: Optional[str],
+                                 gate: str,
+                                 fluo_columns: Union[list[str], str],
+                                 groupby: Union[list[str], str],
                                  method: Literal["mean", "median"],
                                  aggregate: bool) -> pd.DataFrame:
     if aggregate:
         groups = [groupby]
     else:
         groups = ["sample_ID", groupby] if groupby != "sample_ID" else [groupby]
+    if not isinstance(fluo_columns, list):
+        fluo_columns = [fluo_columns]
     data = input_frame.loc[input_frame[gate] == True,
                            fluo_columns + groups].groupby(groups, observed = True)
     if method == "mean":
@@ -39,7 +41,7 @@ def _save_settings(adata: AnnData,
                    use_only_fluo: bool,
                    layer: str) -> None:
 
-    if not "settings" in adata.uns:
+    if "settings" not in adata.uns:
         adata.uns["settings"] = {}
     
     adata.uns["settings"][f"_mfi_{groupby}_{layer}"] = {
@@ -54,8 +56,8 @@ def _save_settings(adata: AnnData,
 def _mfi(adata: AnnData,
          layer: str,
          columns_to_analyze: list[str],
-         groupby: Union[str, list[str]],
-         method: Literal["mean", "median", "geo_mean"],
+         groupby: Union[list[str], str],
+         method: Literal["mean", "median"],
          aggregate: bool) -> pd.DataFrame:
 
     dataframe = _concat_gate_info_and_obs_and_fluo_data(adata,
@@ -71,7 +73,7 @@ def _mfi(adata: AnnData,
 
 @_default_layer
 def mfi(adata: AnnData,
-        layer: Union[str, list[str]] = None,
+        layer: Union[list[str], str],
         method: Literal["mean", "median"] = "median",
         groupby: Union[Literal["sample_ID"], str] = "sample_ID",
         use_only_fluo: bool = False,

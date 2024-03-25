@@ -55,7 +55,7 @@ def _perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
                                              "this avoids a value error")
 
             kwargs["perplexity"] = min(30, data.shape[0]-1)
-        if n_components > 3 and not "method" in kwargs:
+        if n_components > 3 and "method" not in kwargs:
             _warn_user_about_changed_setting("TSNE",
                                              "method",
                                              "exact",
@@ -89,15 +89,15 @@ def _perform_dr(reduction: Literal["PCA", "MDS", "UMAP", "TSNE"],
 
 def _perform_samplewise_dr(adata: AnnData,
                            reduction: Literal["PCA", "MDS", "TSNE", "UMAP"],
-                           data_metric: Literal["mfi", "fop", "gate_frequency"],
-                           data_group: Optional[Union[str, list[str]]],
-                           layer: Literal["compensated", "transformed"],
+                           data_metric: Literal["mfi", "fop"],
+                           data_group: Optional[Union[list[str], str]],
+                           layer: Union[Literal["compensated", "transformed"], str],
                            use_only_fluo: bool,
-                           exclude: Optional[Union[str, list, str]],
+                           exclude: Optional[Union[list[str], str]],
                            scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"],
                            n_components: int,
                            *args,
-                           **kwargs):
+                           **kwargs) -> AnnData:
     
     exclude = [] if exclude is None else exclude
 
@@ -125,10 +125,10 @@ def _perform_samplewise_dr(adata: AnnData,
 
     table_identifier = f"{data_metric}_{data_group}_{layer}"
 
-    if not table_identifier in adata.uns:
+    if table_identifier not in adata.uns:
         raise AnalysisNotPerformedError(analysis = data_metric)
     
-    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+    if scaling not in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
 
     data: pd.DataFrame = adata.uns[table_identifier]
@@ -185,4 +185,3 @@ def _perform_samplewise_dr(adata: AnnData,
     adata.uns[table_identifier] = return_data
 
     return return_data
-

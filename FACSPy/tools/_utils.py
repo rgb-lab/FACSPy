@@ -1,7 +1,7 @@
 from anndata import AnnData
 import numpy as np
 import pandas as pd
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 import warnings
 
 from scipy.sparse import csr_matrix
@@ -14,14 +14,14 @@ from ..exceptions._exceptions import (InsufficientSampleNumberWarning,
                                       DimredSettingModificationWarning)
 
 def _concat_gate_info_and_obs_and_fluo_data(adata: AnnData,
-                                            layer: Literal["transformed", "compensated"] = "compensated") -> pd.DataFrame:
+                                            layer: str = "compensated") -> pd.DataFrame:
     gate_and_obs = _concat_gate_info_and_obs(adata)
     fluo_data = adata.to_df(layer = layer)
     return pd.concat([gate_and_obs, fluo_data], axis = 1)
 
 def _concat_gate_info_and_obs(adata: AnnData) -> pd.DataFrame:
     obs = adata.obs.copy()
-    gates = pd.DataFrame(data = adata.obsm["gating"].todense(),
+    gates = pd.DataFrame(data = adata.obsm["gating"].toarray(),
                          columns = adata.uns["gating_cols"].tolist(),
                          index = obs.index)
     return pd.concat([gates, obs], axis = 1)
@@ -35,7 +35,7 @@ def _concat_gate_info_and_sample_ID(adata: AnnData) -> pd.DataFrame:
 
 
 def _scale_adata(adata: AnnData,
-                 layer: Literal["compensated", "transformed"] = "transformed",
+                 layer: str = "transformed",
                  scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler") -> AnnData:
     if scaling is None:
         return adata.layers[layer]
@@ -52,18 +52,13 @@ def _scale_adata(adata: AnnData,
 
 def _preprocess_adata(adata: AnnData,
                       gate: str,
-                      layer: Literal["compensated", "transformed"],
+                      layer: str,
                       use_only_fluo: bool = True,
-                      exclude: Optional[list[str]] = None,
+                      exclude: Optional[Union[list[str], str]] = None,
                       scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None) -> AnnData:
     """
     Preprocessing of an AnnData object to select the correct gate and channels,
     select the correct data matrix and scale the data, if necessary.
-
-    Parameters
-    ----------
-
-    
     
     """
     # hacky way to ensure that everything else will be an anndata view
@@ -480,12 +475,12 @@ def _choose_use_rep_as_scanpy(adata: AnnData,
             )
 
 def _save_dr_settings(adata: AnnData,
-                      gate,
-                      layer,
-                      use_only_fluo,
-                      exclude,
-                      scaling,
-                      reduction,
+                      gate: str,
+                      layer: str,
+                      use_only_fluo: bool,
+                      exclude: Optional[Union[list[str], str]],
+                      scaling: Optional[Union[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"], str]],
+                      reduction: str,
                       **kwargs) -> None:
     if "settings" not in adata.uns:
         adata.uns["settings"] = {}
@@ -507,7 +502,7 @@ def _save_cluster_settings(adata: AnnData,
                            layer: str,
                            use_only_fluo: bool,
                            exclude: list[str],
-                           scaling: str,
+                           scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]],
                            clustering: str,
                            **kwargs) -> None:
     if "settings" not in adata.uns:

@@ -14,14 +14,14 @@ from .._utils import _default_layer
 
 @_default_layer
 def tsne_samplewise(adata: AnnData,
-                    layer: str = None,
+                    layer: str,
                     n_components: int = 3,
                     use_only_fluo: bool = True,
-                    exclude: Optional[Union[str, list, str]] = None,
+                    exclude: Optional[Union[list[str], str]] = None,
                     scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    copy = False,
+                    data_group: Optional[Union[list[str], str]] = "sample_ID",
+                    data_metric: Literal["mfi", "fop"] = "mfi",
+                    copy: bool = False,
                     *args,
                     **kwargs) -> Optional[AnnData]:
     """\

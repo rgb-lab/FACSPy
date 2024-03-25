@@ -79,10 +79,10 @@ def gate_frequencies_mem(adata: AnnData,
         sample_ID_cat_codes = sample_ID_cat_codes[sorted_sample_IDs]
         gate_matrix = gate_matrix[sorted_sample_IDs,:]
 
-    adata.uns["gate_frequencies"] = pd.concat(
-        [_calculate_gate_freq_per_parent_mem(gate_matrix, gate, gates, sample_ID_cat_codes, sample_ID_cat_map)
-         for gate in unique_gates],
-         axis = 0
+    adata.uns["gate_frequencies"] = pd.concat([
+        _calculate_gate_freq_per_parent_mem(gate_matrix, gate, gates, sample_ID_cat_codes, sample_ID_cat_map)
+        for gate in unique_gates],
+        axis = 0
     )
     return adata if copy else None
 
@@ -149,8 +149,8 @@ def _calculate_gate_freq_per_parent_mem(gate_mtx: csr_matrix,
 
 
 def _calculate_gate_freq_per_parent(df: pd.DataFrame,
-                                    gate,
-                                    gates) -> pd.DataFrame:
+                                    gate: str,
+                                    gates: list[str]) -> pd.DataFrame:
     parents = _find_parents_recursively(gate) if gate != "root" else []
     gates_of_interest = [
         goi for goi in gates if goi not in parents and goi != gate
