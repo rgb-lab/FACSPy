@@ -72,7 +72,7 @@ def _recalculate_fop(adata: AnnData,
         **settings_dict)
 
 def _append_calculated_dimred_dimensions(calculated_dimreds: list[str],
-                                         uns_frame: pd.DataFrame):
+                                         uns_frame: pd.DataFrame) -> list[str]:
     dimred_dimensions = []
     for dimred in calculated_dimreds:
         for col in uns_frame.columns:
@@ -106,7 +106,7 @@ def _synchronize_uns_frame(adata: AnnData,
         ]
     return
 
-def _get_frame_metrics(frame_id: str) -> tuple[str]:
+def _get_frame_metrics(frame_id: str) -> tuple[str, str, str]:
     split_frame_id = frame_id.split("_")
     data_metric = split_frame_id[0]
     data_origin = split_frame_id[-1]
@@ -139,7 +139,7 @@ def _get_samplewise_dimred_columns(df: pd.DataFrame) -> list[str]:
 
 def _recalculate_samplewise_dimreds(adata,
                                     frame_id: str,
-                                    calculated_dimreds: Optional[list[str]]) -> None:
+                                    calculated_dimreds: list[str]) -> None:
     from ..tools._pca import pca_samplewise
     from ..tools._mds import mds_samplewise
     from ..tools._umap import umap_samplewise
@@ -179,4 +179,3 @@ def _recalculate_samplewise_dimreds(adata,
         tsne_samplewise(adata,
                         **settings)
         return
-
