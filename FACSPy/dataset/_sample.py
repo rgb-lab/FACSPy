@@ -4,13 +4,10 @@ import numpy as np
 import pandas as pd
 from flowio import FlowData
 from flowio.exceptions import FCSParsingError
-<<<<<<< Updated upstream
-from typing import Optional
-=======
+
 from flowutils.compensate import get_spill
 
 from typing import Optional, Union
->>>>>>> Stashed changes
 
 from ..transforms._matrix import Matrix
 from ..exceptions._exceptions import (NotCompensatedError,
@@ -64,7 +61,7 @@ class FCSFile:
         )
 
     def get_events(self,
-                   source: str) -> np.ndarray:
+                   source: str) -> Optional[np.ndarray]:
         """returns the events by data-source (raw or compensated)"""
         if source == "raw":
             return self._get_original_events()
@@ -73,18 +70,18 @@ class FCSFile:
         else:
             raise NotImplementedError("Only Raw ('raw') and compensated events ('comp') can be fetched.")
 
-    def _get_original_events(self):
+    def _get_original_events(self) -> np.ndarray:
         """returns uncompensated original events"""
         return self.original_events
     
-    def _get_compensated_events(self):
+    def _get_compensated_events(self) -> np.ndarray:
         """returns compensated events"""
         if self.compensation_status != "compensated":
             raise NotCompensatedError()
         return self.compensated_events
 
     def get_channel_index(self,
-                          channel_label) -> int:
+                          channel_label: str) -> int:
         """
         performs a lookup in the channels dataframe and
         returns the channel index by the fcs file channel numbers
@@ -119,7 +116,7 @@ class FCSFile:
                       spill_data_or_file = matrix)
 
     def _parse_event_count(self,
-                           fcs_data: FlowData):
+                           fcs_data: FlowData) -> int:
         """returns the total event count"""
         return fcs_data.event_count
 
@@ -162,7 +159,7 @@ class FCSFile:
         return tmp_orig_events
 
     def _adjust_range(self,
-                      arr: np.ndarray):
+                      arr: np.ndarray) -> np.ndarray:
         channel_ranges = self.channels["pnr"].to_numpy()
         range_exceeded_cells = (arr > channel_ranges)
         range_exceeded_channels = range_exceeded_cells.any(axis = 0)
@@ -175,7 +172,7 @@ class FCSFile:
         return arr
 
     def _remove_nans_from_events(self,
-                                 arr: np.ndarray):
+                                 arr: np.ndarray) -> np.ndarray:
         """Function to remove rows with NaN, inf and -inf"""
         if np.isinf(arr).any():
             idxs = np.argwhere(np.isinf(arr))[:,0]
@@ -294,7 +291,7 @@ class FCSFile:
             return "" 
 
     def _parse_channel_range(self,
-                             channel_number: str) -> int:
+                             channel_number: str) -> Union[int, float]:
         """parses the channel range from the fcs file"""
         try:
             return int(self.fcs_metadata[f"p{channel_number}r"])
@@ -331,7 +328,7 @@ class FCSFile:
             return 1.0
 
     def _parse_fcs_metadata(self,
-                            fcs_data: FlowData) -> dict[str: str]:
+                            fcs_data: FlowData) -> dict:
         """Returns fcs metadata as a dictionary"""
         return fcs_data.text
 

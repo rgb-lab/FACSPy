@@ -147,7 +147,7 @@ class DatasetAssembler:
                  workspace: Union[FlowJoWorkspace, DivaWorkspace],
                  subsample_fcs_to: Optional[int] = None,
                  truncate_max_range: bool = False,
-                 keep_raw: bool = False) -> AnnData:
+                 keep_raw: bool = False) -> None:
         """automatically creates the dataset"""
 
         file_list: list[FCSFile] = self._fetch_fcs_files(input_directory,
@@ -268,11 +268,12 @@ class DatasetAssembler:
     def _concatenate_dataset(self,
                              file_list: list[AnnData]):
         """concatenates all singular anndata representations into the dataset"""
-        return ad.concat(file_list,
-                         merge = "same",
-                         index_unique = "-",
-                         keys = range(len(file_list))
-                         )
+        return ad.concat(
+            file_list,
+            merge = "same",
+            index_unique = "-",
+            keys = range(len(file_list))
+        )
     
     def _create_obs_from_metadata(self,
                                   file: FCSFile,
@@ -290,7 +291,7 @@ class DatasetAssembler:
         return metadata_frame
 
     def _fetch_panel_antigen(self,
-                             panel_channels: pd.Series,
+                             panel_channels: list[str],
                              channel: str,
                              panel_df: pd.DataFrame) -> Optional[str]:
         """retrieves the antigens from the panel"""
@@ -321,7 +322,7 @@ class DatasetAssembler:
 
     def _fetch_fcs_antigen(self,
                            fcs_panel_df: pd.DataFrame,
-                           channel: str):
+                           channel: str) -> str:
         """retrieves the antigen as supplied by the FCS file"""
         return fcs_panel_df.loc[fcs_panel_df.index == channel, "pns"].item()
     
@@ -331,7 +332,7 @@ class DatasetAssembler:
         """fills the .var slot by using the FCS data and the user supplied panel"""
         panel_df = panel.to_df()
         fcs_panel_df = file.channels
-        panel_channels = panel_df["fcs_colname"].to_list()
+        panel_channels: list[str] = panel_df["fcs_colname"].tolist()
         for channel in fcs_panel_df.index:
             fcs_antigen = self._fetch_fcs_antigen(fcs_panel_df, channel)
             panel_antigen = self._fetch_panel_antigen(panel_channels,
@@ -366,10 +367,12 @@ class DatasetAssembler:
                                              metadata)
         var = self._create_var_from_panel(file,
                                           panel)
-        if file.original_events is not None:
+        if hasattr(file, "original_events"):
+            assert file.compensated_events is not None
             layers = {"raw": file.original_events.astype(np.float32),
                       "compensated": file.compensated_events.astype(np.float32)}
         else:
+            assert file.compensated_events is not None
             layers = {"compensated": file.compensated_events.astype(np.float32)}
 
         return AnnData(X = None,
@@ -387,7 +390,7 @@ class DatasetAssembler:
     def _construct_dataset(self,
                            file_list: list[FCSFile],
                            metadata: Metadata,
-                           panel: Panel) -> AnnData:
+                           panel: Panel) -> list[AnnData]:
         """constructs a list of AnnData representations for all FCS data"""
         return self._create_anndata_representations(file_list, metadata, panel)
 
@@ -408,7 +411,8 @@ class DatasetAssembler:
         sample.compensated_events = comp_matrix.apply(sample)
         sample.compensation_status = "compensated"
         if not keep_raw:
-            sample.original_events = None
+            del sample.original_events
+            #sample.original_events = None
         return sample
 
     def _find_comp_matrix(self,

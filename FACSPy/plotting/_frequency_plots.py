@@ -34,7 +34,7 @@ def _prep_cluster_abundance(adata: AnnData,
                  values = "count")
 
 def _order_dataframe(dataframe: pd.DataFrame,
-                     order: Union[str, list[str]]) -> pd.DataFrame:
+                     order: Union[list[str], str]) -> pd.DataFrame:
     return dataframe[order]
     
 def _prepare_cluster_frequencies(adata: AnnData,
@@ -64,11 +64,11 @@ def _prepare_cluster_frequencies(adata: AnnData,
 @_default_gate
 @_enable_gate_aliases
 def cluster_frequency(adata: AnnData,
-                      gate: str = None,
-                      cluster_key: str = None,
-                      cluster: str = None,
+                      gate: str,
+                      cluster_key: str,
+                      cluster: str,
                       normalize: bool = False,
-                      groupby: Optional[Union[str, list[str]]] = None,
+                      groupby: Optional[Union[list[str], str]] = None,
                       splitby: Optional[str] = None,
                       cmap: Optional[str] = None,
                       order: Optional[list[str]] = None,
@@ -203,7 +203,7 @@ def cluster_frequency(adata: AnnData,
     return
 
 def cluster_abundance(adata: AnnData,
-                      groupby: Union[str, list[str]],
+                      groupby: str, 
                       cluster_key: str = None,
                       normalize: bool = True,
                       order: Optional[list[str]] = None,

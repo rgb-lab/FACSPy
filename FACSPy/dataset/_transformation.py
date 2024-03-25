@@ -1,7 +1,6 @@
 from anndata import AnnData
 import numpy as np
 import pandas as pd
-from flowutils import transforms
 import scipy.signal as scs
 
 from typing import Literal, Optional, Union
@@ -60,6 +59,7 @@ def _transform_array(data: np.ndarray,
 
     else:
         assert transform == "asinh"
+        assert isinstance(cofactors, np.ndarray)
         return asinh_transform(data,
                                cofactors)
 
@@ -67,9 +67,9 @@ def transform(adata: AnnData,
               transform: Literal["asinh", "logicle", "hyperlog", "log"],
               transform_kwargs: Optional[dict] = None,
               cofactor_table: Optional[CofactorTable] = None,
-              key_added: str = None,
+              key_added: Optional[str] = None,
               layer: str = "compensated",
-              copy: bool = False):
+              copy: bool = False) -> Optional[AnnData]:
     """\
         
     Transforms the data. The data are transformed by either `asinh`, `log`,
@@ -365,7 +365,6 @@ class CofactorCalculator:
         
         if self._only_one_peak(peaks): ## one peak has been found
             return self._find_root_of_tangent_line_at_turning_point(x, curve)
-
 
     def _subset_two_highest_peaks(self,
                                   peak_output: tuple[np.ndarray, dict]

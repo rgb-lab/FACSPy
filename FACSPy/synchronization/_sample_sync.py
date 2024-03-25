@@ -50,7 +50,7 @@ def _sync_columns_from_obs(adata: AnnData):
     metadata: pd.DataFrame = adata.uns["metadata"].dataframe
     metadata_columns = metadata.columns
     columns_to_transfer = [col for col in sample_specific_columns
-                           if not col in metadata_columns] + ["sample_ID"]
+                           if col not in metadata_columns] + ["sample_ID"]
 
     metadata_to_append = adata.obs[columns_to_transfer].drop_duplicates()
     appended_metadata = pd.merge(
@@ -147,7 +147,7 @@ def _sync_sample_ids_from_obs(adata: AnnData) -> None:
         columns_to_transfer = [col for col in metadata_columns
                                if col in adata.obs.columns]
         obs = adata.obs[columns_to_transfer]
-        metadata = obs.drop_duplicates()
+        metadata: pd.DataFrame = obs.drop_duplicates()
         
         # we make sure that the drop duplicates resulted
         # in a dataframe that only contains one line per sample_ID

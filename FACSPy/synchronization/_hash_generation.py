@@ -2,7 +2,7 @@ from anndata import AnnData
 import pandas as pd
 
 
-def _generate_hash_dict(adata: AnnData):
+def _generate_hash_dict(adata: AnnData) -> dict:
     """
     Stores all wanted hashs in a dictionary.
     This function can be appended to the liking.

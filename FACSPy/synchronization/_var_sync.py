@@ -70,7 +70,7 @@ def _sync_cofactors_from_panel(adata: AnnData) -> None:
     return
 
 def _sync_cofactors_from_var(adata: AnnData) -> None:
-    var_names = adata.var_names
+    var_names = adata.var_names.tolist()
     try:
         cofactor_table: CofactorTable = adata.uns["cofactors"]
         cofactor_table.select_channels(var_names)

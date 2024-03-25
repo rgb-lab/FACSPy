@@ -22,11 +22,11 @@ from ..exceptions._exceptions import InvalidScalingError
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def parc(adata: AnnData,
-         gate: str = None,
-         layer: str = None,
+         gate: str,
+         layer: str,
          key_added: Optional[str] = None,
          use_only_fluo: bool = True,
-         exclude: Optional[Union[str, list[str]]] = None,
+         exclude: Optional[Union[list[str], str]] = None,
          scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
          copy: bool = False,
          **kwargs) -> Optional[AnnData]:
@@ -97,7 +97,13 @@ def parc(adata: AnnData,
     
     adata = adata.copy() if copy else adata
 
-    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
+
+    if scaling not in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
 
     _save_cluster_settings(adata = adata,

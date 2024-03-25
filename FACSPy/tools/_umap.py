@@ -23,14 +23,14 @@ _InitPos = Literal['paga', 'spectral', 'random']
 
 @_default_layer
 def umap_samplewise(adata: AnnData,
-                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                    layer: str = None,
+                    layer: str,
+                    data_group: str = "sample_ID",
+                    data_metric: Literal["mfi", "fop"] = "mfi",
                     use_only_fluo: bool = True,
-                    exclude: Optional[Union[str, list, str]] = None,
+                    exclude: Optional[Union[list[str], str]] = None,
                     scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
                     n_components: int = 3,
-                    copy = False,
+                    copy: bool = False,
                     *args,
                     **kwargs) -> Optional[AnnData]:
     """\

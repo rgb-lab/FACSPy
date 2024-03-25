@@ -31,7 +31,7 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
                                 data: pd.DataFrame,
                                 plot_params: dict,
                                 groupby: str,
-                                splitby: str,
+                                splitby: Optional[str],
                                 stat_test: Optional[str],
                                 figsize: tuple[float, float]):
 
