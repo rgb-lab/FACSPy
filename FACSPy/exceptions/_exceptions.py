@@ -4,8 +4,8 @@ import warnings
 class DataModificationWarning(Warning):
     def __init__(self,
                  message) -> None:
-        message = "It was detected that cells are either appended "
-        message += "or deleted. Please make sure that the performed "
+        message = "It was detected that the dataset was modified."
+        message += "Please make sure that the performed "
         message += "analyses are still valid. Note that if you removed "
         message += "whole samples, mfi/fop calculations will not be affected."
         self.message = message
