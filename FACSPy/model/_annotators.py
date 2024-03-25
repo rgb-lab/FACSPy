@@ -2,7 +2,6 @@ from anndata import AnnData
 
 import numpy as np
 import pandas as pd
-import scanpy as sc
 
 from scipy.sparse import csr_matrix
 
@@ -10,8 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.utils.validation import check_is_fitted
 from sklearn.experimental import enable_halving_search_cv
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, HalvingGridSearchCV
-
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 from sklearn.preprocessing import (MinMaxScaler,
                                    RobustScaler,
@@ -23,8 +21,8 @@ from typing import Optional, Union, Literal
 
 from ._classifiers import DecisionTree, RandomForest, IMPLEMENTED_ESTIMATORS
 from ._utils import (cap_data,
-                    transform_data,
-                    scale_data)
+                     transform_data,
+                     scale_data)
 from ._sampling import GateSampler
 from ._halvingrandomsearch import HalvingRandomSearchCV_TE
 
@@ -54,7 +52,8 @@ from ..exceptions._exceptions import (ClassifierNotImplementedError,
 class BaseGating:
     
     def __init__(self):
-        pass
+        self.adata: AnnData
+        return
 
     def get_dataset(self):
         return self.adata
@@ -536,27 +535,25 @@ class unsupervisedGating(BaseGating):
 
 
 class supervisedGating(BaseGating):
-    """
-    
-    
+    """\
     Examples
     --------
 
-    adata = fp.create_dataset([...])
-    gating = fp.ml.supervisedGating(dataset)
-    gating.run_data_setup(
-        gated_samples = ["1", "2", "3"],
-        layer = "compensated",
-        scaling = "StandardScaler"
-    )
-    gating.setup_classifier("DecisionTreeClassifier")
-    gating.tune_hyperparameters(
-        method = "HalvingRandomSearchCV",
-        grid = {"max_depth": [10,20,100]}
-    )
-    gating.setup_classifier("DecisionTreeClassifier")
-    gating.train()
-    gating.gate_dataset()
+    >>> adata = fp.create_dataset([...])
+    >>> gating = fp.ml.supervisedGating(dataset)
+    >>> gating.run_data_setup(
+    ...     gated_samples = ["1", "2", "3"],
+    ...     layer = "compensated",
+    ...     scaling = "StandardScaler"
+    ... )
+    >>> gating.setup_classifier("DecisionTreeClassifier")
+    >>> gating.tune_hyperparameters(
+    ...    method = "HalvingRandomSearchCV",
+    ...    grid = {"max_depth": [10,20,100]}
+    ... )
+    >>> gating.setup_classifier("DecisionTreeClassifier")
+    >>> gating.train()
+    >>> gating.gate_dataset()
     
     """
 

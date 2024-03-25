@@ -1,36 +1,18 @@
+Big topics:
+    - dataset merges
+    - synchronization of the dataset
+        - find solution for renaming channels...
+    - potentially expression reconstruction
+    - supervised classification implementation
+    - add cofactors to adata.var
+
+Big topics Browser:
+    - Clustering second tab
+    - Supervised gating implementation
+    - data integration
+    - dataset merges
+
+small topics browser:
+    - change darkmode functionality for empty plots
 
 
-currently, no check for completely missing comps is in place!
-see dataset -> compensate samples
-
-think about setting cofactors for scatter channels to 1...
-
-
-metadata: add function to rename sample_id to sampleID
-
-Transformer: Implement FMO controls
-
-MFI: implement population parameter
-
-rename uns["gating_cols"] to uns["gates"]
-
-
-UNIT TESTS!!! especially for cases where inputs are missing
-
-write wrapper function to create supplements
-
-
-read about flowsom... what about the input parameters?
-
-
-restrict_to_parameters
-
-write test for contains_fluo_only
-
-test functions for subset stained and unstained
-
-Transformer Class: implement cell number matching
-Transformer Class: refactor so that calculation logic becomes somewhat different
-
-
-BUG: return compensation matrix if none was provided by dataframe
