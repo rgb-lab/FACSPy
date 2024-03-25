@@ -51,7 +51,7 @@ def _save_settings(adata: AnnData,
                    use_only_fluo: bool,
                    layer: str) -> None:
 
-    if not "settings" not in adata.uns:
+    if "settings" not in adata.uns:
         adata.uns["settings"] = {}
     
     adata.uns["settings"][f"_fop_{groupby}_{layer}"] = {
@@ -65,7 +65,7 @@ def _save_settings(adata: AnnData,
 
 @_default_layer
 def fop(adata: AnnData,
-        layer: Union[list[str], str],
+        layer: Union[list[str], str] = "compensated",
         cutoff: Optional[Union[list[int], list[float], int, float]] = None,
         groupby: Union[Literal["sample_ID"], str] = "sample_ID",
         use_only_fluo: bool = False,
