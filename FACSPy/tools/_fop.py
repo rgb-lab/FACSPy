@@ -28,7 +28,7 @@ def _fop(adata: AnnData,
          layer: str,
          columns_to_analyze: list[str],
          cofactors: np.ndarray,
-         groupby: Union[str, list[str]],
+         groupby: Union[list[str], str],
          aggregate: bool) -> pd.DataFrame:
 
     dataframe = _concat_gate_info_and_obs_and_fluo_data(adata,
