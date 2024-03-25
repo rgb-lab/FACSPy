@@ -82,7 +82,9 @@ def find_name_of_control_sample_by_metadata(sample,
                                             metadata_to_compare: pd.DataFrame,
                                             indexed_frame: pd.DataFrame,
                                             by = Literal["sample_ID", "file_name"]) -> list[str]:
+    assert metadata_to_compare.shape[0] == 1
     matching_metadata = indexed_frame.loc[tuple(metadata_to_compare.values[0])]
+    matching_metadata = matching_metadata[matching_metadata["staining"] != "stained"]
     return matching_metadata.loc[matching_metadata[by] != sample, by].tolist()
 
 def asinh_transform(data: np.ndarray,
