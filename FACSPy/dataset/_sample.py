@@ -4,13 +4,10 @@ import numpy as np
 import pandas as pd
 from flowio import FlowData
 from flowio.exceptions import FCSParsingError
-<<<<<<< Updated upstream
-from typing import Optional
-=======
+
 from flowutils.compensate import get_spill
 
 from typing import Optional, Union
->>>>>>> Stashed changes
 
 from ..transforms._matrix import Matrix
 from ..exceptions._exceptions import (NotCompensatedError,
