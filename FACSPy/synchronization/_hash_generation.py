@@ -111,7 +111,7 @@ HASH_FUNCTION_DICT = {
         "adata_obs_columns": _generate_obs_columns_hash,
 
         "metadata_sample_ids": _generate_metadata_sample_ID_hash,
-        "metadata_columns": _generate_metadata_sample_ID_hash,
+        "metadata_columns": _generate_metadata_columns_hash,
 
         "adata_var_names": _generate_dataset_var_hash,
         "panel_var_names": _generate_panel_var_hash
