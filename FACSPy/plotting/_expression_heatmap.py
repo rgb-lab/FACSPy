@@ -2,15 +2,13 @@ from anndata import AnnData
 import numpy as np
 import pandas as pd
 
-from matplotlib.figure import Figure
-
+import seaborn as sns
 from typing import Literal, Optional, Union
 
 from ._utils import (_scale_data,
                      _map_obs_to_cmap,
                      _calculate_sample_distance,
                      _calculate_linkage,
-                     _remove_technical_channels,
                      _prepare_heatmap_data,
                      _remove_dendrogram,
                      _add_metaclusters,
@@ -20,7 +18,6 @@ from ._utils import (_scale_data,
                      _add_categorical_legend_to_clustermap,
                      _calculate_correlation_data,
                      add_annotation_plot,
-                     _get_uns_dataframe,
                      ANNOTATION_CMAPS,
                      savefig_or_show)
 from ._clustermap import create_clustermap
@@ -43,12 +40,12 @@ def prepare_plot_data(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def expression_heatmap(adata: AnnData,
-                       gate: str = None,
-                       layer: str = None,
+                       gate: str,
+                       layer: str,
                        metadata_annotation: Optional[Union[str, list[str]]] = None,
                        marker_annotation: Optional[str] = None,
                        include_technical_channels: bool = False,
-                       data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                       data_group: str = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
@@ -58,12 +55,12 @@ def expression_heatmap(adata: AnnData,
                        label_metaclusters_in_dataset: bool = True,
                        label_metaclusters_key: Optional[str] = "metacluster_sc",
                        y_label_fontsize: Optional[Union[int, float]] = 10,
-                       figsize: Optional[tuple[int, int]] = (5,3.8),
+                       figsize: Optional[tuple[float, float]] = (5,3.8),
                        return_dataframe: bool = False,
                        return_fig: bool = False,
                        show: bool = True,
                        save: Optional[str] = None
-                       ) -> Optional[Union[Figure, pd.DataFrame]]:
+                       ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     """\
     Plot for expression heatmap. Rows are the individual channels and columns are the data points.
 

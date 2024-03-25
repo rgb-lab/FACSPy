@@ -1,4 +1,3 @@
-import warnings
 import pandas as pd
 import numpy as np
 from anndata import AnnData
@@ -14,7 +13,6 @@ from typing import Union, Optional, Literal
 from ._utils import (savefig_or_show,
                      _retrieve_cofactor_or_set_to_default,
                      _generate_scale_kwargs,
-                     _get_cofactor_from_var,
                      LINEPLOT_PARAMS)
 from ._cofactor_plots import calculate_histogram_data
 
@@ -73,15 +71,15 @@ def _append_colorby_variable(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def marker_density(adata: AnnData,
-                   gate: str = None,
-                   layer: str = None,
-                   marker: str = None,
+                   gate: str,
+                   layer: str,
+                   marker: str,
                    groupby: str = "sample_ID",
-                   colorby: str = None,
-                   highlight: Optional[Union[str, list[str]]] = None,
+                   colorby: Optional[str] = None,
+                   highlight: Optional[Union[list[str], str]] = None,
                    ridge: bool = False,
                    add_cofactor: bool = False,
-                   cmap: str = "Set1",
+                   cmap: Optional[str] = "Set1",
                    plot_height: float = 1,
                    plot_spacing: float = -0.5,
                    plot_aspect: float = 1,

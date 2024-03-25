@@ -5,6 +5,8 @@ import pandas as pd
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
+import seaborn as sns
+
 from typing import Literal, Optional, Union
 
 from ._utils import (_scale_data,
@@ -33,15 +35,15 @@ def _cluster_mfi_fop_baseplot(data_metric: str,
                               cluster_key: str,
                               marker: str,
                               splitby: Optional[str],
-                              cmap: str,
-                              order: list[str],
-                              stat_test: str,
+                              cmap: Optional[str],
+                              order: Optional[Union[list[str], str]],
+                              stat_test: Optional[str],
                               figsize: tuple[float, float],
                               return_dataframe: bool,
                               return_fig: bool,
-                              ax: Axes,
-                              save: bool,
-                              show: bool):
+                              ax: Optional[Axes],
+                              show: bool,
+                              save: Optional[str]):
 
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
@@ -85,14 +87,14 @@ def _cluster_mfi_fop_baseplot(data_metric: str,
 
 @_enable_gate_aliases
 def cluster_fop(adata: AnnData,
-                gate: str = None,
-                layer: str = None,
-                cluster_key: str = None,
-                marker: str = None,
+                gate: str,
+                layer: str,
+                cluster_key: str,
+                marker: str,
                 splitby: Optional[str] = None,
-                cmap: str = None,
-                order: list[str] = None,
-                stat_test: str = "Kruskal",
+                cmap: Optional[str] = None,
+                order: Optional[Union[list[str], str]] = None,
+                stat_test: Optional[str] = "Kruskal",
                 figsize: tuple[float, float] = (3,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
@@ -200,14 +202,14 @@ def cluster_fop(adata: AnnData,
 
 @_enable_gate_aliases
 def cluster_mfi(adata: AnnData,
-                gate: str = None,
-                layer: str = None,
-                marker: str = None,
-                cluster_key: str = None,
+                gate: str,
+                layer: str,
+                marker: str,
+                cluster_key: str,
                 splitby: Optional[str] = None,
-                cmap: str = None,
-                order: list[str] = None,
-                stat_test: str = "Kruskal",
+                cmap: Optional[str] = None,
+                order: Optional[Union[list[str], str]] = None,
+                stat_test: Optional[str] = "Kruskal",
                 figsize: tuple[float, float] = (3,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
@@ -327,24 +329,24 @@ def prepare_plot_data(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def cluster_heatmap(adata: AnnData,
-                    gate: str = None,
-                    layer: str = None,
-                    cluster_key: Optional[Union[str, list[str]]] = None,
+                    gate: str,
+                    layer: str,
+                    cluster_key: str,
                     include_technical_channels: bool = False,
-                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    data_metric: Literal["mfi", "fop"] = "mfi",
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                     cluster_method: Literal["correlation", "distance"] = "distance",
                     annotate: Optional[Union[Literal["frequency"], str]] = None,
-                    annotation_kwargs: dict = {},
-                    cmap: str = "RdYlBu_r",
+                    annotation_kwargs: Optional[dict] = None,
+                    cmap: Optional[str] = "RdYlBu_r",
                     y_label_fontsize: Optional[Union[int, float]] = 10,
                     figsize: Optional[tuple[float, float]] = (5,3.8),
                     return_dataframe: bool = False,
                     return_fig: bool = False,
                     show: bool = True,
                     save: Optional[str] = None
-                    ) -> Optional[Union[Figure, pd.DataFrame]]:
+                    ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     """\
     Plots a heatmap where every column corresponds to one cluster and the rows display the marker expression.
 
@@ -430,6 +432,9 @@ def cluster_heatmap(adata: AnnData,
     ... )
 
     """
+    if annotation_kwargs is None:
+        annotation_kwargs = {}
+
     raw_data, plot_data = _prepare_heatmap_data(adata = adata,
                                                 gate = gate,
                                                 layer = layer,

@@ -1,8 +1,7 @@
 import pandas as pd
-import numpy as np
 from anndata import AnnData
-from matplotlib.figure import Figure
 
+import seaborn as sns
 from typing import Literal, Union, Optional
 from ._utils import (_map_obs_to_cmap,
                      _calculate_sample_distance,
@@ -41,14 +40,14 @@ def _calculate_distances(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def sample_distance(adata: AnnData,
-                    gate: str = None,
-                    layer: str = None,
-                    metadata_annotation: Union[str, list[str]] = None,
+                    gate: str,
+                    layer: str,
+                    metadata_annotation: Optional[Union[str, list[str]]] = None,
                     include_technical_channels: bool = False,
-                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    data_group: str = "sample_ID",
                     data_metric: Literal["mfi", "fop"] = "mfi",
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
-                    cmap: str = "inferno",
+                    cmap: Optional[str] = "inferno",
                     metaclusters: Optional[int] = None,
                     label_metaclusters_in_dataset: bool = True,
                     label_metaclusters_key: Optional[str] = "sample_distance_metaclusters",
@@ -57,7 +56,7 @@ def sample_distance(adata: AnnData,
                     return_fig: bool = False,
                     show: bool = True,
                     save: Optional[str] = None
-                    ) -> Optional[Union[Figure, pd.DataFrame]]:
+                    ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     
     """\
     Plot to display sample to sample distance as a heatmap.

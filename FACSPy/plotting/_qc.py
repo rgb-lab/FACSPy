@@ -23,8 +23,8 @@ from ..exceptions._exceptions import AnalysisNotPerformedError, HierarchyError
 from .._settings import settings
 
 def _find_y_label(adata: AnnData,
-                  freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent"]]],
-                  gate: Union[str, list[str]]):
+                  freq_of: Union[str, Literal["parent", "grandparent", "all"]],
+                  gate: str):
     
     if freq_of == "parent":
         return _find_parent_population(_find_gate_path_of_gate(adata, gate))
@@ -33,9 +33,9 @@ def _find_y_label(adata: AnnData,
     return "All Cells" if freq_of in ["root", "all"] else freq_of
 
 def _prepare_dataframe_gate_frequency(adata: AnnData,
-                                      gate: Union[str, list[str]],
-                                      freq_of: Optional[Union[str, list[str]]],
-                                      groupby: Optional[Union[str, list[str]]],
+                                      gate: str,
+                                      freq_of: Union[str, Literal["parent", "grandparent", "all"]],
+                                      groupby: str,
                                       splitby: Optional[str]) -> pd.DataFrame:
     
     if "gate_frequencies" not in adata.uns:
@@ -80,13 +80,13 @@ def _prepare_dataframe_cell_counts(adata: AnnData,
 @_default_gate
 @_enable_gate_aliases
 def gate_frequency(adata: AnnData,
-                   gate: Union[str, list[str]] = None,
-                   freq_of: Optional[Union[str, list[str], Literal["parent", "grandparent", "all"]]] = None,
-                   groupby: Optional[str] = None,
+                   gate: str,
+                   freq_of: Union[str, Literal["parent", "grandparent", "all"]],
+                   groupby: str,
                    splitby: Optional[str] = None,
-                   cmap: str = None,
-                   order: list[str] = None,
-                   stat_test: str = "Kruskal",
+                   cmap: Optional[str] = None,
+                   order: Optional[Union[list[str], str]] = None,
+                   stat_test: Optional[str] = "Kruskal",
                    figsize: tuple[float, float] = (3,3),
                    return_dataframe: bool = False,
                    return_fig: bool = False,
@@ -206,11 +206,11 @@ def gate_frequency(adata: AnnData,
 @_default_gate
 @_enable_gate_aliases
 def cell_counts(adata: AnnData,
-                gate: str = None,
-                groupby: Optional[Union[str, list[str]]] = None,
+                gate: str,
+                groupby: str, 
                 splitby: Optional[str] = None,
-                cmap: str = None,
-                order: list[str] = None,
+                cmap: Optional[str] = None,
+                order: Optional[Union[list[str], str]] = None,
                 stat_test: Optional[str] = "Kruskal",
                 figsize: tuple[float, float] = (3,3),
                 return_dataframe: bool = False,
