@@ -85,9 +85,9 @@ def _calculate_fold_changes(adata: AnnData,
                             group2: Union[list[Union[str, int]], str, int],
                             gate: str,
                             layer: str,
-                            data_group: Optional[Union[list[str], str]] = "sample_ID",
+                            data_group: str = "sample_ID",
                             data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                            test: Literal["Kruskal", "t-test"] = "Kruskal"
+                            test: Literal["Kruskal", "Wilcoxon", "t-test"] = "Kruskal"
                             ) -> pd.DataFrame:
     
     """asinh fold change calculation"""

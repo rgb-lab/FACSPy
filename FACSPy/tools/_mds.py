@@ -8,13 +8,13 @@ from .._utils import _default_layer
 @_default_layer
 def mds_samplewise(adata: AnnData,
                    layer: str,
-                   data_group: Optional[Union[list[str], str]] = "sample_ID",
+                   data_group: str = "sample_ID",
                    data_metric: Literal["mfi", "fop"] = "mfi",
                    use_only_fluo: bool = True,
                    exclude: Optional[Union[list[str], str]] = None,
                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
                    n_components: int = 3,
-                   copy = False,
+                   copy: bool = False,
                    *args,
                    **kwargs) -> Optional[AnnData]:
     """\
