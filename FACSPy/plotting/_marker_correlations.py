@@ -1,13 +1,10 @@
 import pandas as pd
 from anndata import AnnData
 
-from matplotlib.figure import Figure
+import seaborn as sns
 from typing import Literal, Optional, Union
 
-from ._utils import (_scale_data,
-                     _get_uns_dataframe,
-                     _remove_technical_channels,
-                     _prepare_heatmap_data,
+from ._utils import (_prepare_heatmap_data,
                      _remove_ticklabels,
                      _remove_ticks,
                      _scale_cbar_to_heatmap,
@@ -35,12 +32,12 @@ def _calculate_correlations(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def marker_correlation(adata: AnnData,
-                       gate: str = None,
-                       layer: str = None,
+                       gate: str,
+                       layer: str,
                        include_technical_channels: bool = False,
                        scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                       data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                       data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                       data_group: str = "sample_ID",
+                       data_metric: Literal["mfi", "fop"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cmap: str = "inferno",
                        y_label_fontsize: float = 10,
@@ -49,7 +46,7 @@ def marker_correlation(adata: AnnData,
                        return_fig: bool = False,
                        show: bool = True,
                        save: Optional[str] = None
-                       ) -> Optional[Union[Figure, pd.DataFrame]]:
+                       ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     """\
     Plot for marker correlation heatmap. 
 

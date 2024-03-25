@@ -11,14 +11,14 @@ from .._utils import _default_layer
 
 @_default_layer
 def pca_samplewise(adata: AnnData,
-                   layer: str = None,
-                   use_only_fluo: bool = True,
-                   n_components: int = 3,
-                   exclude: Optional[Union[str, list, str]] = None,
-                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                   data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                   layer: str,
+                   data_group: str = "sample_ID",
                    data_metric: Literal["mfi", "fop"] = "mfi",
-                   copy = False,
+                   use_only_fluo: bool = True,
+                   exclude: Optional[Union[list[str], str]] = None,
+                   scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
+                   n_components: int = 3,
+                   copy: bool = False,
                    *args,
                    **kwargs) -> Optional[AnnData]:
     """\

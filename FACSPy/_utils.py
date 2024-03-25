@@ -321,12 +321,14 @@ def _check_gate_name(gate: str) -> None:
     if not gate:
         raise GateNotProvidedError(gate)
     
-def _check_gate_path(gate_path):
+def _check_gate_path(gate_path: str) -> None:
     _check_gate_name(gate_path)
     if not GATE_SEPARATOR in gate_path:
         raise PopulationAsGateError(gate_path)
 
-def _is_parent(adata, gate, parent) -> bool:
+def _is_parent(adata: AnnData,
+               gate: str,
+               parent: str) -> bool:
     """Substring analysis to see if these are actually children"""
     parent_gate = _find_gate_path_of_gate(adata, parent)
     child_gate = _find_gate_path_of_gate(adata, gate) 
@@ -414,7 +416,7 @@ def _extract_partial_gate_path_start(gate_path: str,
     return GATE_SEPARATOR.join(gate_path.split("/")[:n_positions])
 
 def _find_gate_indices(adata: AnnData,
-                       gate_columns: Union[str, list[str]]) -> list[int]:
+                       gate_columns: Union[list[str], str]) -> list[int]:
     """Finds the index of provided populations in adata.uns["gating_cols"]
     This function is supposed to index columns provided as a string.
     That way, the indices can be used to access the sparse matrix
@@ -422,10 +424,10 @@ def _find_gate_indices(adata: AnnData,
 
     Parameters
     ----------
-    adata: AnnData
+    adata
         the provided dataset
     
-    gate_columns: Union[str, list[str]]:
+    gate_columns
         the gate columns that are supposed to be looked up
 
     Examples
@@ -534,7 +536,8 @@ def _find_grandparent_population(gate: str) -> str:
     _check_gate_name(gate)
     return _find_parent_population(_find_parent_gate(gate))
 
-def _find_parents_recursively(gate: str, parent_list = None) -> list[str]:
+def _find_parents_recursively(gate: str,
+                              parent_list: Optional[list[str]] = None) -> list[str]:
     """Finds all parent gates of a specified gate
 
     Parameters
@@ -633,8 +636,7 @@ def _close_polygon_gate_coordinates(vertices: np.ndarray) -> np.ndarray:
     """
     return np.vstack([vertices, vertices[0]])
 
-
-def _create_gate_lut(wsp_dict: dict[str, dict]) -> dict:
+def _create_gate_lut(wsp_dict: dict[str: dict]) -> dict:
     #TODO: needs check for group...
     _gate_lut = {}
     gated_files = []
@@ -688,7 +690,7 @@ def _fetch_fluo_channels(adata: AnnData) -> list[str]:
 
 def subset_fluo_channels(adata: AnnData,
                          as_view: bool = False,
-                         copy: bool = False) -> AnnData:
+                         copy: bool = False) -> Optional[AnnData]:
     """\
     Subsets only channels that are of type 'fluo'.
 
@@ -729,12 +731,12 @@ def subset_channels(adata: AnnData,
                     copy: bool = False) -> Optional[AnnData]:
     if not use_panel and channels is None:
         raise ChannelSubsetError
-    
+
     if use_panel: ## overrides channels input.
         channels = adata.uns["panel"].dataframe["antigens"].to_list()
     
     if keep_state_channels:
-        state_channels = [channel for channel in adata.var_names if any(k in channel.lower()
+        state_channels: list[str] = [channel for channel in adata.var_names if any(k in channel.lower()
                                                                         for k in scatter_channels + time_channels + cytof_technical_channels + spectral_flow_technical_channels)]
         channels += state_channels
 
@@ -745,7 +747,7 @@ def subset_channels(adata: AnnData,
 def subset_gate(adata: AnnData,
                 gate: str,
                 as_view: bool = False,
-                copy: bool = False) -> AnnData:
+                copy: bool = False) -> Optional[AnnData]:
     """\
     Subsets the dataset to a specific population.
 
@@ -802,7 +804,7 @@ def subset_gate(adata: AnnData,
 def equalize_groups(adata: AnnData,
                     fraction: Optional[float] = None,
                     n_obs: Optional[int] = None,
-                    on: Union[str, list[str]] = None, 
+                    on: Union[list[str], str] = "sample_ID", 
                     random_state: int = 187,
                     as_view: bool = False,
                     copy: bool = False
@@ -849,22 +851,26 @@ def equalize_groups(adata: AnnData,
     #TODO: add "min" as a parameter
     np.random.seed(random_state)
     if n_obs and fraction:
-        raise ValueError("Please provide either `n_obs` or `fraction`")
+        raise ValueError("Please provide either `n_obs` or `fraction`, not both.")
+
     if n_obs is not None:
         new_n_obs = n_obs
     elif fraction is not None:
         if fraction > 1 or fraction < 0:
             raise ValueError(f'`fraction` needs to be within [0, 1], not {fraction}')
         new_n_obs = int(adata.obs.value_counts(on).min() * fraction)
+    else:
+        raise ValueError("Please provide one of `n_obs` or `fraction`")
     
-    if on is None:
-        warnings.warn("Equalizing... groups to equalize are set to 'sample_ID'")
-        on = "sample_ID"
 
     # we check if there are enough cells per group
     n_cells_per_group = adata.obs.groupby(on, observed = True).size()
     groups_below_n_obs = n_cells_per_group[n_cells_per_group < new_n_obs].index.tolist()
     groups_above_n_obs = n_cells_per_group[n_cells_per_group >= new_n_obs].index.tolist()
+
+    if on is None:
+        warnings.warn("Equalizing... groups to equalize are set to 'sample_ID'")
+        on = "sample_ID"
 
     if groups_below_n_obs:
         warnings.warn(
@@ -940,15 +946,19 @@ def remove_unnamed_channels(adata: AnnData,
     adata._inplace_subset_var(channels_to_keep)
     return adata if copy else None
 
-def _flatten_nested_list(l):
-    return [item for sublist in l for item in sublist]
+def _flatten_nested_list(list_to_flatten):
+    return [item for sublist in list_to_flatten for item in sublist]
 
 def _is_valid_sample_ID(adata: AnnData,
-                        string_to_check) -> bool:
+                        string_to_check: Optional[str]) -> bool:
+    if not string_to_check:
+        return False
     return string_to_check in adata.obs["sample_ID"].unique()
 
 def _is_valid_filename(adata: AnnData,
-                       string_to_check) -> bool:
+                       string_to_check: Optional[str]) -> bool:
+    if not string_to_check:
+        return False
     return string_to_check in adata.obs["file_name"].unique()
 
 def is_fluo_channel(adata: AnnData,
@@ -971,8 +981,8 @@ def _create_comparisons(data: pd.DataFrame,
 
 def convert_cluster_to_gate(adata: AnnData,
                             cluster_key: str,
-                            positive_cluster: Union[int, str, list[int], list[str]],
-                            population_name: Optional[str],
+                            positive_cluster: Union[list[int], list[str], int, str],
+                            population_name: str,
                             parent_name: str,
                             copy: bool = False) -> Optional[AnnData]:
     """\
@@ -1138,7 +1148,7 @@ def rename_channel(adata: AnnData,
     return adata if copy else None
 
 def remove_channel(adata: AnnData,
-                   channel: Union[str, list[str]],
+                   channel: Union[list[str], str],
                    as_view: bool = False,
                    copy: bool = False) -> Optional[AnnData]:
     """\

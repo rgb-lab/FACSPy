@@ -24,7 +24,7 @@ from .._settings import settings
 
 def prepare_data_subsets(adata: AnnData,
                          by: Literal["sample_ID", "file_name"],
-                         sample_identifier: str,
+                         sample_identifier: Optional[str],
                          marker: str,
                          scatter: str,
                          sample_size: int = 5_000)-> tuple[AnnData, AnnData]:
@@ -130,8 +130,8 @@ def transformation_histogram_plot(type: Literal["compensated", "transformed"],
                                   stained_data_x: np.ndarray,
                                   stained_data_curve: np.ndarray,
                                   control_data: pd.DataFrame,
-                                  control_data_x: np.ndarray,
-                                  control_data_curve: np.ndarray,
+                                  control_data_x: Optional[np.ndarray],
+                                  control_data_curve: Optional[np.ndarray],
                                   plot_params: dict) -> Axes:
     control_is_present = control_data_x is not None and control_data_curve is not None
     
@@ -162,17 +162,17 @@ def transformation_histogram_plot(type: Literal["compensated", "transformed"],
 @_default_gate
 @_enable_gate_aliases
 def transformation_plot(adata: AnnData,
-                        gate: Optional[str] = None,
-                        sample_identifier: str = None,
-                        marker: Optional[Union[str, list[str]]] = None,
+                        gate: str,
+                        marker: str,
+                        sample_identifier: Optional[str] = None,
                         scatter: str = "SSC-A",
-                        sample_size: Optional[int] = 5_000,
+                        sample_size: int = 5_000,
                         figsize: tuple[float, float] = (10,3),
                         return_dataframe: bool = False,
                         return_fig: bool = False,
                         show: bool = True,
                         save: Optional[str] = None
-                        ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
+                        ) -> Optional[Union[Figure, Axes, tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]]]:
     """\
     Transformation plot. Plots the data on a log scale (biaxial),
     the data on the transformed scale (biaxial) and the data
@@ -187,11 +187,11 @@ def transformation_plot(adata: AnnData,
         The gate to be analyzed, called by the population name.
         This parameter has a default stored in fp.settings, but
         can be superseded by the user.
+    marker
+        The channel to plot
     sample_identifier
         Used to specify a specific sample. Can be a valid sample_ID and a valid file_name
         from the .obs slot or the metadata
-    marker
-        The channel to plot
     scatter
         The scatter channel to use on the y-axis. Defaults to SSC-A
     sample_size
@@ -263,11 +263,11 @@ def transformation_plot(adata: AnnData,
     }
     ### first plot: raw fluorescence values
     
-    stained_data_compensated = stained_sample.to_df(layer = "compensated")
-    control_data_compensated = control_samples.to_df(layer = "compensated")
+    stained_data_compensated: pd.DataFrame = stained_sample.to_df(layer = "compensated")
+    control_data_compensated: pd.DataFrame = control_samples.to_df(layer = "compensated")
     
-    stained_data_transformed = stained_sample.to_df(layer = "transformed")
-    control_data_transformed = control_samples.to_df(layer = "transformed")
+    stained_data_transformed: pd.DataFrame = stained_sample.to_df(layer = "transformed")
+    control_data_transformed: pd.DataFrame = control_samples.to_df(layer = "transformed")
 
     stained_data_x, stained_data_curve = calculate_histogram_data(stained_data_transformed,
                                                                   plot_params = plot_params)
@@ -278,17 +278,17 @@ def transformation_plot(adata: AnnData,
         control_data_x, control_data_curve = None, None
 
     if return_dataframe:
-        return (stained_data_compensated,
-                stained_data_transformed,
-                control_data_compensated,
-                control_data_transformed,
-                stained_data_x,
-                stained_data_curve,
-                control_data_x,
-                control_data_curve)
+        return (
+            stained_data_compensated,
+            stained_data_transformed,
+            control_data_compensated,
+            control_data_transformed,
+            stained_data_x,
+            stained_data_curve,
+            control_data_x,
+            control_data_curve
+        )
     
-    fig: Figure
-    ax: list[Axes]
     ncols = 3
     nrows = 1
     figsize = (10, 3)
@@ -333,12 +333,12 @@ def transformation_plot(adata: AnnData,
     
 
 def cofactor_distribution(adata: AnnData,
-                          marker: Optional[str] = None,
-                          groupby: Optional[str] = None,
+                          marker: str,
+                          groupby: str,
                           splitby: Optional[str] = None,
-                          cmap: str = None,
-                          order: list[str] = None,
-                          stat_test: str = "Kruskal",
+                          cmap: Optional[str] = None,
+                          order: Optional[Union[list[str], str]] = None,
+                          stat_test: Optional[str] = "Kruskal",
                           figsize: tuple[float, float] = (3,3),
                           return_dataframe: bool = False,
                           return_fig: bool = False,
