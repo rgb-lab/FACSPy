@@ -946,15 +946,19 @@ def remove_unnamed_channels(adata: AnnData,
     adata._inplace_subset_var(channels_to_keep)
     return adata if copy else None
 
-def _flatten_nested_list(l):
-    return [item for sublist in l for item in sublist]
+def _flatten_nested_list(list_to_flatten):
+    return [item for sublist in list_to_flatten for item in sublist]
 
 def _is_valid_sample_ID(adata: AnnData,
-                        string_to_check: str) -> bool:
+                        string_to_check: Optional[str]) -> bool:
+    if not string_to_check:
+        return False
     return string_to_check in adata.obs["sample_ID"].unique()
 
 def _is_valid_filename(adata: AnnData,
-                       string_to_check: str) -> bool:
+                       string_to_check: Optional[str]) -> bool:
+    if not string_to_check:
+        return False
     return string_to_check in adata.obs["file_name"].unique()
 
 def is_fluo_channel(adata: AnnData,
