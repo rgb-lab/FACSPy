@@ -4,7 +4,13 @@ import numpy as np
 import pandas as pd
 from flowio import FlowData
 from flowio.exceptions import FCSParsingError
+<<<<<<< Updated upstream
 from typing import Optional
+=======
+from flowutils.compensate import get_spill
+
+from typing import Optional, Union
+>>>>>>> Stashed changes
 
 from ..transforms._matrix import Matrix
 from ..exceptions._exceptions import (NotCompensatedError,
@@ -90,21 +96,27 @@ class FCSFile:
         creates a compensation matrix from the fcs
         file or creates and empty matrix if spill is not saved within the fcs file
         """
-        
-        if "spill" not in self.fcs_metadata:
-            fluoro_channels_no = len(
-                [channel for channel in self.channels.index
-                 if any(k not in channel.lower() for k in ["fsc", "ssc", "time"])]
-            )
-            return Matrix(matrix_id = "FACSPy_empty",
-                          detectors = self.channels.index,
-                          fluorochromes = self.channels["pns"],
-                          spill_data_or_file = np.eye(N = fluoro_channels_no, M = fluoro_channels_no))
 
+        if "spill" not in self.fcs_metadata:
+            detectors = [
+                channel for channel in self.channels.index
+                if any(k not in channel.lower() for k in ["fsc", "ssc", "time"])
+            ]
+            detector_n = len(detectors)
+            fluorochromes = self.channels.loc[self.channels.index.isin(detectors), "pns"].tolist()
+            return Matrix(matrix_id = "FACSPy_empty",
+                          detectors = detectors,
+                          fluorochromes = fluorochromes,
+                          spill_data_or_file = np.eye(N = detector_n, M = detector_n))
+
+        matrix, detectors = get_spill(self.fcs_metadata["spill"])
+        fluorochromes = self.channels.loc[self.channels.index.isin(detectors), "pns"].tolist()
+        assert matrix.shape[0] == len(detectors)
+        assert matrix.shape[0] == len(fluorochromes)
         return Matrix(matrix_id = "acquisition_defined",
-                      detectors = self.channels.index,
-                      fluorochromes = self.channels["pns"],
-                      spill_data_or_file = self.fcs_metadata["spill"])
+                      detectors = detectors,
+                      fluorochromes = fluorochromes,
+                      spill_data_or_file = matrix)
 
     def _parse_event_count(self,
                            fcs_data: FlowData):
