@@ -7,7 +7,7 @@ import scanpy as sc
 import pandas as pd
 import warnings
 
-from typing import Optional
+from typing import Optional, MutableMapping
 
 from ._utils import (_make_obs_valid,
                      _make_obsm_valid,
@@ -24,7 +24,7 @@ from ._utils import (_make_obs_valid,
 from ..synchronization._synchronize import _hash_dataset
 
 def save_dataset(adata: AnnData,
-                 output_dir: Optional[str] = None,
+                 output_dir: Optional[PathLike] = None,
                  file_name: Optional[PathLike] = None,
                  overwrite: bool = False,
                  **kwargs
@@ -69,9 +69,9 @@ def save_dataset(adata: AnnData,
 
     if os.path.isfile(file_name) and not overwrite:
         raise FileExistsError("The file already exists. Please set 'overwrite' to True")
-    
+        
+    uns = adata.uns.copy()
     try:
-        uns = adata.uns.copy()
         del adata.uns
         _make_obs_valid(adata)
         _make_var_valid(adata) 
@@ -109,8 +109,8 @@ def save_dataset(adata: AnnData,
     print("File saved successfully")
 
 
-def read_dataset(input_dir: str = None,
-                 file_name: str = None) -> AnnData:
+def read_dataset(input_dir: Optional[str] = None,
+                 file_name: Optional[PathLike] = None) -> AnnData:
     """\
     Reads the dataset from the hard drive. 
 
@@ -151,7 +151,7 @@ def read_dataset(input_dir: str = None,
     
     uns_name = file_name.replace(".h5ad", ".uns")
     with open(uns_name, "rb") as uns_metadata:
-        uns = pd.read_pickle(uns_metadata)
+        uns: MutableMapping = pd.read_pickle(uns_metadata)
     adata.uns = uns
 
     # because the PYTHONHASHSEED is changed for every session,
