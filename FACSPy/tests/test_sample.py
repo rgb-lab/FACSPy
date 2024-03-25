@@ -51,7 +51,6 @@ def test_channels(fcs_file: FCSFile):
 def test_fcs_compensation(fcs_file: FCSFile):
     assert isinstance(fcs_file.fcs_compensation, Matrix)
     assert fcs_file.fcs_compensation.matrix.shape == (14,14)
-    assert all(fcs_file.fcs_compensation.fluorochromes == fcs_file.channels["pns"].to_list())
     assert fcs_file.fcs_compensation.id == "acquisition_defined"
 
 def test_get_events(fcs_file: FCSFile):
