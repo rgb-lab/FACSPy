@@ -859,8 +859,7 @@ def test_default_layer_decorator_return_all_defaults(empty_adata: AnnData):
     and layer is not passed.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -896,8 +895,7 @@ def test_default_layer_decorator_return_all_defaults_other_kwargs(empty_adata: A
     We test if other kwargs are passed as the user wants.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -936,8 +934,7 @@ def test_default_layer_decorator_pass_as_kwargs(empty_adata: AnnData):
     and layer is passed as a keyword argument.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -975,8 +972,7 @@ def test_default_layer_decorator_pass_as_kwargs_other_kwargs(empty_adata: AnnDat
     We test if other kwargs are passed as the user wants.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1110,8 +1106,7 @@ def test_default_layer_decorator_pass_as_args(empty_adata: AnnData):
     and layer is passed as a positional argument.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1149,8 +1144,7 @@ def test_default_layer_decorator_pass_as_args_other_kwargs(empty_adata: AnnData)
     We test if other kwargs are passed as the user wants.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1288,8 +1282,7 @@ def test_default_layer_decorator_return_facspy_defaults(empty_adata: AnnData):
     and layer is not passed.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1327,8 +1320,7 @@ def test_default_layer_decorator_return_facspy_defaults_other_kwargs(empty_adata
     We test if other kwargs are passed as the user wants.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1371,8 +1363,7 @@ def test_default_layer_decorator_return_facspy_defaults_kwarg_passing(empty_adat
     and layer is passed via a keyword argument.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1411,8 +1402,7 @@ def test_default_layer_decorator_return_facspy_defaults_kwarg_passing_other_kwar
     We test if other kwargs are passed as the user wants.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1552,8 +1542,7 @@ def test_default_layer_decorator_return_facspy_defaults_arg_passing(empty_adata:
     and layer is passed as an positional argument.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1593,8 +1582,7 @@ def test_default_layer_decorator_return_facspy_defaults_arg_passing_other_kwargs
     We test if other kwargs are passed as the user wants.
     """
     @_default_layer
-    def my_func_decorated(adata: AnnData,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1734,8 +1722,7 @@ def test_default_gate_decorator_return_all_defaults(empty_adata: AnnData):
     and gate is not passed.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1771,8 +1758,7 @@ def test_default_gate_decorator_return_all_defaults_other_kwargs(empty_adata: An
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1811,8 +1797,7 @@ def test_default_gate_decorator_pass_as_kwargs(empty_adata: AnnData):
     and layer is passed as a keyword argument.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1848,8 +1833,7 @@ def test_default_gate_decorator_pass_as_kwargs_other_kwargs(empty_adata: AnnData
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -1983,8 +1967,7 @@ def test_default_gate_decorator_pass_as_args(empty_adata: AnnData):
     and layer is passed as a positional argument.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2022,8 +2005,7 @@ def test_default_gate_decorator_pass_as_args_other_kwargs(empty_adata: AnnData):
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2161,8 +2143,7 @@ def test_default_gate_decorator_return_facspy_defaults(empty_adata: AnnData):
     and layer is not passed.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2200,8 +2181,7 @@ def test_default_gate_decorator_return_facspy_defaults_other_kwargs(empty_adata:
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2244,8 +2224,7 @@ def test_default_gate_decorator_return_facspy_defaults_kwarg_passing(empty_adata
     and layer is passed via a keyword argument.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2284,8 +2263,7 @@ def test_default_gate_decorator_return_facspy_defaults_kwarg_passing_other_kwarg
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2423,8 +2401,7 @@ def test_default_gate_decorator_return_facspy_defaults_arg_passing(empty_adata: 
     and layer is passed as an positional argument.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2464,8 +2441,7 @@ def test_default_gate_decorator_return_facspy_defaults_arg_passing_other_kwargs(
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2603,9 +2579,7 @@ def test_default_gate_and_layer_decorator_return_all_defaults(empty_adata: AnnDa
     and gate is not passed.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2644,9 +2618,7 @@ def test_default_gate_and_layer_decorator_return_all_defaults_other_kwargs(empty
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2688,9 +2660,7 @@ def test_default_gate_and_layer_decorator_pass_as_kwargs(empty_adata: AnnData):
     and layer is passed as a keyword argument.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2731,9 +2701,7 @@ def test_default_gate_and_layer_decorator_pass_as_kwargs_other_kwargs(empty_adat
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2882,9 +2850,7 @@ def test_default_gate_and_layer_decorator_pass_as_args(empty_adata: AnnData):
     and layer is passed as a positional argument.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -2925,9 +2891,7 @@ def test_default_gate_and_layerdecorator_pass_as_args_other_kwargs(empty_adata: 
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3080,9 +3044,7 @@ def test_default_gate_and_layer_decorator_return_facspy_defaults(empty_adata: An
     and layer is not passed.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3124,9 +3086,7 @@ def test_default_gate_and_layer_decorator_return_facspy_defaults_other_kwargs(em
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3173,9 +3133,7 @@ def test_default_gate_and_layer_decorator_return_facspy_defaults_kwarg_passing(e
     and layer is passed via a keyword argument.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3219,9 +3177,7 @@ def test_default_gate_and_layer_decorator_return_facspy_defaults_kwarg_passing_o
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3379,9 +3335,7 @@ def test_default_gate_and_layer_decorator_return_facspy_defaults_arg_passing(emp
     and layer is passed as an positional argument.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3427,9 +3381,7 @@ def test_default_gate_and_layer_decorator_return_facspy_defaults_arg_passing_oth
     We test if other kwargs are passed as the user wants.
     """
     @_default_gate_and_default_layer
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3695,9 +3647,7 @@ def test_enable_gate_alias_decorator(empty_adata: AnnData):
     fp.settings.add_new_alias("complicated", "easy")
 
     @_enable_gate_aliases
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3742,9 +3692,7 @@ def test_enable_gate_alias_decorator_no_alias(empty_adata: AnnData):
     fp.settings.add_new_alias("complicated", "easy")
 
     @_enable_gate_aliases
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3844,9 +3792,7 @@ def test_enable_gate_alias_decorator_default_gate(empty_adata: AnnData):
 
     @_default_gate
     @_enable_gate_aliases
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3892,9 +3838,7 @@ def test_enable_gate_alias_decorator_default_gate_and_default_layer(empty_adata:
 
     @_default_gate_and_default_layer
     @_enable_gate_aliases
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3938,9 +3882,7 @@ def test_enable_gate_alias_decorator_default_gate_and_default_layer_pass_gate_as
 
     @_default_gate_and_default_layer
     @_enable_gate_aliases
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -3968,9 +3910,7 @@ def test_enable_gate_alias_decorator_default_gate_and_default_layer_pass_gate_as
 
     @_default_gate_and_default_layer
     @_enable_gate_aliases
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
@@ -4029,9 +3969,7 @@ def test_enable_gate_alias_decorator_default_gate_and_default_layer_pass_gate_an
 
     @_default_gate_and_default_layer
     @_enable_gate_aliases
-    def my_func_decorated(adata: AnnData,
-                          gate: Optional[str] = None,
-                          layer: Optional[str] = None,
+    def my_func_decorated(adata: AnnData, gate: str, layer: str,
                           some: Optional[str] = "some",
                           other: str = "other",
                           keyword_arg: str = "keyword_arg"):
