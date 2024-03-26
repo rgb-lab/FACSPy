@@ -197,27 +197,77 @@ class unsupervisedGating(BaseGating):
     def __init__(self,
                  adata: AnnData,
                  gating_strategy: dict,
-                 layer: str = None,
+                 layer: str,
                  clustering_algorithm: Literal["leiden", "FlowSOM", "phenograph", "parc"] = "leiden",
-                 cluster_key: str = None,
+                 cluster_key: Optional[str] = None,
                  sensitivity: float = 1,
                  intervals: list[float] = [0.33,0.66]) -> None:
-        """
+        """\
+        Class for semi-supervised gating. This class allows to identify cell populations
+        based on their marker expression. Cells are first clustered using one of the four 
+        implemented algorithms (parc, leiden, phenograph and FlowSOM). The clusters are then 
+        analyzed and compared to a user-defined gating strategy.
+
+        Gating strategies are dicts with the following naming convention:
+        gating_strategy = {population_name: [parent_population, [marker1+, marker2-]]}
+        where the population name is the population that is identified, the parent
+        population states which cell population is used to derive the population from 
+        and the marker specify the population characteristics.
+
+        Parameters
+        ----------
+        adata
+            The anndata object of shape `n_obs` x `n_vars`
+            where rows correspond to cells and columns to the channels.
+        gating_strategy
+            The gating strategy with the above mentioned format.
+        layer
+            The layer corresponding to the data matrix.
+        clustering_algorithm
+            The clustering algorithm used for community detection. One of `parc`, 
+            `leiden`, `phenograph` or `FlowSOM`. 
+        cluster_key
+            The cluster key to be added to the dataset.
+        sensitivity
+            Parameter to control the sensitivity of the marker detection.  The value will
+            be log-transformed so that a sensitivity of 1 leads to cutoff of np.arcsinh(1) (~0.88).
+            For every log there will be the addition of 0.1. Sensitivity of 0.1 therefore
+            leads to np.arcsinh(1) + 0.1*-np.log10(0.1) which is np.arcsinh(1) + 0.1.
+            To increase the sensitivity, choose higher values (100 will result in a decrease of 0.2).
         intervals:
             gives the intervals for lo, int and hi so that the first two numbers
-            denote the lo quantile. Defaults to the 33rd percentile and below
+            denote the lo quantile. Defaults to the 33rd and 66th percentile.
+
+        Returns
+        -------
+
+        A :class:`~AnnData` object where the identified populations are stored in
+        adata.obsm["gating"].
+        
+
+        Examples
+        --------
+        >>> import FACSPy as fp
+        >>> dataset = fp.dt.create_dataset(...)
+        >>> gating_strategy = {"T_cells": ["CD45+", ["CD3+"]]}
+        >>> clf = fp.ml.unsupervisedGating(
+        ...     dataset,
+        ...     gating_strategy = gating_strategy,
+        ...     layer = "transformed",
+        ...     clustering_algorithm = "parc"
+        ... )
+        >>> clf.identify_populations()
+
         """
+        if not gating_strategy:
+            raise ValueError("Please provide a gating strategy.")
         gating_strategy = gating_strategy
-        self.gating_strategy = self._preprocess_gating_strategy(gating_strategy)
-        self.clustering_algorithm = clustering_algorithm
-        self.adata = adata
-        self.cluster_key = cluster_key or "clusters"
-        self.layer = layer
+        self.gating_strategy: dict = self._preprocess_gating_strategy(gating_strategy)
+        self.clustering_algorithm: str = clustering_algorithm
+        self.adata: AnnData = adata
+        self.cluster_key: str = cluster_key or "clusters"
+        self.layer: str = layer
         # sensitivity controls the cutoff.
-        # will be log-transformed so that a sensitivity of 1 leads to cutoff of np.arcsinh(1) (~0.88).
-        # and for every log there will be the addition of 0.1. sensitivity of 0.1 therefore
-        # leads to np.arcsinh(1) + 0.1*-np.log10(0.1) which is np.arcsinh(1) + 0.1.
-        # to increase the sensitivity, choose higher values (100 will result in a decrease of 0.2).
         self.sensitivity = sensitivity # will be logtransformed so that 1 is a cut
         if len(intervals) != 2:
             raise TypeError("Please provide intervals in two steps (e.g. [0.33, 0.66]).")
@@ -225,9 +275,9 @@ class unsupervisedGating(BaseGating):
         self._define_disallowed_characters()
 
     def _define_disallowed_characters(self) -> None:
-        disallowed_characters = ["/", "[", "{", "(", ")", "}", "]", ".", "-"]
-        replacement_dict = {char: "" for char in disallowed_characters}
-        self.transtab = str.maketrans(replacement_dict)
+        self._disallowed_characters = ["/", "[", "{", "(", ")", "}", "]", ".", "-"]
+        replacement_dict = {char: "" for char in self._disallowed_characters}
+        self._transtab = str.maketrans(replacement_dict)
         return
 
     def _generate_cutoff_table(self,
@@ -465,9 +515,10 @@ class unsupervisedGating(BaseGating):
         return " & ".join(query_strings)
 
     def _clean_marker_names(self,
-                            markers: list[str]) -> list[str]:
+                            markers: Union[pd.Index, dict]) -> Union[list[str], dict, pd.Index]:
         """This function checks for disallowed characters that would otherwise mess up the pd.query function"""
-
+        if not isinstance(markers, pd.Index) and not isinstance(markers, dict):
+            raise ValueError("Input type not valid.")
         if isinstance(markers, pd.Index):
             return self._remove_disallowed_character_list(markers)
 
@@ -478,19 +529,19 @@ class unsupervisedGating(BaseGating):
         return markers
 
     def _remove_disallowed_character_list(self,
-                                          str_list: list[str]) -> list[str]:
+                                          str_list: pd.Index) -> list[str]:
         """removes disallowed characters from strings of a list"""
         return [self._remove_disallowed_character(string) for string in str_list]
 
     def _remove_disallowed_character(self,
                                      input_str: str) -> str:
         """removes disallowed characters from a string"""
-        return input_str.translate(self.transtab)
+        return input_str.translate(self._transtab)
 
     def _identify_clusters_of_interest(self,
                                        adata: AnnData,
                                        markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
-        df = adata.to_df(layer = self.layer)
+        df = self.adata.to_df(layer = self.layer)
         df.columns = self._clean_marker_names(df.columns)
         markers_of_interest = self._clean_marker_names(markers_of_interest)
         df[self.cluster_key] = adata.obs[self.cluster_key].to_list()
@@ -536,6 +587,21 @@ class unsupervisedGating(BaseGating):
 
 class supervisedGating(BaseGating):
     """\
+    Class for supervised gating. This class implements the learning of a 
+    gating strategy based on pregated samples with according prediction of 
+    ungated samples.
+
+    Parameters
+    ----------
+    adata
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
+    
+    Returns
+    -------
+
+    a :class:`~AnnData` object where the predicted gating has been saved
+    in adata.obsm["gating"].
     Examples
     --------
 
