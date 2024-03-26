@@ -8,6 +8,7 @@ Find below the vignettes for the commonly used FACSPy datastructures
 dataset_creation_and_transformation
 dataset_frequency_analysis
 dataset_mfi_fop
+dataset_unsupervised_gating
 panel_object
 metadata_object
 cofactortable_object
