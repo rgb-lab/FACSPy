@@ -6,6 +6,7 @@ Find below the vignettes for the commonly used FACSPy datastructures
 :maxdepth: 1
 
 dataset_creation_and_transformation
+dataset_frequency_analysis
 panel_object
 metadata_object
 cofactortable_object
