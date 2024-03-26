@@ -9,6 +9,7 @@ dataset_creation_and_transformation
 dataset_frequency_analysis
 dataset_mfi_fop
 dataset_unsupervised_gating
+dataset_samplewise_analysis
 panel_object
 metadata_object
 cofactortable_object
