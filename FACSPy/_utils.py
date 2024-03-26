@@ -1132,8 +1132,14 @@ def rename_channel(adata: AnnData,
     adata = adata.copy() if copy else adata
     # we need to rename it in the panel, the cofactors and var
     adata.var = adata.var.replace(old_channel_name, new_channel_name)
-    adata.var = adata.var.set_index("pns", drop = False)
-    adata.var.index.name = "" # just to keep the index clean :)
+    
+    # curiosity: only the uncommented line works. The commented lead to a serious
+    # file save error 'TypeError: expected str, bytes or os.PathLike object, not NoneType
+    # Error raised while writing key 'pns' of <class 'h5py._hl.group.Group'> to /
+    # in anndata\_io\h5ad.py:104
+    adata.var.index = adata.var["pns"].tolist()
+    # adata.var = adata.var.set_index("pns", drop = False)
+    # adata.var.index.name = "" # just to keep the index clean :)
 
     if "panel" in adata.uns and len(adata.uns["panel"].dataframe) > 0:
         from .dataset._supplements import Panel

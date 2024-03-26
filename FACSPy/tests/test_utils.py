@@ -833,6 +833,19 @@ def test_rename_channel(mock_dataset: AnnData):
     assert "something" in adata.uns["panel"].dataframe["antigens"].tolist()
     assert "CXCR4" not in adata.uns["panel"].dataframe["antigens"].tolist()
 
+def test_rename_channel_dataset_save(tmp_path, mock_dataset: AnnData):
+    adata = mock_dataset
+    fp.rename_channel(adata, "CXCR4", "something")
+    assert "something" in adata.var_names.tolist()
+    assert "CXCR4" not in adata.var_names.tolist()
+    assert "something" in adata.var["pns"].tolist()
+    assert "CXCR4" not in adata.var["pns"].tolist()
+    # check if the panel has been adjusted
+    assert "something" in adata.uns["panel"].dataframe["antigens"].tolist()
+    assert "CXCR4" not in adata.uns["panel"].dataframe["antigens"].tolist()
+    # assert that saving is possible
+    fp.save_dataset(adata, tmp_path, "test")
+
 def test_convert_cluster_to_gate(mock_dataset: AnnData):
     adata = mock_dataset
     adata.obs["cluster_col"] = np.random.randint(0, 5, adata.shape[0])
