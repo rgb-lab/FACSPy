@@ -174,3 +174,8 @@ def test_read_file_rehash(tmpdir,
                      file_name = "test")
     assert isinstance(x, AnnData)
     assert isinstance(x.uns["dataset_status_hash"], dict)
+
+def test_read_dataset_ValueError(mock_dataset):
+    # defaults are input_dir = None and file_name = None
+    with pytest.raises(ValueError):
+        fp.read_dataset()

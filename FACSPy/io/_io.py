@@ -134,6 +134,9 @@ def read_dataset(input_dir: Optional[str] = None,
     
     """
 
+    if not file_name:
+        raise ValueError("Please provide a file name")
+
     if input_dir:
         warnings.warn("The parameter `input_dir` is deprecated and will be removed in future versions", DeprecationWarning)
         file_name = os.path.join(input_dir, file_name)
