@@ -6,9 +6,9 @@ Find below the vignettes for the commonly used FACSPy datastructures
 :maxdepth: 1
 
 dataset_creation_and_transformation
+dataset_unsupervised_gating
 dataset_frequency_analysis
 dataset_mfi_fop
-dataset_unsupervised_gating
 dataset_samplewise_analysis
 panel_object
 metadata_object
