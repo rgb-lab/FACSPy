@@ -58,6 +58,10 @@ def _prepare_cluster_frequencies(adata: AnnData,
         normalized_values = dataframe[["count"]] / cluster_sums
         dataframe["count"] = normalized_values["count"]
         dataframe = dataframe.reset_index()
+    observed_combinations = list(adata.obs[groupings].drop_duplicates().to_numpy())
+    dataframe = dataframe.set_index(groupings)
+    dataframe = dataframe.loc[observed_combinations]
+    dataframe = dataframe.reset_index()
     return dataframe[dataframe[cluster_key] == cluster]
 
 
