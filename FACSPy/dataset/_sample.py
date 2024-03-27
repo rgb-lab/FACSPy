@@ -20,19 +20,20 @@ class FCSFile:
     intermediate representation of a sample FCS file.
     Organization into an object is meant to facilitate cleaner code
     """
+
     def __init__(self,
                  input_directory: str,
                  file_name: str,
                  subsample: Optional[int] = None,
                  truncate_max_range: bool = True
                  ) -> None:
-        
+
         self.original_filename = file_name
 
         raw_data = self._load_fcs_file_from_disk(input_directory,
-                                                file_name,
-                                                ignore_offset_error = False)
-        
+                                                 file_name,
+                                                 ignore_offset_error = False)
+
         self.compensation_status = "uncompensated"
         self.transform_status = "untransformed"
         self.gating_status = "ungated"
@@ -41,9 +42,10 @@ class FCSFile:
         self.version = self._parse_fcs_version(raw_data)
         self.fcs_metadata = self._parse_fcs_metadata(raw_data)
         self.channels = self._parse_channel_information(raw_data)
-        self.original_events = self._parse_and_process_original_events(raw_data,
-                                                                       subsample,
-                                                                       truncate_max_range)
+        self.original_events = \
+            self._parse_and_process_original_events(raw_data,
+                                                    subsample,
+                                                    truncate_max_range)
         self.event_count = self.original_events.shape[0]
         self.compensated_events: Optional[np.ndarray] = None
         self.fcs_compensation = self._parse_compensation_matrix_from_fcs()
@@ -51,12 +53,12 @@ class FCSFile:
     def __repr__(self) -> str:
         return (
             f'{self.__class__.__name__}('
-            f'v{self.version}, ' +
+            f'v{self.version}, '
             f'{self.original_filename}, '
-            f'{self.channels.shape[0]} channels, ' + 
-            f'{self.event_count} events, ' +
-            f'gating status: {self.gating_status}, ' + 
-            f'compensation status: {self.compensation_status}, ' + 
+            f'{self.channels.shape[0]} channels, '
+            f'{self.event_count} events, '
+            f'gating status: {self.gating_status}, '
+            f'compensation status: {self.compensation_status}, '
             f'transform status: {self.transform_status})'
         )
 
@@ -68,13 +70,16 @@ class FCSFile:
         elif source == "comp":
             self._get_compensated_events()
         else:
-            raise NotImplementedError("Only Raw ('raw') and compensated events ('comp') can be fetched.")
+            raise NotImplementedError(
+                "Only Raw ('raw') and compensated events \
+                ('comp') can be fetched."
+            )
 
     def _get_original_events(self) -> np.ndarray:
         """returns uncompensated original events"""
         return self.original_events
-    
-    def _get_compensated_events(self) -> np.ndarray:
+
+    def _get_compensated_events(self) -> Optional[np.ndarray]:
         """returns compensated events"""
         if self.compensation_status != "compensated":
             raise NotCompensatedError()
@@ -86,28 +91,38 @@ class FCSFile:
         performs a lookup in the channels dataframe and
         returns the channel index by the fcs file channel numbers
         """
-        return self.channels.loc[self.channels.index == channel_label, "channel_numbers"].iloc[0] - 1
+        return self.channels.loc[
+            self.channels.index == channel_label,
+            "channel_numbers"
+        ].iloc[0] - 1
 
     def _parse_compensation_matrix_from_fcs(self) -> Matrix:
         """
         creates a compensation matrix from the fcs
-        file or creates and empty matrix if spill is not saved within the fcs file
+        file or creates and empty matrix if spill
+        is not saved within the fcs file
         """
 
         if "spill" not in self.fcs_metadata:
             detectors = [
                 channel for channel in self.channels.index
-                if any(k not in channel.lower() for k in ["fsc", "ssc", "time"])
+                if any(k not in channel.lower()
+                       for k in ["fsc", "ssc", "time"])
             ]
             detector_n = len(detectors)
-            fluorochromes = self.channels.loc[self.channels.index.isin(detectors), "pns"].tolist()
+            fluorochromes = self.channels.loc[
+                self.channels.index.isin(detectors), "pns"
+            ].tolist()
             return Matrix(matrix_id = "FACSPy_empty",
                           detectors = detectors,
                           fluorochromes = fluorochromes,
-                          spill_data_or_file = np.eye(N = detector_n, M = detector_n))
+                          spill_data_or_file = np.eye(N = detector_n,
+                                                      M = detector_n))
 
         matrix, detectors = get_spill(self.fcs_metadata["spill"])
-        fluorochromes = self.channels.loc[self.channels.index.isin(detectors), "pns"].tolist()
+        fluorochromes = self.channels.loc[
+            self.channels.index.isin(detectors), "pns"
+        ].tolist()
         assert matrix.shape[0] == len(detectors)
         assert matrix.shape[0] == len(fluorochromes)
         return Matrix(matrix_id = "acquisition_defined",
@@ -126,14 +141,14 @@ class FCSFile:
         """subsamples the data array using a user defined number of cells"""
         if size >= events.shape[0]:
             return events
-        
+
         return events[np.random.randint(events.shape[0],
                                         size = size), :]
 
     def _parse_and_process_original_events(self,
                                            fcs_data: FlowData,
                                            subsample: Optional[int],
-                                           truncate_max_range: bool) -> np.ndarray:
+                                           truncate_max_range: bool) -> np.ndarray:  # noqa
         """parses and processes the original events"""
         tmp_orig_events = self._parse_original_events(fcs_data)
         if subsample is not None:
@@ -175,40 +190,46 @@ class FCSFile:
                                  arr: np.ndarray) -> np.ndarray:
         """Function to remove rows with NaN, inf and -inf"""
         if np.isinf(arr).any():
-            idxs = np.argwhere(np.isinf(arr))[:,0]
+            idxs = np.argwhere(np.isinf(arr))[:, 0]
             arr = arr[~np.in1d(np.arange(arr.shape[0]), idxs)]
-            warning_message = f"{idxs.shape[0]} cells were removed from " + \
-                              f"{self.original_filename} due to " + \
-                               "the presence of Infinity values"
+            warning_message = (
+                f"{idxs.shape[0]} cells were removed from "
+                f"{self.original_filename} due to "
+                "the presence of Infinity values"
+            )
             InfRemovalWarning(warning_message)
         if np.isnan(arr).any():
-            idxs = np.argwhere(np.isnan(arr))[:,0]
+            idxs = np.argwhere(np.isnan(arr))[:, 0]
             arr = arr[~np.in1d(np.arange(arr.shape[0]), idxs)]
-            warning_message = f"{idxs.shape[0]} cells were removed from " + \
-                              f"{self.original_filename} due to " + \
-                               "the presence of NaN values"
+            warning_message = (
+                f"{idxs.shape[0]} cells were removed from "
+                f"{self.original_filename} due to "
+                "the presence of NaN values"
+            )
             NaNRemovalWarning(warning_message)
         return arr
 
     def _adjust_channel_gain(self,
                              events: np.ndarray) -> np.ndarray:
         """divides the event fluorescence values by the channel gain"""
-        channel_gains = self.channels.sort_values("channel_numbers")["png"].to_numpy()
+        channel_gains = self.channels.sort_values("channel_numbers")["png"].to_numpy()  # noqa
         return np.divide(events, channel_gains)
-    
+
     def _adjust_decades(self,
                         events: np.ndarray) -> np.ndarray:
         """adjusts the decades"""
-        for (decades, log0), channel_number, channel_range in zip(self.channels["pne"],
-                                                                  self.channels["channel_numbers"],
-                                                                  self.channels["pnr"]):
+        for (decades, log0), \
+                channel_number, \
+                channel_range in zip(self.channels["pne"],
+                                     self.channels["channel_numbers"],
+                                     self.channels["pnr"]):
             if decades > 0:
                 events[:, channel_number - 1] = (
-                    10 ** (decades * events[:, channel_number - 1] / channel_range)
-                    ) * log0
-        
+                    10 ** (decades * events[:, channel_number - 1] / channel_range)  # noqa
+                ) * log0
+
         return events
-    
+
     def _adjust_time_channel(self,
                              events: np.ndarray) -> np.ndarray:
         """multiplies the time values by the time step"""
@@ -219,14 +240,22 @@ class FCSFile:
 
     def _find_time_channel(self) -> tuple[int, float]:
         """returns the index and time_step of the time channel if present"""
-        time_step = float(self.fcs_metadata["timestep"]) if "timestep" in self.fcs_metadata else 1.0
-        time_index = int(self.channels.loc[self.channels.index.isin(["Time", "time"]), "channel_numbers"].iloc[0]) -1
+        if "timestep" in self.fcs_metadata:
+            time_step = float(self.fcs_metadata["timestep"])
+        else:
+            time_step = 1.0
+        time_index = int(
+            self.channels.loc[
+                self.channels.index.isin(["Time", "time"]), "channel_numbers"
+            ].iloc[0]
+        ) - 1
         return (time_index, time_step)
 
     def _time_channel_exists(self) -> bool:
         """returns bool if time channel exists"""
         return any(
-            time_symbol in self.channels.index for time_symbol in ["Time", "time"]
+            time_symbol in self.channels.index
+            for time_symbol in ["Time", "time"]
         )
 
     def _parse_original_events(self,
@@ -245,10 +274,13 @@ class FCSFile:
             if char in input_string:
                 input_string = input_string.replace(char, "_")
         return input_string
-    
+
     def _parse_channel_information(self,
                                    fcs_data: FlowData) -> pd.DataFrame:
-        """retrieves the channel information from the fcs file and returns a dataframe"""
+        """\
+        retrieves the channel information from the
+        fcs file and returns a dataframe
+        """
         channels: dict = fcs_data.channels
         pnn_labels = [self._parse_pnn_label(channels, channel_number) for
                       channel_number in channels]
@@ -260,7 +292,7 @@ class FCSFile:
                            channel_number in channels]
         channel_ranges = [self._parse_channel_range(channel_number) for
                           channel_number in channels]
-        
+
         channel_numbers = [int(k) for k in channels]
 
         channel_frame = pd.DataFrame(
@@ -286,9 +318,11 @@ class FCSFile:
                          channel_number: str) -> str:
         """parses the pns labels from the fcs file"""
         try:
-            return self._remove_disallowed_characters_from_string(channels[channel_number]["PnS"]) 
+            return self._remove_disallowed_characters_from_string(
+                channels[channel_number]["PnS"]
+            )
         except KeyError:
-            return "" 
+            return ""
 
     def _parse_channel_range(self,
                              channel_number: str) -> Union[int, float]:
@@ -297,9 +331,10 @@ class FCSFile:
             return int(self.fcs_metadata[f"p{channel_number}r"])
         except ValueError as e:
             """
-            Some FCS Files have deranged channel ranges which throw a conversion error.
-            In order to avoid crashing, we return np.inf instead.
-            These values are not needed down the road, so we do not issue a warning.
+            Some FCS Files have deranged channel ranges which throw
+            a conversion error. In order to avoid crashing, we return
+            np.inf instead. These values are not needed down the road,
+            so we do not issue a warning.
             """
             if "invalid literal for int() with base 10" in str(e):
                 return np.inf
@@ -310,13 +345,16 @@ class FCSFile:
                                channel_number: str) -> tuple[float, float]:
         """parses the channel lin log from the fcs file"""
         try:
-            (decades, log0) = [float(x) for x in self.fcs_metadata[f"p{channel_number}e"].split(",")] 
-            if log0 == 0.0 and decades !=0:
-                log0 = 1.0 # FCS std states to use 1.0 for invalid 0 value
+            (decades, log0) = [
+                float(x)
+                for x in self.fcs_metadata[f"p{channel_number}e"].split(",")
+            ]
+            if log0 == 0.0 and decades != 0:
+                log0 = 1.0  # FCS std states to use 1.0 for invalid 0 value
             return (decades, log0)
         except KeyError:
             return (0.0, 0.0)
-    
+
     def _parse_channel_gain(self,
                             channel_number: str) -> float:
         """parses the channel gain from the fcs file"""
@@ -339,16 +377,24 @@ class FCSFile:
             return str(fcs_data.header["version"])
         except KeyError:
             return None
-        
+
     def _load_fcs_file_from_disk(self,
                                  input_directory: str,
                                  file_name: str,
                                  ignore_offset_error: bool) -> FlowData:
         """function to load the fcs from the hard rive"""
         try:
-            return FlowData(os.path.join(input_directory, file_name), ignore_offset_error)
+            return FlowData(
+                os.path.join(input_directory, file_name),
+                ignore_offset_error
+            )
         except FCSParsingError:
-            warnings.warn("FACSPy IO: FCS file could not be read with " + 
-                         f"ignore_offset_error set to {ignore_offset_error}. " +
-                          "Parameter is set to True.")
-            return FlowData(os.path.join(input_directory, file_name), ignore_offset_error = True)
+            warnings.warn(
+                "FACSPy IO: FCS file could not be read with "
+                f"ignore_offset_error set to {ignore_offset_error}. "
+                "Parameter is set to True."
+            )
+            return FlowData(
+                os.path.join(input_directory, file_name),
+                ignore_offset_error = True
+            )
