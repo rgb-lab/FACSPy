@@ -17,6 +17,4 @@ Access to FACSPy's modeling capacities.
 
     ml.supervisedGating
     ml.unsupervisedGating
-    ml.RandomForest
-    ml.DecisionTree
 ```
