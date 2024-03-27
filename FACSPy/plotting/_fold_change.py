@@ -143,23 +143,23 @@ def fold_change(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated'
-    >>> fp.pl.fold_change(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "compensated",
-    ...     groupby = "condition",
-    ...     group1 = "healthy",
-    ...     group2 = "disease",
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.tl.mfi(dataset)
+
+        fp.pl.fold_change(
+            dataset,
+            gate = "B_cells",
+            groupby = "organ",
+            group1 = "BM",
+            group2 = "PB",
+            figsize = (3,5)
+        )
 
     """
        

@@ -147,8 +147,12 @@ def mfi(adata: AnnData,
     >>> fp.tl.pca(dataset)
     >>> fp.tl.neighbors(dataset)
     >>> fp.tl.leiden(dataset)
-    >>> fp.tl.mfi(dataset, groupby = "leiden", aggregate = True) # will calculate MFI per leiden cluster
-    >>> fp.tl.mfi(dataset, groupby = "leiden", aggregate = False) # will calculate MFI per leiden cluster and sample_ID
+    >>> fp.tl.mfi(dataset,
+    ...           groupby = "T_cells_transformed_leiden",
+    ...           aggregate = True) # will calculate MFI per leiden cluster
+    >>> fp.tl.mfi(dataset,
+    ...           groupby = "T_cells_transformed_leiden",
+    ...           aggregate = False) # will calculate MFI per leiden cluster and sample_ID
     
     """
 

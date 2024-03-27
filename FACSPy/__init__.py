@@ -19,6 +19,9 @@ from ._utils import (subset_gate,
 from .io._io import save_dataset, read_dataset
 from ._settings import settings, FACSPyConfig
 
+from .datasets._datasets import mouse_lineages
+
+
 import sys
 
 sys.modules.update({f'{__name__}.{m}': globals()[m] for m in ['tl', 'pl', 'ml', 'dt', 'sync']})
@@ -38,4 +41,5 @@ all = [
     "rename_channel",
     "convert_cluster_to_gate",
     "FACSPyConfig",
+    "mouse_lineages"
 ]

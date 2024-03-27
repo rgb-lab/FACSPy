@@ -85,6 +85,7 @@ def _cluster_mfi_fop_baseplot(data_metric: str,
     if show is False:
         return ax
 
+@_default_gate_and_default_layer
 @_enable_gate_aliases
 def cluster_fop(adata: AnnData,
                 gate: str,
@@ -102,13 +103,12 @@ def cluster_fop(adata: AnnData,
                 show: bool = True,
                 save: Optional[str] = None
                 ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the frequency of parent (fop) values as calculated by fp.tl.fop
     as a combined strip-/boxplot for the indicated clustering.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -161,25 +161,32 @@ def cluster_fop(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.tl.fop(dataset, groupby = "T_cells_transformed_leiden")
-    >>> fp.pl.cluster_fop(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     marker = "CD3",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     splitby = "sex"
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.tl.fop(dataset,
+                  layer = "compensated",
+                  groupby = "CD45+_transformed_leiden",
+                  aggregate = False)
+
+        fp.pl.cluster_fop(
+            dataset,
+            layer = "compensated",
+            cluster_key = "CD45+_transformed_leiden",
+            marker = "B220",
+            stat_test = False
+        )
     
     """
     
@@ -200,6 +207,7 @@ def cluster_fop(adata: AnnData,
                                      save = save,
                                      show = show)
 
+@_default_gate_and_default_layer
 @_enable_gate_aliases
 def cluster_mfi(adata: AnnData,
                 gate: str,
@@ -217,13 +225,12 @@ def cluster_mfi(adata: AnnData,
                 show: bool = True,
                 save: Optional[str] = None
                 ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the median fluorescence intensity (mfi) values as calculated by fp.tl.mfi
     as a combined strip-/boxplot for the indicated clustering.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -276,26 +283,33 @@ def cluster_mfi(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.tl.mfi(dataset, groupby = "T_cells_transformed_leiden")
-    >>> fp.pl.cluster_mfi(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     marker = "CD3",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     splitby = "sex"
-    ... )
-    
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.tl.mfi(dataset,
+                  layer = "compensated",
+                  groupby = "CD45+_transformed_leiden",
+                  aggregate = False)
+
+        fp.pl.cluster_mfi(
+            dataset,
+            layer = "compensated",
+            cluster_key = "CD45+_transformed_leiden",
+            marker = "B220",
+            stat_test = False
+        )
+   
     """
 
     return _cluster_mfi_fop_baseplot(data_metric = "mfi",
@@ -412,24 +426,33 @@ def cluster_heatmap(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.tl.mfi(dataset, groupby = "T_cells_transformed_leiden")
-    >>> fp.pl.cluster_heatmap(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     annotate = "frequency"
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.tl.mfi(dataset,
+                  groupby = "CD45+_transformed_leiden",
+                  aggregate = True)
+
+        fp.pl.cluster_heatmap(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            cluster_key = "CD45+_transformed_leiden",
+            annotate = "frequency",
+            annotation_kwargs = {"groupby": "organ"},
+            figsize = (4,6)
+        )
 
     """
     if annotation_kwargs is None:

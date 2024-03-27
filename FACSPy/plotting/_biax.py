@@ -158,25 +158,23 @@ def biax(adata: AnnData,
     Examples
     --------
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated'
-    >>> fp.pl.biax(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "compensated",
-    ...     x_channel = "CD3",
-    ...     y_channel = "SSC-A",
-    ...     color = "batch",
-    ...     x_scale = "biex",
-    ...     y_scale = "linear"
-    ... )
-    
+    .. plot::
+        :context: close-figs
+
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.pl.biax(
+            dataset,
+            gate = "CD45+",
+            layer = "compensated",
+            x_channel = "Ly6G",
+            y_channel = "SSC-A",
+            color = "density",
+            x_scale = "biex",
+            y_scale = "linear"
+        )
     """
     
     if x_scale not in ["biex", "linear", "log"] and x_scale is not None:

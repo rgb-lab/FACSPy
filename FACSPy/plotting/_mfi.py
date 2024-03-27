@@ -33,13 +33,12 @@ def fop(adata: AnnData,
         show: bool = True,
         save: Optional[str] = None
         ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the frequency of parent (fop) values as calculated by fp.tl.fop
     as a combined strip-/boxplot.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -91,23 +90,23 @@ def fop(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.fop(dataset)
-    >>> fp.pl.fop(
-    ...     dataset,
-    ...     gate = "live",
-    ...     groupby = "condition",
-    ...     splitby = "sex"
-    ... )
-    
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.fop(dataset, layer = "compensated")
+
+        fp.pl.fop(
+            dataset,
+            gate = "CD45+",
+            layer = "compensated",
+            marker = "B220",
+            groupby = "organ",
+            figsize = (3,3.5)
+        )
     """
 
     return _mfi_fop_baseplot(adata = adata,
@@ -148,13 +147,12 @@ def mfi(adata: AnnData,
         show: bool = True,
         save: Optional[str] = None
         ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the median fluorescence intensity (mfi) values as calculated by fp.tl.mfi
     as a combined strip-/boxplot.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels.
@@ -206,23 +204,23 @@ def mfi(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.pl.mfi(
-    ...     dataset,
-    ...     gate = "live",
-    ...     groupby = "condition",
-    ...     splitby = "sex"
-    ... )
-    
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.tl.mfi(dataset, layer = "compensated")
+
+        fp.pl.mfi(
+            dataset,
+            gate = "Neutrophils",
+            layer = "compensated",
+            marker = "Ly6G",
+            groupby = "organ",
+            figsize = (3,3.5)
+        )
     """
     
     return _mfi_fop_baseplot(adata = adata,
