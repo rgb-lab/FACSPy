@@ -12,13 +12,14 @@ from ..exceptions._supplements import (SupplementInputTypeError,
                                        SupplementColumnError,
                                        SupplementNoInputDirectoryError)
 
+
 class BaseSupplement:
-    
+
     def __init__(self,
                  file: str = '',
                  data: Optional[pd.DataFrame] = None,
                  from_fcs: bool = False) -> None:
-        
+
         self.source = self._fetch_data_source(file,
                                               data,
                                               from_fcs)
@@ -26,11 +27,11 @@ class BaseSupplement:
         self.dataframe = self._fetch_data_from_source(file,
                                                       data,
                                                       from_fcs)
-        
+
     def write(self,
               output_directory: Union[str, os.PathLike] = ''):
         """writes the underlying table to disk."""
-        self.dataframe.to_csv(output_directory, index = False)    
+        self.dataframe.to_csv(output_directory, index = False)
 
     def _strip_prefixes(self,
                         dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -40,9 +41,13 @@ class BaseSupplement:
         the FCS naming, prefixes have to be stripped.
         """
         channel_list: list[str] = dataframe["fcs_colname"].to_list()
-        dataframe["fcs_colname"] = [channel.split("Comp-")[1] if "Comp-" in channel else channel for channel in channel_list]
+        dataframe["fcs_colname"] = [
+            channel.split("Comp-")[1]
+            if "Comp-" in channel else channel
+            for channel in channel_list
+        ]
         return dataframe
-    
+
     def to_df(self) -> pd.DataFrame:
         """returns the dataframe of the object"""
         return self.dataframe
@@ -55,7 +60,7 @@ class BaseSupplement:
             return pd.read_csv(file, sep = delimiter)
         except FileNotFoundError as e:
             raise SupplementFileNotFoundError(os.path.basename(file)) from e
-    
+
     def _fetch_delimiter(self,
                          file) -> str:
         """pandas finds the correct delimiter"""
@@ -63,10 +68,10 @@ class BaseSupplement:
                                              sep = None,
                                              iterator = True,
                                              engine = "python")
-        return reader._engine.data.dialect.delimiter
-    
+        return reader._engine.data.dialect.delimiter  # type: ignore
+
     def _fetch_data_source(self,
-                           file: Optional[str],
+                           file: str,
                            data: Optional[pd.DataFrame],
                            from_fcs: bool) -> str:
         """
@@ -84,13 +89,15 @@ class BaseSupplement:
             return "provided file"
         else:
             raise SupplementCreationError(self.__class__.__name__)
-    
+
     def _validate_user_supplied_table(self,
                                       dataframe: pd.DataFrame,
-                                      columns_to_check: list[str]) -> pd.DataFrame:
+                                      columns_to_check: list[str]) -> pd.DataFrame:  # noqa
         if not isinstance(dataframe, pd.DataFrame):
-            raise SupplementInputTypeError(data_type = type(dataframe),
-                                          class_name = self.__class__.__name__)
+            raise SupplementInputTypeError(
+                data_type = type(dataframe),
+                class_name = self.__class__.__name__
+            )
         if any(k not in dataframe.columns for k in columns_to_check):
             for column in columns_to_check:
                 if column not in dataframe.columns:
@@ -100,18 +107,18 @@ class BaseSupplement:
         return dataframe
 
     def _fetch_data_from_source(self,
-                                file: Optional[str],
+                                file: str,
                                 data: Optional[pd.DataFrame],
-                                from_fcs: bool) -> Optional[pd.DataFrame]:
-
+                                from_fcs: bool) -> pd.DataFrame:
         """actually converts the operations set in `fetch_data_source`"""
         if self.source == "provided dataframe":
+            assert isinstance(data, pd.DataFrame)
             return data
-            
+
         elif self.source == "provided file":
             return self._open_from_file(file)
-        
-        elif from_fcs: 
+
+        elif from_fcs:
             if self.__class__.__name__ == "Panel":
                 return pd.DataFrame(columns = ["fcs_colname", "antigens"])
             elif self.__class__.__name__ == "Metadata":
@@ -120,7 +127,8 @@ class BaseSupplement:
                 return pd.DataFrame(columns = ["fcs_colname", "cofactors"])
         else:
             raise ValueError("Please open a bugreport.")
-    
+        return pd.DataFrame()
+
     def select_channels(self,
                         channels: list[str]) -> None:
         """selects channels and subsets dataframe"""
@@ -129,21 +137,29 @@ class BaseSupplement:
         if not isinstance(channels, list):
             channels = [channels]
         if isinstance(self, Panel):
-            self.dataframe = self.dataframe.loc[self.dataframe["antigens"].isin(channels),:]
+            self.dataframe = self.dataframe.loc[
+                self.dataframe["antigens"].isin(channels), :
+            ]
         if isinstance(self, CofactorTable):
-            self.dataframe = self.dataframe.loc[self.dataframe["fcs_colname"].isin(channels),:]
+            self.dataframe = self.dataframe.loc[
+                self.dataframe["fcs_colname"].isin(channels), :
+            ]
 
     def _remove_unnamed_columns(self):
         """removes unnamed columns that happen upon pandas import"""
-        unnamed_columns = [col for col in self.dataframe.columns if "Unnamed:" in col]
+        unnamed_columns = [
+            col for col in self.dataframe.columns
+            if "Unnamed:" in col
+        ]
         self.dataframe = self.dataframe.drop(unnamed_columns, axis = 1)
 
+
 class Panel(BaseSupplement):
-    
     """\
     Panel class to represent and unify cytometry panel representations.
-    The structure has to be at least two columns: `fcs_colname` with the channels
-    (e.g. `BV421-A`) and `antigens` with the custom antigen names (e.g. `CD3`).
+    The structure has to be at least two columns: `fcs_colname` with the
+    channels (e.g. `BV421-A`) and `antigens` with the custom antigen names
+    (e.g. `CD3`).
     If the panel is supposed to be read from the FCS files directly, set the
     flag from_fcs. The will create a completely empty panel file that is
     later filled by the function fp.create_dataset().
@@ -172,7 +188,8 @@ class Panel(BaseSupplement):
     >>> import FACSPy as fp
     >>> import pandas as pd
 
-    >>> panel = fp.dt.panel("panel.csv") # creates a panel from the local file `panel.csv`
+    >>> # Create a panel from the local file `panel.csv`
+    >>> panel = fp.dt.panel("panel.csv")
     >>> panel
     Panel(12 channels, loaded as provided file)
 
@@ -183,7 +200,8 @@ class Panel(BaseSupplement):
     ...     },
     ...     index = list(range(3))
     ... )
-    >>> panel = fp.dt.Panel(panel = panel_frame) # creates a panel from a pd.DataFrame
+    >>> # Create a panel from a pd.DataFrame
+    >>> panel = fp.dt.Panel(panel = panel_frame)
     >>> panel
     Panel(3 channels, loaded as provided dataframe)
 
@@ -202,51 +220,57 @@ class Panel(BaseSupplement):
                  file: str = '',
                  panel: Optional[pd.DataFrame] = None,
                  from_fcs: bool = False) -> None:
-        
         super().__init__(file = file,
                          data = panel,
                          from_fcs = from_fcs)
-        
-        self.dataframe = self._validate_user_supplied_table(self.dataframe,
-                                                            ["fcs_colname", "antigens"])
+
+        self.dataframe = self._validate_user_supplied_table(
+            self.dataframe,
+            ["fcs_colname", "antigens"]
+        )
         self._remove_unnamed_columns()
         self.dataframe = self._strip_prefixes(self.dataframe)
-    
+
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}(" +
-            f"{len(self.dataframe)} channels, "+
+            f"{self.__class__.__name__}("
+            f"{len(self.dataframe)} channels, "
             f"loaded as {self.source})"
-        ) 
+        )
 
     def get_antigens(self) -> list[str]:
         """returns the antigens from the panel as a list"""
         return self.dataframe["antigens"].to_list()
-    
+
     def get_channels(self) -> list[str]:
         """returns the channel names from the panel as a list"""
         return self.dataframe["fcs_colname"].to_list()
-    
+
     def rename_channel(self,
                        old_channel_name,
                        new_channel_name) -> None:
         """renames a channel"""
-        self.dataframe.loc[self.dataframe["fcs_colname"] == old_channel_name, "fcs_colname"] = new_channel_name
-    
+        self.dataframe.loc[
+            self.dataframe["fcs_colname"] == old_channel_name, "fcs_colname"
+        ] = new_channel_name
+
     def rename_antigen(self,
                        old_name,
                        new_name) -> None:
         """renames an antigen"""
-        self.dataframe.loc[self.dataframe["antigens"] == old_name, "antigens"] = new_name 
+        self.dataframe.loc[
+            self.dataframe["antigens"] == old_name, "antigens"
+        ] = new_name
+
 
 class Metadata(BaseSupplement):
     """\
     Metadata class to represent and unify cytometry metadata representations.
     The structure has to be at least to columns: sample_ID with ascending ints
     and file_name with the file names.
-    If the metadata are supposed to be constructed from the read-in files directly, 
-    set the flag from_fcs to True. 
-    
+    If the metadata are supposed to be constructed from the read-in files
+    directly, set the flag from_fcs to True.
+
     Parameters
     ----------
 
@@ -270,7 +294,8 @@ class Metadata(BaseSupplement):
     >>> import FACSPy as fp
     >>> import pandas as pd
 
-    >>> metadata = fp.dt.Metadata("metadata.csv") # creates metadata from the local file `metadata.csv`
+    >>> # Create metadata from the local file `metadata.csv`
+    >>> metadata = fp.dt.Metadata("metadata.csv")
     >>> metadata
     Metadata(28 entries with factors ["condition", "organ"])
 
@@ -282,11 +307,13 @@ class Metadata(BaseSupplement):
     ...     },
     ...     index = list(range(3))
     ... )
-    >>> metadata = fp.dt.Metadata(metadata = metadata_frame) # creates metadata from a pd.DataFrame
+    >>> # Create metadata from a pd.DataFrame
+    >>> metadata = fp.dt.Metadata(metadata = metadata_frame)
     >>> metadata
     Metadata(3 entries with factors ["condition"])
 
-    >>> metadata = fp.dt.Metadata(from_fcs = True) # creates an empty metadata object
+    >>> # Create an empty metadata object
+    >>> metadata = fp.dt.Metadata(from_fcs = True)
     Metadata(0 entries with factors [])
 
     Notes
@@ -295,8 +322,7 @@ class Metadata(BaseSupplement):
     See further usage examples in the following tutorials:
     :doc:`/vignettes/metadata_object`
 
-    
-    """ 
+    """
 
     def __init__(self,
                  file: str = '',
@@ -305,12 +331,13 @@ class Metadata(BaseSupplement):
 
         if from_fcs and not file:
             raise SupplementNoInputDirectoryError
-        
+
         super().__init__(file = file,
                          data = metadata,
                          from_fcs = from_fcs)
-        self.dataframe: pd.DataFrame = self._validate_user_supplied_table(self.dataframe,
-                                                                          ["sample_ID", "file_name"])
+        self.dataframe: pd.DataFrame = \
+            self._validate_user_supplied_table(self.dataframe,
+                                               ["sample_ID", "file_name"])
         self._remove_unnamed_columns()
         self.factors = self._extract_metadata_factors()
         self._manage_dtypes()
@@ -318,19 +345,21 @@ class Metadata(BaseSupplement):
 
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}(" +
-            f"{len(self.dataframe)} entries with factors " +
+            f"{self.__class__.__name__}("
+            f"{len(self.dataframe)} entries with factors "
             f"{self._extract_metadata_factors()})"
         )
-    
+
     def _manage_dtypes(self) -> None:
-        """collection of statements that manage dtypes. sample_IDs are strings"""
+        """
+        collection of statements that manage dtypes. sample_IDs are strings
+        """
         self.dataframe["sample_ID"] = self.dataframe["sample_ID"].astype("str")
-    
+
     def _make_dataframe_categorical(self) -> None:
         """all columns are converted to categoricals"""
         self.dataframe = self.dataframe.astype("category")
-    
+
     def annotate(self,
                  sample_IDs: Union[list[str], str] = "",
                  file_names: Union[list[str], str] = "",
@@ -343,14 +372,24 @@ class Metadata(BaseSupplement):
             sample_IDs = [sample_IDs]
         if file_names and not isinstance(file_names, list):
             file_names = [file_names]
-        if file_names and not all(file in self.dataframe["file_name"].tolist() for file in file_names):
+        if file_names and not all(
+            file in self.dataframe["file_name"].tolist() for file in file_names
+        ):
             raise ValueError("Invalid filename passed.")
-        if sample_IDs and not all(sid in self.dataframe["sample_ID"].tolist() for sid in sample_IDs):
-            raise ValueError("Invalid sample_ID passed. Make sure to provide strings.")
+        if sample_IDs and not all(
+            sid in self.dataframe["sample_ID"].tolist() for sid in sample_IDs
+        ):
+            raise ValueError(
+                "Invalid sample_ID passed. Make sure to provide strings."
+            )
         if sample_IDs:
-            self.dataframe.loc[self.dataframe["sample_ID"].isin(sample_IDs), column] = value
+            self.dataframe.loc[
+                self.dataframe["sample_ID"].isin(sample_IDs), column
+            ] = value
         if file_names:
-            self.dataframe.loc[self.dataframe["file_name"].isin(file_names), column] = value
+            self.dataframe.loc[
+                self.dataframe["file_name"].isin(file_names), column
+            ] = value
 
     def group_variable(self,
                        factor: str,
@@ -366,11 +405,13 @@ class Metadata(BaseSupplement):
                               max_value + min_value + 1,
                               np.ceil((max_value - min_value) / n_groups))
         self.dataframe[f"{factor}_grouped"] = pd.cut(column, intervals)
-    
+
     def rename_column(self,
                       current_name: str,
                       new_name: str) -> None:
-        """renames a column from the metadata dataframe and removes the old column"""
+        """\
+        renames a column from the metadata dataframe and removes the old column
+        """
         if current_name not in self.dataframe.columns:
             raise ValueError("Column not found in metadata.")
         self.dataframe[new_name] = self.dataframe[current_name]
@@ -378,7 +419,7 @@ class Metadata(BaseSupplement):
 
     def rename_values(self,
                       column: Union[str, pd.Index],
-                      replacement: Union[list[Union[str, float, int]], Mapping]) -> None:
+                      replacement: Union[list[Union[str, float, int]], Mapping]) -> None:  # noqa
         """renames the values of a metadata factor"""
         if isinstance(replacement, dict):
             self.dataframe[column].replace(replacement,
@@ -394,36 +435,49 @@ class Metadata(BaseSupplement):
         """subsets the metadata based on metadata values"""
         if not isinstance(values, list):
             values = [values]
-        self.dataframe = self.dataframe.loc[self.dataframe[column].isin(values)]
+        self.dataframe = self.dataframe.loc[
+            self.dataframe[column].isin(values)
+        ]
 
     def _extract_metadata_factors(self) -> list[str]:
-        """returns all metadata columns that are not `sample_ID`, `file_name` or `staining`"""
+        """
+        returns all metadata columns that are not `sample_ID`,
+        `file_name` or `staining`
+        """
         return [
             col
             for col in self.dataframe.columns
-            if all(k not in col for k in ["sample_ID", "sample_id", "file_name", "staining"])
+            if all(
+                k not in col
+                for k in ["sample_ID", "sample_id", "file_name", "staining"]
+            )
         ]
 
     def get_factors(self) -> list[str]:
-        """returns all metadata columns that are not `sample_ID`, `file_name` or `staining`"""
+        """
+        returns all metadata columns that are not `sample_ID`,
+        `file_name` or `staining`
+        """
         return self._extract_metadata_factors()
-    
+
     def _sanitize_categoricals(self) -> None:
         """removes unused categories"""
         for column in self.dataframe:
             if isinstance(self.dataframe[column].dtype, pd.CategoricalDtype):
-                self.dataframe[column] = self.dataframe[column].cat.remove_unused_categories()
+                self.dataframe[column] = \
+                    self.dataframe[column].cat.remove_unused_categories()
         return
 
 
 class CofactorTable(BaseSupplement):
     """\
-    CofactorTable class to represent and unify cytometry cofactor representations.
-    The structure has to be at least two columns: `fcs_colname` with the antigen names
-    (e.g. `CD3`) and `cofactors` with the corresponding cofactors.
-    If the table is supposed to be constructed from the read-in files directly, 
-    set the flag from_fcs to True. 
-    
+    CofactorTable class to represent and unify cytometry cofactor
+    representations. The structure has to be at least two columns:
+    `fcs_colname` with the antigen names (e.g. `CD3`) and `cofactors`
+    with the corresponding cofactors. If the table is supposed to be
+    constructed from the read-in files directly, set the flag from_fcs
+    to True.
+
     Parameters
     ----------
 
@@ -447,7 +501,8 @@ class CofactorTable(BaseSupplement):
     >>> import FACSPy as fp
     >>> import pandas as pd
 
-    >>> cof_table = fp.dt.CofactorTable("cofactors.csv") # creates table from the local file `cofactors.csv`
+    >>> # Create a table from the local file `cofactors.csv`
+    >>> cof_table = fp.dt.CofactorTable("cofactors.csv")
     >>> cof_table
     CofactorTable(12 channels, loaded as provided file)
 
@@ -458,7 +513,8 @@ class CofactorTable(BaseSupplement):
     ...     },
     ...     index = list(range(3))
     ... )
-    >>> cof_table = fp.dt.CofactorTable(cofactors = cof_table_frame) # creates table from a pd.DataFrame
+    >>> # Create table from a pd.DataFrame
+    >>> cof_table = fp.dt.CofactorTable(cofactors = cof_table_frame)
     >>> cof_table
     CofactorTable(3 channels, loaded as provided dataframe)
 
@@ -474,50 +530,64 @@ class CofactorTable(BaseSupplement):
                  file: str = '',
                  cofactors: Optional[pd.DataFrame] = None,
                  from_fcs: bool = False) -> None:
-        
+
         super().__init__(file = file,
                          data = cofactors,
                          from_fcs = from_fcs)
-        
-        self.dataframe = self._validate_user_supplied_table(self.dataframe,
-                                                            ["fcs_colname", "cofactors"])
+
+        self.dataframe = self._validate_user_supplied_table(
+            self.dataframe,
+            ["fcs_colname", "cofactors"]
+        )
         self._remove_unnamed_columns()
         self.dataframe = self._strip_prefixes(self.dataframe)
-    
+
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}(" +
-            f"{self.dataframe.shape[0]} channels, "+
+            f"{self.__class__.__name__}("
+            f"{self.dataframe.shape[0]} channels, "
             f"loaded as {self.source})"
-        ) 
-    
+        )
+
     def get_cofactor(self,
                      channel_name: str) -> float:
         """returns cofactor of a given channel"""
-        return self.dataframe.loc[self.dataframe["fcs_colname"] == channel_name, "cofactors"].iloc[0]
-    
+        return self.dataframe.loc[
+            self.dataframe["fcs_colname"] == channel_name, "cofactors"
+        ].iloc[0]
+
     def set_cofactor(self,
                      channel_name: str,
                      cofactor: Union[int, float]) -> None:
         """sets cofactor of a given channel"""
-        self.dataframe.loc[self.dataframe["fcs_colname"] == channel_name, "cofactors"] = cofactor
+        self.dataframe.loc[
+            self.dataframe["fcs_colname"] == channel_name, "cofactors"
+        ] = cofactor
 
     def set_columns(self,
                     columns: list[str]) -> None:
         """converts a column to fcs_colname column"""
         self.dataframe["fcs_colname"] = columns
-    
+
     def set_cofactors(self,
                       cofactors: Optional[list[Union[str, int]]] = None,
                       cytof: bool = False) -> None:
         """sets cofactors. If cytof == True, cofactors are set to 5"""
         if cofactors is None and not cytof:
-            raise ValueError("Please provide a list of cofactors or set the cytof flag to True")
+            raise ValueError(
+                "Please provide a list of cofactors "
+                "or set the cytof flag to True"
+            )
         if cytof and cofactors is not None:
-            print("... warning cytof flag has been set to True, cofactors will be 5 for each channel.")
+            print(
+                "... warning cytof flag has been set to True, "
+                "cofactors will be 5 for each channel."
+            )
         self.dataframe["cofactors"] = 5 if cytof else cofactors
 
     def rename_channel(self,
                        current_name,
                        new_name) -> None:
-        self.dataframe.loc[self.dataframe["fcs_colname"] == current_name, "fcs_colname"] = new_name   
+        self.dataframe.loc[
+            self.dataframe["fcs_colname"] == current_name, "fcs_colname"
+        ] = new_name

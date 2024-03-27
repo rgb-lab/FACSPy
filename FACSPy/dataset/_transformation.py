@@ -23,18 +23,20 @@ from ..exceptions._supplements import SupplementFormatError
 
 IMPLEMENTED_TRANSFORMS = ["asinh", "logicle", "hyperlog", "log"]
 
+
 def _transform_array(data: np.ndarray,
                      transform: Literal["asinh", "logicle", "hyperlog", "log"],
                      transform_kwargs: dict,
                      cofactors: Optional[np.ndarray]) -> np.ndarray:
-    channel_indices = np.array(list(range(data.shape[1]))) # for now, transform every channel regardless
+    # for now, transform every channel regardless
+    channel_indices = np.array(list(range(data.shape[1])))
     m = transform_kwargs.get("m", 4.5)
     t = transform_kwargs.get("t", 262144)
     w = transform_kwargs.get("w", 0.5)
     a = transform_kwargs.get("a", 0)
-    
+
     if transform == "log":
-        ## TODO: Needs revision, quick fix for values below 0
+        # TODO: Needs revision, quick fix for values below 0
         data[data <= 1] = 1
         return log_transform(data = data,
                              m = m,
@@ -63,6 +65,7 @@ def _transform_array(data: np.ndarray,
         return asinh_transform(data,
                                cofactors)
 
+
 def transform(adata: AnnData,
               transform: Literal["asinh", "logicle", "hyperlog", "log"],
               transform_kwargs: Optional[dict] = None,
@@ -71,10 +74,9 @@ def transform(adata: AnnData,
               layer: str = "compensated",
               copy: bool = False) -> Optional[AnnData]:
     """\
-        
     Transforms the data. The data are transformed by either `asinh`, `log`,
     `logicle` or `hyperlog`. If `asinh` is selected, a cofactor table can
-    be supplied mapping the channel names to their respective cofactor. If 
+    be supplied mapping the channel names to their respective cofactor. If
     there is no cofactor table, the cofactors will be calculated.
 
     Parameters
@@ -83,11 +85,11 @@ def transform(adata: AnnData,
         The anndata object of shape `n_obs` x `n_vars`
         where Rows correspond to cells and columns to the channels
     transform
-        The transform method to be used. Can be any of `asinh`, `log`, 
+        The transform method to be used. Can be any of `asinh`, `log`,
         `logicle` or `hyperlog`. If `log`, values below 1 are set to 1.
     transform_kwargs
-        Keyword arguments passed to the respective transform function as a dictionary.
-        Please refer to their documentation
+        Keyword arguments passed to the respective transform function as a
+        dictionary. Please refer to their documentation
     cofactor_table
         A table mapping the channels (e.g. CD3) to their respective cofactors.
         Please refer to the documentation of the CofactorTable class for
@@ -145,21 +147,22 @@ def transform(adata: AnnData,
 
     if transform not in IMPLEMENTED_TRANSFORMS:
         raise InvalidTransformationError(transform, IMPLEMENTED_TRANSFORMS)
-    
-    if not isinstance(cofactor_table, CofactorTable) and cofactor_table is not None:
+
+    if not isinstance(cofactor_table, CofactorTable) \
+            and cofactor_table is not None:
         raise SupplementFormatError(supplement = "CofactorTable",
                                     instance_type = type(cofactor_table))
-    
+
     if transform_kwargs is None:
         transform_kwargs = {}
-    
+
     adata = adata.copy() if copy else adata
 
     if key_added is None:
         key_added = transform
 
     if transform == "asinh" and not cofactor_table:
-        cofactor_table, raw_cofactor_table = CofactorCalculator(adata).get_cofactors()
+        cofactor_table, raw_cofactor_table = CofactorCalculator(adata).get_cofactors()  # noqa
         adata.uns["raw_cofactors"] = raw_cofactor_table
 
     if cofactor_table:
@@ -170,20 +173,22 @@ def transform(adata: AnnData,
     else:
         cofactors = None
 
-    adata.layers[key_added] = _transform_array(data = adata.layers[layer],
-                                               transform = transform,
-                                               transform_kwargs = transform_kwargs,
-                                               cofactors = cofactors)
-    
+    assert cofactors is None or isinstance(cofactors, np.ndarray)
+    adata.layers[key_added] = _transform_array(
+        data = adata.layers[layer],  # type: ignore
+        transform = transform,
+        transform_kwargs = transform_kwargs,
+        cofactors = cofactors
+    )
+
     return adata if copy else None
 
 def calculate_cofactors(adata: AnnData,
                         add_to_adata: bool = True,
                         return_dataframe: bool = False,
                         copy: bool = False
-                        ) -> Optional[Union[AnnData, tuple[CofactorTable, pd.DataFrame]]]:
+                        ) -> Optional[Union[AnnData, tuple[CofactorTable, pd.DataFrame]]]:  # noqa
     """\
-    
     Calculates the cofactors based on the channel histograms.
 
     Parameters
@@ -210,7 +215,7 @@ def calculate_cofactors(adata: AnnData,
         slots are filled with the corresponding tables.
     If return_dataframe:
         a tuple of the cofactor table and the raw cofactors per sample
-    
+
     Examples
     --------
     >>> import FACSPy as fp
@@ -245,7 +250,7 @@ def calculate_cofactors(adata: AnnData,
     'raw_cofactors', 'cofactors'
     obsm: 'gating'
     layers: 'compensated', 'transformed'
-    
+
     """
     adata = adata.copy() if copy else adata
     cofactor_calc = CofactorCalculator(adata = adata)
@@ -257,9 +262,9 @@ def calculate_cofactors(adata: AnnData,
 
     if return_dataframe:
         return cofactor_calc.get_cofactors()
-    
+
     return adata if copy else None
-    
+
 
 class CofactorCalculator:
 
@@ -272,58 +277,91 @@ class CofactorCalculator:
     def __init__(self,
                  adata: AnnData) -> None:
 
-        ### Notes: Takes approx. (80-100.000 cells * 17 channels) / second 
+        # Notes: Takes approx. (80-100.000 cells * 17 channels) / second
         print("... calculating cofactors")
-        self.cofactor_table, self.raw_cofactor_table = self._calculate_cofactors(adata)
-    
+        self.cofactor_table, \
+            self.raw_cofactor_table = self._calculate_cofactors(adata)
+
     def get_cofactors(self) -> tuple[CofactorTable, pd.DataFrame]:
-        """returns the calculated cofactors as a CofactorTable object and the raw cofactors per sample as a pd.DataFrame"""
+        """
+        returns the calculated cofactors as a CofactorTable object
+        and the raw cofactors per sample as a pd.DataFrame
+        """
         return self.cofactor_table, self.raw_cofactor_table
-    
+
     def _calculate_cofactors(self,
-                             adata: AnnData) -> tuple[CofactorTable, pd.DataFrame]:
-        
+                             adata: AnnData) -> tuple[CofactorTable, pd.DataFrame]:  # noqa
+
         (stained_samples,
-         corresponding_control_samples) = find_corresponding_control_samples(adata,
-                                                                             by = "file_name")
+         corresponding_control_samples) = find_corresponding_control_samples(
+            adata,
+            by = "file_name"
+        )
         cofactors = {}
         for sample in stained_samples:
             print(f"    ... sample {sample}")
             cofactors[sample] = {}
             fluo_channels = _fetch_fluo_channels(adata)
-            sample_subset = create_sample_subset_with_controls(adata,
-                                                               sample,
-                                                               corresponding_control_samples,
-                                                               match_cell_number = True)
+            sample_subset = create_sample_subset_with_controls(
+                adata,
+                sample,
+                corresponding_control_samples,
+                match_cell_number = True
+            )
             for channel in fluo_channels:
-                data_array = sample_subset[:, sample_subset.var.index == channel].layers["compensated"]
-                cofactor_stained_sample = self._estimate_cofactor_on_stained_sample(data_array,
-                                                                                    200)
+                data_array = sample_subset[
+                    :, sample_subset.var.index == channel
+                ].layers["compensated"]
+
+                cofactor_stained_sample = self._estimate_cofactor_on_stained_sample(  # noqa
+                    data_array,  # type: ignore
+                    200
+                )
+                assert cofactor_stained_sample is not None
+
                 if corresponding_control_samples[sample]:
-                    control_sample = sample_subset[sample_subset.obs["staining"] != "stained", sample_subset.var.index == channel]
+                    control_sample = sample_subset[
+                        sample_subset.obs["staining"] != "stained",
+                        sample_subset.var.index == channel
+                    ]
+
                     data_array = control_sample.layers["compensated"]
-                    cofactor_unstained_sample = self._estimate_cofactor_on_unstained_sample(data_array, 20)
-                    cofactor_by_percentile = self._estimate_cofactor_from_control_quantile(control_sample)
-                
-                    cofactors[sample][channel] = np.mean([cofactor_stained_sample,
-                                                          cofactor_unstained_sample,
-                                                          cofactor_by_percentile])
-                    
+                    cofactor_unstained_sample = self._estimate_cofactor_on_unstained_sample(data_array, 20)  # type: ignore  # noqa
+                    cofactor_by_percentile = self._estimate_cofactor_from_control_quantile(control_sample)  # noqa
+
+                    cofactors[sample][channel] = np.mean([
+                        cofactor_stained_sample,
+                        cofactor_unstained_sample,
+                        cofactor_by_percentile
+                    ])
+
                     continue
                 cofactors[sample][channel] = cofactor_stained_sample
         return self._create_cofactor_tables(cofactors)
 
     def _create_cofactor_tables(self,
                                 cofactors: dict[str, list[float]],
-                                reduction_method: str = "mean") -> tuple[CofactorTable, pd.DataFrame]:
-        """creates the CofactorTable object from the means or medians of the raw cofactors per sample"""
+                                reduction_method: str = "mean") -> tuple[CofactorTable, pd.DataFrame]:  # noqa
+        """\
+        creates the CofactorTable object from the means or medians
+        of the raw cofactors per sample
+        """
         raw_table = pd.DataFrame(data = cofactors).T
         if reduction_method == "mean":
             reduced = pd.DataFrame(cofactors).mean(axis = 1)
         elif reduction_method == "median":
             reduced = pd.DataFrame(cofactors).median(axis = 1)
-        reduced_table = pd.DataFrame({"fcs_colname": reduced.index,
-                                      "cofactors": reduced.values})
+        else:
+            raise NotImplementedError(
+                "Reduction method must be one of 'mean', 'median'"
+            )
+        assert isinstance(reduced, pd.DataFrame)
+        reduced_table = pd.DataFrame(
+            {
+                "fcs_colname": reduced.index,
+                "cofactors": reduced.values
+            }
+        )
         return CofactorTable(cofactors = reduced_table), raw_table
 
     def _only_one_peak(self,
@@ -338,59 +376,87 @@ class CofactorCalculator:
 
     def _estimate_cofactor_on_stained_sample(self,
                                              data_array: np.ndarray,
-                                             cofactor: int) -> float:
+                                             cofactor: int) -> Optional[float]:
         """wrapper method to estimate cofactors on a stained sample"""
         data_array = transform_data_array(data_array, cofactor)
         x, curve = _get_histogram_curve(data_array)
-        
+
         peak_output = scs.find_peaks(curve, prominence = 0.001, height = 0.01)
-        peaks: np.ndarray = peak_output[0] ## array with the locs of found peaks
+        peaks: np.ndarray = peak_output[0]  # array with the locs of peaks
         peak_characteristics: dict = peak_output[1]
 
-        if peaks.shape[0] >= 2: ## more than two peaks have been found it needs to be subset
-            peaks, peak_characteristics = self._subset_two_highest_peaks(peak_output)
+        # more than two peaks have been found it needs to be subset
+        if peaks.shape[0] >= 2:
+            peaks, peak_characteristics = self._subset_two_highest_peaks(
+                peak_output
+            )
         # sourcery skip: use-named-expression
-        right_indents = self._find_curve_indent_right_side(curve, peak_output, x)
-        
+        right_indents = self._find_curve_indent_right_side(curve,
+                                                           peak_output,
+                                                           x)
+
         if right_indents:
             indent_idx = right_indents[0][0]
-            return abs(np.sinh(x[indent_idx]) * cofactor)
-        
-        if self._two_peaks(peaks): ## two peaks have been found
+            return abs(
+                np.sinh(x[indent_idx]) * cofactor  # type: ignore
+            )
+
+        if self._two_peaks(peaks):
             if np.argmax(peak_characteristics["peak_heights"]) == 0:
-                return abs(np.sinh(x[peak_characteristics["left_bases"][1]]) * cofactor)
-            
+                return abs(
+                    np.sinh(
+                        x[peak_characteristics["left_bases"][1]]
+                    ) * cofactor  # type: ignore
+                )
+
             assert np.argmax(peak_characteristics["peak_heights"]) == 1
-            return abs(np.sinh(x[peak_characteristics["right_bases"][0]]) * cofactor)
-        
-        if self._only_one_peak(peaks): ## one peak has been found
+
+            return abs(
+                np.sinh(
+                    x[peak_characteristics["right_bases"][0]]
+                ) * cofactor  # type: ignore
+            )
+
+        if self._only_one_peak(peaks):
             return self._find_root_of_tangent_line_at_turning_point(x, curve)
+
+        return
 
     def _subset_two_highest_peaks(self,
                                   peak_output: tuple[np.ndarray, dict]
-                                  ) -> tuple[np.ndarray, np.ndarray]:
+                                  ) -> tuple[np.ndarray, dict]:
         """finds the two highest peaks and returns their locations"""
-        peaks: np.ndarray = peak_output[0] ## array with the locs of found peaks
+        peaks: np.ndarray = peak_output[0]
         peak_characteristics: dict = peak_output[1]
-        
-        highest_peak_indices = self._find_index_of_two_highest_peaks(peak_characteristics)
-        
-        peaks: tuple = peaks[highest_peak_indices], peak_characteristics
+
+        highest_peak_indices = self._find_index_of_two_highest_peaks(
+            peak_characteristics
+        )
+
+        peak_subset: tuple[np.ndarray, dict] = (
+            peaks[highest_peak_indices], peak_characteristics
+        )
         for key, value in peak_characteristics.items():
             peak_characteristics[key] = value[highest_peak_indices]
-        
-        return peaks[0], peaks[1]
+
+        return peak_subset[0], peak_subset[1]
 
     def _find_index_of_two_highest_peaks(self,
-                                         peak_characteristics: dict) -> np.ndarray:
+                                         peak_characteristics: dict) -> np.ndarray:  # noqa
         """returns index of the two highest peaks"""
-        return np.sort(np.argpartition(peak_characteristics["peak_heights"], -2)[-2:])
-    
+        return np.sort(
+            np.argpartition(peak_characteristics["peak_heights"], -2)[-2:]
+        )
+
     def _find_curve_indent_right_side(self,
                                       curve: np.ndarray,
                                       peaks: tuple[np.ndarray, dict],
-                                      x: np.ndarray) -> Optional[np.ndarray]:
-        """returns the inflection point of the curve on the right side of the peak"""
+                                      x: np.ndarray
+                                      ) -> Optional[tuple[np.ndarray, dict]]:
+        """
+        returns the inflection point of the curve on the
+        right side of the peak
+        """
         try:
             right_peak_index = peaks[0][1]
         except IndexError:
@@ -404,39 +470,55 @@ class CofactorCalculator:
 
         indents = scs.find_peaks(second_derivative, prominence = 1, height = 1)
 
-        right_indents: tuple[np.ndarray, dict] = indents[0][indents[0] > right_peak_index], indents[1]
+        right_indents: tuple[np.ndarray, dict] = (
+            indents[0][indents[0] > right_peak_index],
+            indents[1]
+        )
 
         for key, value in right_indents[1].items():
             right_indents[1][key] = value[indents[0] > right_peak_index]
 
-        if right_indents[0].any() and curve[right_indents[0]] > 0.2 and x[right_indents[0]] < 4:
+        if right_indents[0].any() and \
+                curve[right_indents[0]] > 0.2 and \
+                x[right_indents[0]] < 4:
             return right_indents
 
         return None
 
     def _estimate_cofactor_on_unstained_sample(self,
-                                              data_array: np.ndarray,
-                                              cofactor: int) -> float:
+                                               data_array: np.ndarray,
+                                               cofactor: int) -> float:
         """wrapper method to estimate the cofactor on an unstained sample"""
         data_array = transform_data_array(data_array, cofactor)
         x, curve = _get_histogram_curve(data_array)
-        
+
         root = self._find_root_of_tangent_line_at_turning_point(x, curve)
 
         return abs(np.sinh(root) * cofactor)
 
     def _find_root_of_tangent_line_at_turning_point(self,
                                                     x: np.ndarray,
-                                                    curve: np.ndarray) -> float:
-        """calculates the root of the tangent line at the turning point of the histogram function"""
+                                                    curve: np.ndarray
+                                                    ) -> float:
+        """
+        calculates the root of the tangent line at the
+        turning point of the histogram function
+        """
         first_derivative = np.gradient(curve)
         turning_point_index = np.argmin(first_derivative),
-        ## y = mx+n
-        m = np.diff(curve)[turning_point_index] * 1/((np.max(x) - np.min(x)) * 0.01)
+
+        # y = mx+n
+        m = np.diff(curve)[turning_point_index] * \
+            1 / ((np.max(x) - np.min(x)) * 0.01)
         n = curve[turning_point_index] - m * x[turning_point_index]
-        return -n/m                 
+        return -n / m
 
     def _estimate_cofactor_from_control_quantile(self,
                                                  adata: AnnData) -> float:
         """calculates the 95th quantile of the unstained data"""
-        return np.quantile(adata[adata.obs["staining"] != "stained"].layers["compensated"], 0.95)
+        return np.quantile(
+            adata[
+                adata.obs["staining"] != "stained"
+            ].layers["compensated"],  # type: ignore
+            0.95
+        )
