@@ -42,7 +42,7 @@ def test_class_init(unsup_gator: unsupervisedGating):
     assert isinstance(unsup_gator.adata, AnnData)
     assert unsup_gator.cluster_key == "clusters"
     assert unsup_gator.sensitivity == 1
-    import unsup_gator.intervals == [0.33, 0.66]
+    assert unsup_gator.intervals == [0.33, 0.66]
 
 def test_class_init_TypeError(mock_dataset: AnnData):
     gating_strategy = {"T_cells": ["CD45+", ["CD3+"]]}
@@ -62,7 +62,6 @@ def test_class_init_ValueError(mock_dataset: AnnData):
 def test_clean_marker_names_list_ValueError(unsup_gator: unsupervisedGating):
     clf = unsup_gator
     # ["/", "[", "{", "(", ")", "}", "]", ".", "-"]
-    disallowed_characters = clf._disallowed_characters
     with pytest.raises(ValueError):
         wrong_input_type = np.array(["CD3"])
         clf._clean_marker_names(wrong_input_type)
@@ -86,4 +85,3 @@ def test_clean_marker_names_dict(unsup_gator: unsupervisedGating):
         x = clf._clean_marker_names(markers)
         assert isinstance(x, dict)
         assert clf._clean_marker_names(markers)["+"] == ["CD3"]
-

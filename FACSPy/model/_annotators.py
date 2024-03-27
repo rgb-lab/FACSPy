@@ -8,6 +8,7 @@ from scipy.sparse import csr_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.utils.validation import check_is_fitted
+# not accessed but necessary
 from sklearn.experimental import enable_halving_search_cv
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
@@ -56,6 +57,9 @@ class BaseGating:
         return
 
     def get_dataset(self):
+        """
+        Returns a :class:`~AnnData` object
+        """
         return self.adata
 
     def _subset_anndata_by_sample(self,
@@ -194,6 +198,63 @@ class ManualGating(BaseGating):
 
 class unsupervisedGating(BaseGating):
 
+    """\
+    Class for semi-supervised gating. This class allows to identify cell populations
+    based on their marker expression. Cells are first clustered using one of the four 
+    implemented algorithms (parc, leiden, phenograph and FlowSOM). The clusters are then 
+    analyzed and compared to a user-defined gating strategy.
+
+    Gating strategies are dicts with the following naming convention:
+    gating_strategy = {population_name: [parent_population, [marker1+, marker2-]]}
+    where the population name is the population that is identified, the parent
+    population states which cell population is used to derive the population from 
+    and the marker specify the population characteristics.
+
+    Parameters
+    ----------
+    adata
+    The anndata object of shape `n_obs` x `n_vars`
+    where rows correspond to cells and columns to the channels.
+    gating_strategy
+    The gating strategy with the above mentioned format.
+    layer
+    The layer corresponding to the data matrix.
+    clustering_algorithm
+    The clustering algorithm used for community detection. One of `parc`, 
+    `leiden`, `phenograph` or `FlowSOM`. 
+    cluster_key
+    The cluster key to be added to the dataset.
+    sensitivity
+    Parameter to control the sensitivity of the marker detection.  The value will
+    be log-transformed so that a sensitivity of 1 leads to cutoff of np.arcsinh(1) (~0.88).
+    For every log there will be the addition of 0.1. Sensitivity of 0.1 therefore
+    leads to np.arcsinh(1) + 0.1*-np.log10(0.1) which is np.arcsinh(1) + 0.1.
+    To increase the sensitivity, choose higher values (100 will result in a decrease of 0.2).
+    intervals:
+    gives the intervals for lo, int and hi so that the first two numbers
+    denote the lo quantile. Defaults to the 33rd and 66th percentile.
+
+    Returns
+    -------
+    A :class:`~AnnData` object where the identified populations are stored in
+    adata.obsm["gating"].
+    
+
+    Examples
+    --------
+    >>> import FACSPy as fp
+    >>> dataset = fp.dt.create_dataset(...)
+    >>> gating_strategy = {"T_cells": ["CD45+", ["CD3+"]]}
+    >>> clf = fp.ml.unsupervisedGating(
+    ...     dataset,
+    ...     gating_strategy = gating_strategy,
+    ...     layer = "transformed",
+    ...     clustering_algorithm = "parc"
+    ... )
+    >>> clf.identify_populations()
+
+    """
+
     def __init__(self,
                  adata: AnnData,
                  gating_strategy: dict,
@@ -202,63 +263,6 @@ class unsupervisedGating(BaseGating):
                  cluster_key: Optional[str] = None,
                  sensitivity: float = 1,
                  intervals: list[float] = [0.33,0.66]) -> None:
-        """\
-        Class for semi-supervised gating. This class allows to identify cell populations
-        based on their marker expression. Cells are first clustered using one of the four 
-        implemented algorithms (parc, leiden, phenograph and FlowSOM). The clusters are then 
-        analyzed and compared to a user-defined gating strategy.
-
-        Gating strategies are dicts with the following naming convention:
-        gating_strategy = {population_name: [parent_population, [marker1+, marker2-]]}
-        where the population name is the population that is identified, the parent
-        population states which cell population is used to derive the population from 
-        and the marker specify the population characteristics.
-
-        Parameters
-        ----------
-        adata
-            The anndata object of shape `n_obs` x `n_vars`
-            where rows correspond to cells and columns to the channels.
-        gating_strategy
-            The gating strategy with the above mentioned format.
-        layer
-            The layer corresponding to the data matrix.
-        clustering_algorithm
-            The clustering algorithm used for community detection. One of `parc`, 
-            `leiden`, `phenograph` or `FlowSOM`. 
-        cluster_key
-            The cluster key to be added to the dataset.
-        sensitivity
-            Parameter to control the sensitivity of the marker detection.  The value will
-            be log-transformed so that a sensitivity of 1 leads to cutoff of np.arcsinh(1) (~0.88).
-            For every log there will be the addition of 0.1. Sensitivity of 0.1 therefore
-            leads to np.arcsinh(1) + 0.1*-np.log10(0.1) which is np.arcsinh(1) + 0.1.
-            To increase the sensitivity, choose higher values (100 will result in a decrease of 0.2).
-        intervals:
-            gives the intervals for lo, int and hi so that the first two numbers
-            denote the lo quantile. Defaults to the 33rd and 66th percentile.
-
-        Returns
-        -------
-
-        A :class:`~AnnData` object where the identified populations are stored in
-        adata.obsm["gating"].
-        
-
-        Examples
-        --------
-        >>> import FACSPy as fp
-        >>> dataset = fp.dt.create_dataset(...)
-        >>> gating_strategy = {"T_cells": ["CD45+", ["CD3+"]]}
-        >>> clf = fp.ml.unsupervisedGating(
-        ...     dataset,
-        ...     gating_strategy = gating_strategy,
-        ...     layer = "transformed",
-        ...     clustering_algorithm = "parc"
-        ... )
-        >>> clf.identify_populations()
-
-        """
         if not gating_strategy:
             raise ValueError("Please provide a gating strategy.")
         gating_strategy = gating_strategy
@@ -284,7 +288,7 @@ class unsupervisedGating(BaseGating):
                                adata: AnnData,
                                layer: str,
                                sensitivity: float,
-                               intervals: list[float]) -> dict:
+                               intervals: list[float, float]) -> dict:
         data_array = adata.layers[layer]
         cutoffs = {}
         for i, marker in enumerate(adata.var_names):
@@ -301,15 +305,41 @@ class unsupervisedGating(BaseGating):
 
     def _calculate_cutoff_interval(self,
                                    data: np.ndarray,
-                                   quantile: float) -> tuple[float, float]:
+                                   quantile: float) -> float:
         return np.percentile(data, quantile * 100)
 
     def identify_populations(self,
                              cluster_kwargs: Optional[dict] = None):
+        """
+        Parameters
+        ----------
+        cluster_kwargs
+            keyword arguments passed to the respective cluster function.
+
+        Returns
+        -------
+        modifies :class:`~AnnData` object where the identified populations are stored in
+        adata.obsm["gating"].
+        
+
+        Examples
+        --------
+        >>> import FACSPy as fp
+        >>> dataset = fp.dt.create_dataset(...)
+        >>> gating_strategy = {"T_cells": ["CD45+", ["CD3+"]]}
+        >>> clf = fp.ml.unsupervisedGating(
+        ...     dataset,
+        ...     gating_strategy = gating_strategy,
+        ...     layer = "transformed",
+        ...     clustering_algorithm = "parc"
+        ... )
+        >>> clf.identify_populations()
+
+        """
         if cluster_kwargs is None:
             cluster_kwargs = {}
         if isinstance(self.adata.obsm["gating"], csr_matrix):
-            self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
+            self.adata.obsm["gating"] = self.adata.obsm["gating"].toarray()
         ### mutable object to keep track of analyzed gates. this is necessary
         ### because if parents are not present immediately, the population
         ### is analyzed beforehand but still a key in the dictionary and
@@ -324,13 +354,17 @@ class unsupervisedGating(BaseGating):
     
     def _preprocess_gating_strategy(self,
                                     gating_strategy: dict) -> dict:
+        """
+        reshapes gating strategy: 
+        [CD4CM, ["CD4+", "CD197-"]] instead of [CD4_T_cells, ["CD4+", "CD197-"]]
+        """
         parent_populations = {entry[0] for _, entry in gating_strategy.items()}
         return {
             population: [
                 [
                     key,
                     value[1],
-                ]  ## [CD4CM, ["CD4+", "CD197-"]] instead of [CD4_T_cells, ["CD4+", "CD197-"]]
+                ]  ## 
                 for key, value in gating_strategy.items()
                 if value[0] == population
             ]
@@ -339,6 +373,7 @@ class unsupervisedGating(BaseGating):
 
     def _population_is_already_a_gate(self,
                                       parent_population) -> bool:
+        """checks if the population is already named in adata.uns["gating_cols"]"""
         return parent_population in [_find_current_population(gate)
                                      for gate in self.adata.uns["gating_cols"]]
     
@@ -346,11 +381,13 @@ class unsupervisedGating(BaseGating):
                          markers: list[str]) -> dict[str, list[Optional[str]]]:
         if not isinstance(markers, list):
             markers = [markers]
-        marker_dict = {"up": [],
-                       "down": [],
-                       "lo": [],
-                       "int": [],
-                       "hi": []}
+        marker_dict = {
+            "up": [],
+            "down": [],
+            "lo": [],
+            "int": [],
+            "hi": []
+        }
         for marker in markers:
             if marker.endswith('+'):
                 marker_dict["up"].append(marker.split("+")[0])
@@ -541,7 +578,7 @@ class unsupervisedGating(BaseGating):
     def _identify_clusters_of_interest(self,
                                        adata: AnnData,
                                        markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
-        df = self.adata.to_df(layer = self.layer)
+        df = adata.to_df(layer = self.layer)
         df.columns = self._clean_marker_names(df.columns)
         markers_of_interest = self._clean_marker_names(markers_of_interest)
         df[self.cluster_key] = adata.obs[self.cluster_key].to_list()
@@ -586,6 +623,7 @@ class unsupervisedGating(BaseGating):
 
 
 class supervisedGating(BaseGating):
+
     """\
     Class for supervised gating. This class implements the learning of a 
     gating strategy based on pregated samples with according prediction of 
@@ -599,9 +637,9 @@ class supervisedGating(BaseGating):
     
     Returns
     -------
-
     a :class:`~AnnData` object where the predicted gating has been saved
     in adata.obsm["gating"].
+    
     Examples
     --------
 
@@ -634,6 +672,42 @@ class supervisedGating(BaseGating):
                                             "ExtraTreesClassifier",
                                             "ExtraTreeClassifier"],
                         **kwargs) -> None:
+        """\
+        Setup method.
+
+        Parameters
+        ----------
+        classifier
+            The classifier to use. Can be any of `RandomForestClassifier`,
+            `DecisionTreeClassifier`, `ExtraTreeClassifier` or `ExtraTreesClassifier`.
+        kwargs
+            keyword arguments passed to the classifier instance. If there are 
+            tuned hyperparameters, keywords will not be passed.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> adata = fp.create_dataset([...])
+        >>> gating = fp.ml.supervisedGating(dataset)
+        >>> gating.run_data_setup(
+        ...     gated_samples = ["1", "2", "3"],
+        ...     layer = "compensated",
+        ...     scaling = "StandardScaler"
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> gating.tune_hyperparameters(
+        ...    method = "HalvingRandomSearchCV",
+        ...    grid = {"max_depth": [10,20,100]}
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> gating.train()
+        >>> gating.gate_dataset()
+        
+
+        """
         if self._tuned_hyperparameters:
             self.classifier = self._select_classifier(classifier,
                                                       **self._tuned_hyperparameters)
@@ -642,7 +716,7 @@ class supervisedGating(BaseGating):
                                                       **kwargs)
 
     def train(self):
-        """public method to train the classifier"""
+        """Trains the classifier."""
         self.classifier.fit(self.X, self.y)
         print("Trained classifier!")
 
@@ -652,11 +726,82 @@ class supervisedGating(BaseGating):
                                              "RandomizedSearchCV",
                                              "GridSearchCV"],
                              grid: dict,
-                             **hyperparameter_search_kwargs):
+                             **hyperparameter_search_kwargs) -> None:
+        """\
+        Method to tune hyperparameters of the classifier.
+
+        Parameters
+        ----------
+
+        method
+            One of `HalvingRandomSearchCV`, `GridSearchCV` or `RandomizedSearchCV`. The 
+            method that is used for the gridsearch.
+        grid
+            The parameters to test. For further documentation, refer to the sklearn documentation.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> adata = fp.create_dataset([...])
+        >>> gating = fp.ml.supervisedGating(dataset)
+        >>> gating.run_data_setup(
+        ...     gated_samples = ["1", "2", "3"],
+        ...     layer = "compensated",
+        ...     scaling = "StandardScaler"
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> gating.tune_hyperparameters(
+        ...    method = "HalvingRandomSearchCV",
+        ...    grid = {"max_depth": [10,20,100]}
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> gating.train()
+        >>> gating.gate_dataset()
+
+        """
+
         self._conduct_hyperparameter_search(method, grid, **hyperparameter_search_kwargs)
 
     def sample_cells(self,
                      sampler: GateSampler):
+        """\
+        Method to sample the cells. For further documentation, refer to the documentation 
+        of the GateSampler class
+
+        Parameters
+        ----------
+        sampler
+            The GateSampler instance.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> adata = fp.create_dataset([...])
+        >>> gating = fp.ml.supervisedGating(dataset)
+        >>> gating.run_data_setup(
+        ...     gated_samples = ["1", "2", "3"],
+        ...     layer = "compensated",
+        ...     scaling = "StandardScaler"
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> gating.tune_hyperparameters(
+        ...    method = "HalvingRandomSearchCV",
+        ...    grid = {"max_depth": [10,20,100]}
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> sampler = GateSampler(...)
+        >>> gating.sample_cells(sampler)
+        >>> gating.train()
+        >>> gating.gate_dataset()
+
+
+        """
         self.X, self.y = sampler.fit_resample(self.X, self.y)
 
     def _conduct_hyperparameter_search(self,
@@ -714,7 +859,35 @@ class supervisedGating(BaseGating):
 
         self._tuned_hyperparameters = grid_result.best_params_
 
-    def gate_dataset(self):
+    def gate_dataset(self) -> None:
+        """\
+        Method to apply the classifier to ungated samples and gate these samples.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> adata = fp.create_dataset([...])
+        >>> gating = fp.ml.supervisedGating(dataset)
+        >>> gating.run_data_setup(
+        ...     gated_samples = ["1", "2", "3"],
+        ...     layer = "compensated",
+        ...     scaling = "StandardScaler"
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> gating.tune_hyperparameters(
+        ...    method = "HalvingRandomSearchCV",
+        ...    grid = {"max_depth": [10,20,100]}
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> sampler = GateSampler(...)
+        >>> gating.sample_cells(sampler)
+        >>> gating.train()
+        >>> gating.gate_dataset()
+
+        """
         self.ungated_data = self.adata[~self.adata.obs["sample_ID"].isin(self.gated_samples)]
         X_pred = self.ungated_data.layers[self.layer]
         if self.scaler is not None:
@@ -730,7 +903,45 @@ class supervisedGating(BaseGating):
                        gated_samples: list[str],
                        layer: str,
                        scaling: Optional[str] = "StandardScaler"):
-        """public method to prepare the data"""
+        """\
+        Public method to run the data setup. Extracts gated samples and scales the data.
+        
+        Parameters
+        ----------
+        gated_samples:
+            A list of sample_IDs of gated samples
+        layer
+            The slot in adata.layers that contains the data to be used for training the
+            classifier.
+        scaling
+            Scaling method. Can be one of `MinMaxScaler`, `StandardScaler` or `RobustScaler`.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> adata = fp.create_dataset([...])
+        >>> gating = fp.ml.supervisedGating(dataset)
+        >>> gating.run_data_setup(
+        ...     gated_samples = ["1", "2", "3"],
+        ...     layer = "compensated",
+        ...     scaling = "StandardScaler"
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> gating.tune_hyperparameters(
+        ...    method = "HalvingRandomSearchCV",
+        ...    grid = {"max_depth": [10,20,100]}
+        ... )
+        >>> gating.setup_classifier("DecisionTreeClassifier")
+        >>> sampler = GateSampler(...)
+        >>> gating.sample_cells(sampler)
+        >>> gating.train()
+        >>> gating.gate_dataset()
+
+        """
+
         self.layer = layer
         self.gated_samples = gated_samples
         self.gated_adata = self.adata[self.adata.obs["sample_ID"].isin(self.gated_samples)]
