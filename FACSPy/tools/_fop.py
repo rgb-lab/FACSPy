@@ -147,7 +147,7 @@ def fop(adata: AnnData,
     ...           groupby = "T_cells_transformed_leiden",
     ...           aggregate = True) # will calculate FOP per leiden cluster
     >>> fp.tl.fop(dataset,
-    ...           groupby = "leiden",
+    ...           groupby = "T_cells_transformed_leiden",
     ...           aggregate = False) # will calculate FOP per leiden cluster and sample_ID
     
     """
