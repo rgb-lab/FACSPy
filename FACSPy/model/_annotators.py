@@ -238,7 +238,6 @@ class unsupervisedGating(BaseGating):
     -------
     A :class:`~AnnData` object where the identified populations are stored in `adata.obsm["gating"]`.
     
-
     Examples
     --------
     >>> import FACSPy as fp
@@ -317,8 +316,7 @@ class unsupervisedGating(BaseGating):
 
         Returns
         -------
-        modifies :class:`~AnnData` object where the identified populations are stored in
-        adata.obsm["gating"].
+        modifies :class:`~AnnData` object where the identified populations are stored in `adata.obsm["gating"]`.
         
 
         Examples

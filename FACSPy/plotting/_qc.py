@@ -145,22 +145,21 @@ def gate_frequency(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.gate_frequencies(dataset)
-    >>> fp.pl.gate_frequency(
-    ...     dataset,
-    ...     gate = "live",
-    ...     groupby = "condition",
-    ...     splitby = "sex"
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.gate_frequencies(dataset)
+
+        fp.pl.gate_frequency(
+            dataset,
+            gate = "B_cells",
+            freq_of = "CD45+",
+            groupby = "organ"
+        )
     
     """
 
@@ -219,12 +218,11 @@ def cell_counts(adata: AnnData,
                 show: bool = True,
                 save: Optional[str] = None
                 ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the cell counts of a specific population.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -267,21 +265,18 @@ def cell_counts(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.pl.cell_counts(
-    ...     dataset,
-    ...     gate = "live",
-    ...     groupby = "condition",
-    ...     splitby = "sex"
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.pl.cell_counts(
+            dataset,
+            gate = "B_cells",
+            groupby = "organ"
+        )
     
     """
 

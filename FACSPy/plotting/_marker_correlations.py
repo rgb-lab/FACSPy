@@ -101,22 +101,20 @@ def marker_correlation(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.pl.marker_correlation(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed"
-    ... )
+        import FACSPy as fp
 
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.mfi(dataset, layer = "compensated")
+
+        fp.pl.marker_correlation(
+            dataset,
+            gate = "CD45+",
+            layer = "compensated"
+        )
     """
 
     plot_data = _prepare_heatmap_data(adata = adata,

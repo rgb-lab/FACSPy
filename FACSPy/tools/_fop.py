@@ -143,8 +143,12 @@ def fop(adata: AnnData,
     >>> fp.tl.pca(dataset)
     >>> fp.tl.neighbors(dataset)
     >>> fp.tl.leiden(dataset)
-    >>> fp.tl.fop(dataset, groupby = "leiden", aggregate = True) # will calculate FOP per leiden cluster
-    >>> fp.tl.fop(dataset, groupby = "leiden", aggregate = False) # will calculate FOP per leiden cluster and sample_ID
+    >>> fp.tl.fop(dataset,
+    ...           groupby = "T_cells_transformed_leiden",
+    ...           aggregate = True) # will calculate FOP per leiden cluster
+    >>> fp.tl.fop(dataset,
+    ...           groupby = "leiden",
+    ...           aggregate = False) # will calculate FOP per leiden cluster and sample_ID
     
     """
 

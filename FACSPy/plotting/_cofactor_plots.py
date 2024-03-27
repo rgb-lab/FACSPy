@@ -389,6 +389,20 @@ def cofactor_distribution(adata: AnnData,
     If `return_fig==True` a :class:`~matplotlib.figure.Figure`
     If `return_dataframe==True` a :class:`~pandas.DataFrame` containing the data used for plotting
 
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.pl.cofactor_distribution(
+            dataset,
+            marker = "B220",
+            groupby = "organ"
+        )
  
     """
     

@@ -26,12 +26,11 @@ def metadata(adata: AnnData,
              show: bool = True,
              save: Optional[str] = None
              ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the frequency of the metadata columns.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels

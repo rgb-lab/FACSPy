@@ -1,6 +1,6 @@
 # Vignettes
-
-Find below the vignettes for the commonly used FACSPy datastructures
+ 
+Find below the vignettes for the commonly used FACSPy datastructures and analysis options.
 
 ```{toctree}
 :maxdepth: 1

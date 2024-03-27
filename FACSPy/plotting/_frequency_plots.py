@@ -138,25 +138,26 @@ def cluster_frequency(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.pl.cluster_frequency(
-    ...     dataset,
-    ...     gate = "live",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     cluster = "2",
-    ...     groupby = "condition",
-    ...     splitby = "sex",
-    ...     normalize = True
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.pl.cluster_frequency(
+            dataset,
+            cluster_key = "CD45+_transformed_leiden",
+            cluster = "0",
+            groupby = "organ"
+        )
 
     """
     
@@ -258,23 +259,25 @@ def cluster_abundance(adata: AnnData,
     Examples
     --------
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.pl.cluster_abundance(
-    ...     dataset,
-    ...     gate = "live",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     groupby = "condition",
-    ...     normalize = True
-    ... )
+    .. plot::
+        :context: close-figs
 
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.pl.cluster_abundance(
+            dataset,
+            cluster_key = "CD45+_transformed_leiden",
+            groupby = "organ"
+        )
 
     """
     
