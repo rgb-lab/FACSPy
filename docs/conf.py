@@ -30,7 +30,7 @@ extensions = [
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "nbsphinx", # for notebook implementation
     "nbsphinx_link", # necessary to keep vignettes outside of sphinx root directory
-    "matplotlib.sphinxext.plot_directive"
+    "matplotlib.sphinxext.plot_directive" # necessary to include inline plots via documentation
 ]
 
 templates_path = ['_templates']
@@ -67,3 +67,4 @@ napoleon_custom_sections = [("Params", "Parameters")]
 
 html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
+html_title = "FACSPy"
