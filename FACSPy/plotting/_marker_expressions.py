@@ -99,7 +99,6 @@ def marker_density(adata: AnnData,
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels.
@@ -167,25 +166,40 @@ def marker_density(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.pl.marker_density(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "compensated",
-    ...     marker = "CD3",
-    ...     groupby = "condition",
-    ...     colorby = "sex"
-    ... )
+        import FACSPy as fp
 
-    
+        dataset = fp.mouse_lineages()
+
+        fp.pl.marker_density(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            marker = "Ly6G",
+            groupby = "organ",
+            ridge = True,
+            plot_aspect = 3
+        )
+
+    .. plot::
+        :context: close-figs
+
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.pl.marker_density(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            marker = "Ly6G",
+            groupby = "organ",
+            colorby = "organ",
+            ridge = False,
+            linewidth = 2
+        )
     """
 
     if not isinstance(highlight, list) and highlight is not None:
@@ -328,7 +342,7 @@ def marker_density(adata: AnnData,
                       title = colorby)
         else:
             ax.legend().remove()
-        ax.set_title(f"Marker expression {marker}\nper sample ID")
+        ax.set_title(f"Marker expression {marker}\nper {groupby}")
         ax.set_ylabel("Density (norm)")
         ax.set_xlabel(f"{layer} expression")
         if xlim is not None:

@@ -99,6 +99,9 @@ def _samplewise_dr_plot(adata: AnnData,
                            labelpad = 30)
 
     ax.set_title(f"{reduction} samplewise reduction\ncolored by {color}")
+    ax.tick_params(left = False, right = False, bottom = False, top = False)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
 
     if return_fig:
         return fig
@@ -192,24 +195,22 @@ def pca_samplewise(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.tl.pca_samplewise(dataset)
-    >>> fp.pl.pca_samplewise(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     color = "condition",
-    ... )
+        import FACSPy as fp
 
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.mfi(dataset, layer = "transformed")
+        fp.tl.pca_samplewise(dataset, layer = "transformed")
+
+        fp.pl.pca_samplewise(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            color = "organ"
+        )
     """
 
     return _samplewise_dr_plot(reduction = "PCA",
@@ -311,23 +312,22 @@ def mds_samplewise(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.tl.mds_samplewise(dataset)
-    >>> fp.pl.mds_samplewise(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     color = "condition",
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.mfi(dataset, layer = "transformed")
+        fp.tl.mds_samplewise(dataset, layer = "transformed")
+
+        fp.pl.mds_samplewise(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            color = "organ"
+        )
 
     """
 
@@ -430,23 +430,22 @@ def umap_samplewise(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.tl.umap_samplewise(dataset)
-    >>> fp.pl.umap_samplewise(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     color = "condition",
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.mfi(dataset, layer = "transformed")
+        fp.tl.umap_samplewise(dataset, layer = "transformed")
+
+        fp.pl.umap_samplewise(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            color = "organ"
+        )
 
     """
     
@@ -549,23 +548,22 @@ def tsne_samplewise(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.tl.tsne_samplewise(dataset)
-    >>> fp.pl.tsne_samplewise(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     color = "condition",
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.mfi(dataset, layer = "transformed")
+        fp.tl.tsne_samplewise(dataset, layer = "transformed")
+
+        fp.pl.tsne_samplewise(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            color = "organ"
+        )
 
     """
 
