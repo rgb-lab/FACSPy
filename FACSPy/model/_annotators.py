@@ -213,31 +213,30 @@ class unsupervisedGating(BaseGating):
     Parameters
     ----------
     adata
-    The anndata object of shape `n_obs` x `n_vars`
-    where rows correspond to cells and columns to the channels.
+        The anndata object of shape `n_obs` x `n_vars`
+        where rows correspond to cells and columns to the channels.
     gating_strategy
-    The gating strategy with the above mentioned format.
+        The gating strategy with the above mentioned format.
     layer
-    The layer corresponding to the data matrix.
+        The layer corresponding to the data matrix.
     clustering_algorithm
-    The clustering algorithm used for community detection. One of `parc`, 
-    `leiden`, `phenograph` or `FlowSOM`. 
+        The clustering algorithm used for community detection. One of `parc`, 
+        `leiden`, `phenograph` or `FlowSOM`. 
     cluster_key
-    The cluster key to be added to the dataset.
+        The cluster key to be added to the dataset.
     sensitivity
-    Parameter to control the sensitivity of the marker detection.  The value will
-    be log-transformed so that a sensitivity of 1 leads to cutoff of np.arcsinh(1) (~0.88).
-    For every log there will be the addition of 0.1. Sensitivity of 0.1 therefore
-    leads to np.arcsinh(1) + 0.1*-np.log10(0.1) which is np.arcsinh(1) + 0.1.
-    To increase the sensitivity, choose higher values (100 will result in a decrease of 0.2).
+        Parameter to control the sensitivity of the marker detection.  The value will
+        be log-transformed so that a sensitivity of 1 leads to cutoff of np.arcsinh(1) (~0.88).
+        For every log there will be the addition of 0.1. Sensitivity of 0.1 therefore
+        leads to np.arcsinh(1) + 0.1*-np.log10(0.1) which is np.arcsinh(1) + 0.1.
+        To increase the sensitivity, choose higher values (100 will result in a decrease of 0.2).
     intervals:
-    gives the intervals for lo, int and hi so that the first two numbers
-    denote the lo quantile. Defaults to the 33rd and 66th percentile.
+        gives the intervals for lo, int and hi so that the first two numbers
+        denote the lo quantile. Defaults to the 33rd and 66th percentile.
 
     Returns
     -------
-    A :class:`~AnnData` object where the identified populations are stored in
-    adata.obsm["gating"].
+    A :class:`~AnnData` object where the identified populations are stored in `adata.obsm["gating"]`.
     
 
     Examples
@@ -637,8 +636,7 @@ class supervisedGating(BaseGating):
     
     Returns
     -------
-    a :class:`~AnnData` object where the predicted gating has been saved
-    in adata.obsm["gating"].
+    A :class:`~AnnData` object where the identified populations are stored in `adata.obsm["gating"]`.
     
     Examples
     --------
