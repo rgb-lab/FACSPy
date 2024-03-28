@@ -20,6 +20,12 @@ class BaseSupplement:
                  data: Optional[pd.DataFrame] = None,
                  from_fcs: bool = False) -> None:
 
+        if data is not None and not isinstance(data, pd.DataFrame):
+            raise SupplementInputTypeError(
+                data_type = type(data),
+                class_name = self.__class__.__name__
+            )
+
         self.source = self._fetch_data_source(file,
                                               data,
                                               from_fcs)
@@ -98,6 +104,7 @@ class BaseSupplement:
                 data_type = type(dataframe),
                 class_name = self.__class__.__name__
             )
+
         if any(k not in dataframe.columns for k in columns_to_check):
             for column in columns_to_check:
                 if column not in dataframe.columns:
