@@ -66,7 +66,7 @@ class FlowJoWorkspace:
         self.ignore_transforms = ignore_transforms
         if not os.path.isfile(file):
             raise SupplementFileNotFoundError(os.path.basename(file))
-        self.wsp_dict = self._parse_workspace(file)
+        self.wsp_dict: dict[str, dict] = self._parse_workspace(file)
 
     def __repr__(self):
         return (
@@ -90,7 +90,7 @@ class FlowJoWorkspace:
         return
 
     def _parse_workspace(self,
-                         file: str) -> dict[dict]:
+                         file: str) -> dict[str, dict]:
         (wsp_root,
          gating_namespace,
          data_type_namespace,
