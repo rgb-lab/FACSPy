@@ -160,15 +160,15 @@ class FCSFile:
 
     def _adjust_range(self,
                       arr: np.ndarray) -> np.ndarray:
-        channel_ranges = self.channels["pnr"].to_numpy()
+        channel_ranges = self.channels["pnr"].to_numpy(dtype = arr.dtype)
         range_exceeded_cells = (arr > channel_ranges)
         range_exceeded_channels = range_exceeded_cells.any(axis = 0)
         if any(range_exceeded_channels):
             exceeded_channels = self.channels[range_exceeded_channels].index.tolist()
             number_of_exceeded_cells = range_exceeded_cells.sum(axis = 0)
             TruncationWarning(exceeded_channels, number_of_exceeded_cells)
-            array_mins = np.min(arr, axis = 0)
-            return np.clip(arr, array_mins, channel_ranges)
+            array_mins = np.min(arr, axis = 0).astype(arr.dtype)
+            return np.clip(arr, array_mins, channel_ranges, dtype = np.float64)
         return arr
 
     def _remove_nans_from_events(self,
