@@ -45,6 +45,7 @@ def sample_correlation(adata: AnnData,
                        layer: str,
                        metadata_annotation: Optional[Union[list[str], str]] = None,
                        include_technical_channels: bool = False,
+                       exclude: Optional[Union[list[str], str]] = None,
                        data_group: str = "sample_ID",
                        data_metric: Literal["mfi", "fop"] = "mfi",
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
@@ -80,6 +81,8 @@ def sample_correlation(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
         use `data_group` to specify the right dataframe.
@@ -137,12 +140,19 @@ def sample_correlation(adata: AnnData,
         )
     """
 
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
+
     plot_data = _prepare_heatmap_data(adata = adata,
                                       gate = gate,
                                       layer = layer,
                                       data_metric = data_metric,
                                       data_group = data_group,
                                       include_technical_channels = include_technical_channels,
+                                      exclude = exclude,
                                       scaling = scaling)
     plot_data = _calculate_correlations(adata = adata,
                                         plot_data = plot_data,

@@ -35,6 +35,7 @@ def marker_correlation(adata: AnnData,
                        gate: str,
                        layer: str,
                        include_technical_channels: bool = False,
+                       exclude: Optional[Union[list[str], str]] = None,
                        scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
                        data_group: str = "sample_ID",
                        data_metric: Literal["mfi", "fop"] = "mfi",
@@ -66,6 +67,8 @@ def marker_correlation(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
         `RobustScaler` or `StandardScaler` (Z-score).
@@ -107,7 +110,7 @@ def marker_correlation(adata: AnnData,
         import FACSPy as fp
 
         dataset = fp.mouse_lineages()
-        
+
         fp.tl.mfi(dataset, layer = "compensated")
 
         fp.pl.marker_correlation(
@@ -117,12 +120,20 @@ def marker_correlation(adata: AnnData,
         )
     """
 
+
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
+
     plot_data = _prepare_heatmap_data(adata = adata,
                                       gate = gate,
                                       layer = layer,
                                       data_metric = data_metric,
                                       data_group = data_group,
                                       include_technical_channels = include_technical_channels,
+                                      exclude = exclude,
                                       scaling = scaling)
     
     plot_data = _calculate_correlations(adata = adata,

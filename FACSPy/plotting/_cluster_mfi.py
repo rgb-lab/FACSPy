@@ -347,6 +347,7 @@ def cluster_heatmap(adata: AnnData,
                     layer: str,
                     cluster_key: str,
                     include_technical_channels: bool = False,
+                    exclude: Optional[Union[list[str], str]] = None,
                     data_metric: Literal["mfi", "fop"] = "mfi",
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
@@ -382,6 +383,8 @@ def cluster_heatmap(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     data_metric
         One of `mfi` or `fop`. Using a different metric will calculate
         the asinh fold change on mfi and fop values, respectively
@@ -458,12 +461,19 @@ def cluster_heatmap(adata: AnnData,
     if annotation_kwargs is None:
         annotation_kwargs = {}
 
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
+
     raw_data, plot_data = _prepare_heatmap_data(adata = adata,
                                                 gate = gate,
                                                 layer = layer,
                                                 data_metric = data_metric,
                                                 data_group = cluster_key,
                                                 include_technical_channels = include_technical_channels,
+                                                exclude = exclude,
                                                 scaling = scaling,
                                                 return_raw_data = True)
     
@@ -471,6 +481,8 @@ def cluster_heatmap(adata: AnnData,
         return plot_data
 
     cols_to_plot = _fetch_fluo_channels(adata) if not include_technical_channels else adata.var_names.tolist()
+    assert isinstance(exclude, list)
+    cols_to_plot = [col for col in cols_to_plot if col not in exclude]
     plot_data = plot_data.set_index(cluster_key)
 
     if cluster_method == "correlation":

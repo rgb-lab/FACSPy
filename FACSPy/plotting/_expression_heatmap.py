@@ -45,6 +45,7 @@ def expression_heatmap(adata: AnnData,
                        metadata_annotation: Optional[Union[list[str], str]] = None,
                        marker_annotation: Optional[str] = None,
                        include_technical_channels: bool = False,
+                       exclude: Optional[Union[list[str], str]] = None,
                        data_group: str = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
@@ -85,6 +86,8 @@ def expression_heatmap(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
         use `data_group` to specify the right dataframe
@@ -157,18 +160,27 @@ def expression_heatmap(adata: AnnData,
     elif metadata_annotation is None:
         metadata_annotation = []
 
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
+
     raw_data, plot_data = _prepare_heatmap_data(adata = adata,
                                                 gate = gate,
                                                 layer = layer,
                                                 data_metric = data_metric,
                                                 data_group = data_group,
                                                 include_technical_channels = include_technical_channels,
+                                                exclude = exclude,
                                                 scaling = scaling,
                                                 return_raw_data = True)
     
     plot_data = plot_data.dropna(axis = 0, how = "any")
 
     cols_to_plot = _fetch_fluo_channels(adata) if not include_technical_channels else adata.var_names.tolist()
+    assert isinstance(exclude, list)
+    cols_to_plot = [col for col in cols_to_plot if col not in exclude]
     
     if cluster_method == "correlation":
         col_linkage = _calculate_linkage(
