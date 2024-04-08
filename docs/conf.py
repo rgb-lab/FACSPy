@@ -28,9 +28,9 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
-    "nbsphinx", # for notebook implementation
-    "nbsphinx_link", # necessary to keep vignettes outside of sphinx root directory
-    "matplotlib.sphinxext.plot_directive" # necessary to include inline plots via documentation
+    "nbsphinx",  # for notebook implementation
+    "nbsphinx_link",  # necessary to keep vignettes outside of sphinx root directory
+    "matplotlib.sphinxext.plot_directive"  # necessary to include inline plots via documentation
 ]
 
 templates_path = ['_templates']

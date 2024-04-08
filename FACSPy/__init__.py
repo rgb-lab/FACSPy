@@ -15,7 +15,9 @@ from ._utils import (subset_gate,
                      equalize_groups,
                      convert_gate_to_obs,
                      rename_channel,
-                     convert_cluster_to_gate)
+                     convert_cluster_to_gate,
+                     r_setup,
+                     r_restore)
 from .io._io import save_dataset, read_dataset
 from ._settings import settings, FACSPyConfig
 
