@@ -46,18 +46,18 @@ def _create_custom_cbar(cmap: str,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def fold_change(adata: AnnData,
-                gate: str = None,
-                layer: str = None,
-                groupby: str = None,
-                group1: Union[str, list[Union[str, int]]] = None,
-                group2: Union[str, list[Union[str, int]]] = None,
-                data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                gate: str,
+                layer: str,
+                groupby: str,
+                group1: Union[list[Union[str, int]], str],
+                group2: Union[list[Union[str, int]], str],
+                data_group: str = "sample_ID",
                 data_metric: Literal["mfi", "fop"] = "mfi",
                 include_technical_channels: bool = False,
                 stat: Literal["p", "p_adj"] = "p",
-                cmap: str = "Reds_r",
+                cmap: Optional[str] = "Reds_r",
                 test: Literal["Kruskal", "Wilcoxon"] = "Kruskal",
-                min_pval: float = None,
+                min_pval: Optional[float] = None,
                 comparison_label: Optional[str] = None,
                 group1_label: Optional[str] = None,
                 group2_label: Optional[str] = None,
@@ -143,23 +143,23 @@ def fold_change(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated'
-    >>> fp.pl.fold_change(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "compensated",
-    ...     groupby = "condition",
-    ...     group1 = "healthy",
-    ...     group2 = "disease",
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.tl.mfi(dataset)
+
+        fp.pl.fold_change(
+            dataset,
+            gate = "B_cells",
+            groupby = "organ",
+            group1 = "BM",
+            group2 = "PB",
+            figsize = (3,5)
+        )
 
     """
        

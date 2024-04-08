@@ -1,8 +1,7 @@
 import pandas as pd
-import numpy as np
 from anndata import AnnData
-from matplotlib.figure import Figure
 
+import seaborn as sns
 from typing import Literal, Union, Optional
 from ._utils import (_map_obs_to_cmap,
                      _calculate_sample_distance,
@@ -41,14 +40,15 @@ def _calculate_distances(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def sample_distance(adata: AnnData,
-                    gate: str = None,
-                    layer: str = None,
-                    metadata_annotation: Union[str, list[str]] = None,
+                    gate: str,
+                    layer: str,
+                    metadata_annotation: Optional[Union[list[str], str]] = None,
                     include_technical_channels: bool = False,
-                    data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                    exclude: Optional[Union[list[str], str]] = None,
+                    data_group: str = "sample_ID",
                     data_metric: Literal["mfi", "fop"] = "mfi",
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
-                    cmap: str = "inferno",
+                    cmap: Optional[str] = "inferno",
                     metaclusters: Optional[int] = None,
                     label_metaclusters_in_dataset: bool = True,
                     label_metaclusters_key: Optional[str] = "sample_distance_metaclusters",
@@ -57,14 +57,13 @@ def sample_distance(adata: AnnData,
                     return_fig: bool = False,
                     show: bool = True,
                     save: Optional[str] = None
-                    ) -> Optional[Union[Figure, pd.DataFrame]]:
+                    ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     
     """\
     Plot to display sample to sample distance as a heatmap.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -81,6 +80,8 @@ def sample_distance(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
         use `data_group` to specify the right dataframe
@@ -118,22 +119,21 @@ def sample_distance(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.pl.sample_distance(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     metadata_annotation = ["condition", "sex"]
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.mfi(dataset, layer = "compensated")
+
+        fp.pl.sample_distance(
+            dataset,
+            gate = "CD45+",
+            layer = "compensated",
+            metadata_annotation = ["organ", "sex"]
+        )
 
     """
  
@@ -142,12 +142,19 @@ def sample_distance(adata: AnnData,
     elif metadata_annotation is None:
         metadata_annotation = []
 
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
+
     plot_data = _prepare_heatmap_data(adata = adata,
                                       gate = gate,
                                       layer = layer,
                                       data_metric = data_metric,
                                       data_group = data_group,
                                       include_technical_channels = include_technical_channels,
+                                      exclude = exclude,
                                       scaling = scaling)
     plot_data = _calculate_distances(adata = adata,
                                      plot_data = plot_data)

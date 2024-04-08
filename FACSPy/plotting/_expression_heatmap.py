@@ -2,15 +2,13 @@ from anndata import AnnData
 import numpy as np
 import pandas as pd
 
-from matplotlib.figure import Figure
-
+import seaborn as sns
 from typing import Literal, Optional, Union
 
 from ._utils import (_scale_data,
                      _map_obs_to_cmap,
                      _calculate_sample_distance,
                      _calculate_linkage,
-                     _remove_technical_channels,
                      _prepare_heatmap_data,
                      _remove_dendrogram,
                      _add_metaclusters,
@@ -20,7 +18,6 @@ from ._utils import (_scale_data,
                      _add_categorical_legend_to_clustermap,
                      _calculate_correlation_data,
                      add_annotation_plot,
-                     _get_uns_dataframe,
                      ANNOTATION_CMAPS,
                      savefig_or_show)
 from ._clustermap import create_clustermap
@@ -43,12 +40,13 @@ def prepare_plot_data(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def expression_heatmap(adata: AnnData,
-                       gate: str = None,
-                       layer: str = None,
-                       metadata_annotation: Optional[Union[str, list[str]]] = None,
+                       gate: str,
+                       layer: str,
+                       metadata_annotation: Optional[Union[list[str], str]] = None,
                        marker_annotation: Optional[str] = None,
                        include_technical_channels: bool = False,
-                       data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                       exclude: Optional[Union[list[str], str]] = None,
+                       data_group: str = "sample_ID",
                        data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler"]] = "MinMaxScaler",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
@@ -58,12 +56,12 @@ def expression_heatmap(adata: AnnData,
                        label_metaclusters_in_dataset: bool = True,
                        label_metaclusters_key: Optional[str] = "metacluster_sc",
                        y_label_fontsize: Optional[Union[int, float]] = 10,
-                       figsize: Optional[tuple[int, int]] = (5,3.8),
+                       figsize: Optional[tuple[float, float]] = (5,3.8),
                        return_dataframe: bool = False,
                        return_fig: bool = False,
                        show: bool = True,
                        save: Optional[str] = None
-                       ) -> Optional[Union[Figure, pd.DataFrame]]:
+                       ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     """\
     Plot for expression heatmap. Rows are the individual channels and columns are the data points.
 
@@ -88,6 +86,8 @@ def expression_heatmap(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
         use `data_group` to specify the right dataframe
@@ -136,23 +136,22 @@ def expression_heatmap(adata: AnnData,
     Examples
     --------
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.pl.expression_heatmap(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     metadata_annotation = ["condition", "sex"],
-    ...     marker_annotation = "CD3"
-    ... )
+    .. plot::
+        :context: close-figs
 
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.mfi(dataset, layer = "transformed")
+
+        fp.pl.expression_heatmap(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            metadata_annotation = ["organ", "sex"],
+            marker_annotation = "B220"
+        )
 
     """
 
@@ -161,18 +160,27 @@ def expression_heatmap(adata: AnnData,
     elif metadata_annotation is None:
         metadata_annotation = []
 
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
+
     raw_data, plot_data = _prepare_heatmap_data(adata = adata,
                                                 gate = gate,
                                                 layer = layer,
                                                 data_metric = data_metric,
                                                 data_group = data_group,
                                                 include_technical_channels = include_technical_channels,
+                                                exclude = exclude,
                                                 scaling = scaling,
                                                 return_raw_data = True)
     
     plot_data = plot_data.dropna(axis = 0, how = "any")
 
     cols_to_plot = _fetch_fluo_channels(adata) if not include_technical_channels else adata.var_names.tolist()
+    assert isinstance(exclude, list)
+    cols_to_plot = [col for col in cols_to_plot if col not in exclude]
     
     if cluster_method == "correlation":
         col_linkage = _calculate_linkage(

@@ -15,6 +15,9 @@ tools
 plotting
 model
 dataset
+io
+synchronization
+
 ```
 
 Additional functionality is available through the following top-level functions and classes.

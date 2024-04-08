@@ -17,15 +17,15 @@ from .._settings import settings
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def fop(adata: AnnData,
-        gate: str = None,
-        layer: str = None,
-        marker: Union[str, list[str]] = None,
-        groupby: Union[str, list[str]] = None,
-        splitby: str = None,
-        cmap: str = None,
-        order: list[str] = None,
-        stat_test: str = "Kruskal",
-        data_group: Optional[Union[str, list[str]]] = "sample_ID",
+        gate: str,
+        layer: str,
+        marker: str,
+        groupby: str,
+        splitby: Optional[str] = None,
+        cmap: Optional[str] = None,
+        order: Optional[Union[list[str], str]] = None,
+        stat_test: Optional[str] = "Kruskal",
+        data_group: str = "sample_ID",
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
         return_fig: bool = False,
@@ -33,13 +33,12 @@ def fop(adata: AnnData,
         show: bool = True,
         save: Optional[str] = None
         ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the frequency of parent (fop) values as calculated by fp.tl.fop
     as a combined strip-/boxplot.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -91,23 +90,23 @@ def fop(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.fop(dataset)
-    >>> fp.pl.fop(
-    ...     dataset,
-    ...     gate = "live",
-    ...     groupby = "condition",
-    ...     splitby = "sex"
-    ... )
-    
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.fop(dataset, layer = "compensated")
+
+        fp.pl.fop(
+            dataset,
+            gate = "CD45+",
+            layer = "compensated",
+            marker = "B220",
+            groupby = "organ",
+            figsize = (3,3.5)
+        )
     """
 
     return _mfi_fop_baseplot(adata = adata,
@@ -132,15 +131,15 @@ def fop(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def mfi(adata: AnnData,
-        gate: str = None,
-        layer: str = None,
-        marker: Union[str, list[str]] = None,
-        groupby: Union[str, list[str]] = None,
-        splitby: str = None,
-        cmap: str = None,
-        order: list[str] = None,
-        stat_test: str = "Kruskal",
-        data_group: Optional[Union[str, list[str]]] = "sample_ID",
+        gate: str,
+        layer: str,
+        marker: str,
+        groupby: str,
+        splitby: Optional[str] = None,
+        cmap: Optional[str] = None,
+        order: Optional[Union[list[str], str]] = None,
+        stat_test: Optional[str] = "Kruskal",
+        data_group: str = "sample_ID",
         figsize: tuple[float, float] = (3,3),
         return_dataframe: bool = False,
         return_fig: bool = False,
@@ -148,13 +147,12 @@ def mfi(adata: AnnData,
         show: bool = True,
         save: Optional[str] = None
         ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the median fluorescence intensity (mfi) values as calculated by fp.tl.mfi
     as a combined strip-/boxplot.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels.
@@ -206,23 +204,23 @@ def mfi(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.pl.mfi(
-    ...     dataset,
-    ...     gate = "live",
-    ...     groupby = "condition",
-    ...     splitby = "sex"
-    ... )
-    
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.tl.mfi(dataset, layer = "compensated")
+
+        fp.pl.mfi(
+            dataset,
+            gate = "Neutrophils",
+            layer = "compensated",
+            marker = "Ly6G",
+            groupby = "organ",
+            figsize = (3,3.5)
+        )
     """
     
     return _mfi_fop_baseplot(adata = adata,
@@ -248,18 +246,18 @@ def _mfi_fop_baseplot(adata: AnnData,
                       data_metric: str,
                       data_group: str,
                       layer: str,
-                      marker: Union[str, list[str]],
-                      groupby: Union[str, list[str]],
-                      splitby: str,
-                      cmap: str = None,
-                      stat_test: str = None,
-                      order: list[str] = None,
-                      figsize: tuple[float, float] = None,
-                      return_fig: bool = False,
-                      return_dataframe: bool = False,
-                      ax: Axes = None,
-                      save: bool = None,
-                      show: bool = None):
+                      marker: str,
+                      groupby: str,
+                      splitby: Optional[str],
+                      cmap: Optional[str],
+                      stat_test: Optional[str],
+                      order: Optional[Union[list[str], str]],
+                      figsize: tuple[float, float],
+                      return_fig: bool,
+                      return_dataframe: bool,
+                      ax: Optional[Axes],
+                      save: Optional[str],
+                      show: bool):
     
     if gate is None:
         raise TypeError("A Gate has to be provided")

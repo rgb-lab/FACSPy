@@ -81,3 +81,49 @@ def test_phenograph_works_as_phenograph(mock_dataset: AnnData):
     assert comms.tolist() == facspy_adata.obs["live_compensated_phenograph"].tolist()
     assert (graph != facspy_adata.uns["live_compensated_phenograph_graph"]).nnz == 0
     assert Q == facspy_adata.uns["live_compensated_phenograph_Q"]
+
+
+def test_decorator_default_gate_and_default_layer(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+
+    fp.tl.phenograph(mock_dataset)
+    assert "live_compensated_phenograph" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_only_gate_provided(mock_dataset: AnnData):
+    fp.settings.default_layer = "compensated"
+
+    fp.tl.phenograph(mock_dataset, gate = "live")
+    assert "live_compensated_phenograph" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_only_layer_provided(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+
+    fp.tl.phenograph(mock_dataset, layer = "compensated")
+    assert "live_compensated_phenograph" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.phenograph(mock_dataset)
+    assert "live_compensated_phenograph" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.phenograph(mock_dataset, "my_personal_gate")
+    assert "live_compensated_phenograph" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.phenograph(mock_dataset, gate = "my_personal_gate")
+    assert "live_compensated_phenograph" in mock_dataset.obs.columns
+
+

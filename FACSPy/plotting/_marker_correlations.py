@@ -1,13 +1,10 @@
 import pandas as pd
 from anndata import AnnData
 
-from matplotlib.figure import Figure
+import seaborn as sns
 from typing import Literal, Optional, Union
 
-from ._utils import (_scale_data,
-                     _get_uns_dataframe,
-                     _remove_technical_channels,
-                     _prepare_heatmap_data,
+from ._utils import (_prepare_heatmap_data,
                      _remove_ticklabels,
                      _remove_ticks,
                      _scale_cbar_to_heatmap,
@@ -35,12 +32,13 @@ def _calculate_correlations(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def marker_correlation(adata: AnnData,
-                       gate: str = None,
-                       layer: str = None,
+                       gate: str,
+                       layer: str,
                        include_technical_channels: bool = False,
+                       exclude: Optional[Union[list[str], str]] = None,
                        scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"] = "MinMaxScaler",
-                       data_group: Optional[Union[str, list[str]]] = "sample_ID",
-                       data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                       data_group: str = "sample_ID",
+                       data_metric: Literal["mfi", "fop"] = "mfi",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                        cmap: str = "inferno",
                        y_label_fontsize: float = 10,
@@ -49,7 +47,7 @@ def marker_correlation(adata: AnnData,
                        return_fig: bool = False,
                        show: bool = True,
                        save: Optional[str] = None
-                       ) -> Optional[Union[Figure, pd.DataFrame]]:
+                       ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     """\
     Plot for marker correlation heatmap. 
 
@@ -69,6 +67,8 @@ def marker_correlation(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
         `RobustScaler` or `StandardScaler` (Z-score).
@@ -104,23 +104,28 @@ def marker_correlation(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.pl.marker_correlation(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed"
-    ... )
+        import FACSPy as fp
 
+        dataset = fp.mouse_lineages()
+
+        fp.tl.mfi(dataset, layer = "compensated")
+
+        fp.pl.marker_correlation(
+            dataset,
+            gate = "CD45+",
+            layer = "compensated"
+        )
     """
+
+
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
 
     plot_data = _prepare_heatmap_data(adata = adata,
                                       gate = gate,
@@ -128,6 +133,7 @@ def marker_correlation(adata: AnnData,
                                       data_metric = data_metric,
                                       data_group = data_group,
                                       include_technical_channels = include_technical_channels,
+                                      exclude = exclude,
                                       scaling = scaling)
     
     plot_data = _calculate_correlations(adata = adata,

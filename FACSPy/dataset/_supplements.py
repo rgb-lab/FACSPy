@@ -43,7 +43,7 @@ class BaseSupplement:
         dataframe["fcs_colname"] = [channel.split("Comp-")[1] if "Comp-" in channel else channel for channel in channel_list]
         return dataframe
     
-    def to_df(self):
+    def to_df(self) -> pd.DataFrame:
         """returns the dataframe of the object"""
         return self.dataframe
 
@@ -63,7 +63,7 @@ class BaseSupplement:
                                              sep = None,
                                              iterator = True,
                                              engine = "python")
-        return reader._engine.data.dialect.delimiter    
+        return reader._engine.data.dialect.delimiter
     
     def _fetch_data_source(self,
                            file: Optional[str],
@@ -102,7 +102,8 @@ class BaseSupplement:
     def _fetch_data_from_source(self,
                                 file: Optional[str],
                                 data: Optional[pd.DataFrame],
-                                from_fcs: bool) -> pd.DataFrame:
+                                from_fcs: bool) -> Optional[pd.DataFrame]:
+
         """actually converts the operations set in `fetch_data_source`"""
         if self.source == "provided dataframe":
             return data
@@ -117,13 +118,9 @@ class BaseSupplement:
                 return pd.DataFrame(columns = ["sample_ID", "file_name"])
             elif self.__class__.__name__ == "CofactorTable":
                 return pd.DataFrame(columns = ["fcs_colname", "cofactors"])
+        else:
+            raise ValueError("Please open a bugreport.")
     
-    def rename_channel(self,
-                       old_channel_name,
-                       new_channel_name) -> None:
-        """renames a channel"""
-        self.dataframe.loc[self.dataframe["fcs_colname"] == old_channel_name, "fcs_colname"] = new_channel_name
-
     def select_channels(self,
                         channels: list[str]) -> None:
         """selects channels and subsets dataframe"""
@@ -197,8 +194,7 @@ class Panel(BaseSupplement):
     -----
 
     See further usage examples in the following tutorials:
-    ### NEEDS DOCSTRING LINKS!
-    vignettes/panel_vignette.ipynb
+    :doc:`/vignettes/panel_object`
 
     """
 
@@ -223,14 +219,25 @@ class Panel(BaseSupplement):
             f"loaded as {self.source})"
         ) 
 
-    def get_antigens(self):
+    def get_antigens(self) -> list[str]:
         """returns the antigens from the panel as a list"""
         return self.dataframe["antigens"].to_list()
     
-    def get_channels(self):
+    def get_channels(self) -> list[str]:
         """returns the channel names from the panel as a list"""
         return self.dataframe["fcs_colname"].to_list()
     
+    def rename_channel(self,
+                       old_channel_name,
+                       new_channel_name) -> None:
+        """renames a channel"""
+        self.dataframe.loc[self.dataframe["fcs_colname"] == old_channel_name, "fcs_colname"] = new_channel_name
+    
+    def rename_antigen(self,
+                       old_name,
+                       new_name) -> None:
+        """renames an antigen"""
+        self.dataframe.loc[self.dataframe["antigens"] == old_name, "antigens"] = new_name 
 
 class Metadata(BaseSupplement):
     """\
@@ -286,8 +293,8 @@ class Metadata(BaseSupplement):
     -----
 
     See further usage examples in the following tutorials:
-    ### NEEDS DOCSTRING LINKS!
-    vignettes/metadata_vignette.ipynb
+    :doc:`/vignettes/metadata_object`
+
     
     """ 
 
@@ -316,26 +323,38 @@ class Metadata(BaseSupplement):
             f"{self._extract_metadata_factors()})"
         )
     
-    def _manage_dtypes(self):
+    def _manage_dtypes(self) -> None:
         """collection of statements that manage dtypes. sample_IDs are strings"""
         self.dataframe["sample_ID"] = self.dataframe["sample_ID"].astype("str")
     
-    def _make_dataframe_categorical(self):
+    def _make_dataframe_categorical(self) -> None:
         """all columns are converted to categoricals"""
         self.dataframe = self.dataframe.astype("category")
     
     def annotate(self,
-                 file_names: Union[str, list[str]],
-                 column: str,
-                 value: str) -> None:
+                 sample_IDs: Union[list[str], str] = "",
+                 file_names: Union[list[str], str] = "",
+                 column: Optional[str] = None,
+                 value: Optional[str] = None) -> None:
         """allows the annotation of new metadata"""
-        if not isinstance(file_names, list):
+        if file_names and sample_IDs:
+            raise TypeError("Please provide either sample_IDs or file_names")
+        if sample_IDs and not isinstance(sample_IDs, list):
+            sample_IDs = [sample_IDs]
+        if file_names and not isinstance(file_names, list):
             file_names = [file_names]
-        self.dataframe.loc[self.dataframe["file_name"].isin(file_names), column] = value
+        if file_names and not all(file in self.dataframe["file_name"].tolist() for file in file_names):
+            raise ValueError("Invalid filename passed.")
+        if sample_IDs and not all(sid in self.dataframe["sample_ID"].tolist() for sid in sample_IDs):
+            raise ValueError("Invalid sample_ID passed. Make sure to provide strings.")
+        if sample_IDs:
+            self.dataframe.loc[self.dataframe["sample_ID"].isin(sample_IDs), column] = value
+        if file_names:
+            self.dataframe.loc[self.dataframe["file_name"].isin(file_names), column] = value
 
     def group_variable(self,
                        factor: str,
-                       n_groups: int):
+                       n_groups: int) -> None:
         """groups continous variables into n_groups"""
         try:
             self.dataframe[factor] = self.dataframe[factor].astype("float32")
@@ -343,25 +362,31 @@ class Metadata(BaseSupplement):
             raise ValueError("Only numeric columns are supported") from e
         column = self.dataframe[factor]
         min_value, max_value = column.min(), column.max()
-        intervals = np.arange(min_value, max_value + min_value, (max_value - min_value) / n_groups)
+        intervals = np.arange(min_value - 1,
+                              max_value + min_value + 1,
+                              np.ceil((max_value - min_value) / n_groups))
         self.dataframe[f"{factor}_grouped"] = pd.cut(column, intervals)
     
-    def rename(self,
-               current_name: str,
-               new_name: str) -> None:
-        """renames a column from the metadata dataframe"""
+    def rename_column(self,
+                      current_name: str,
+                      new_name: str) -> None:
+        """renames a column from the metadata dataframe and removes the old column"""
+        if current_name not in self.dataframe.columns:
+            raise ValueError("Column not found in metadata.")
         self.dataframe[new_name] = self.dataframe[current_name]
         self.dataframe = self.dataframe.drop(current_name, axis = 1)
 
-    def rename_factors(self,
-                       column: Union[str, pd.Index],
-                       replacement: Union[Mapping, list[Union[str, float, int]]]) -> None:
-        """renames the instances of a factor"""
+    def rename_values(self,
+                      column: Union[str, pd.Index],
+                      replacement: Union[list[Union[str, float, int]], Mapping]) -> None:
+        """renames the values of a metadata factor"""
         if isinstance(replacement, dict):
             self.dataframe[column].replace(replacement,
                                            inplace = True)
         else:
             self.dataframe[column] = replacement
+        self._make_dataframe_categorical()
+        self._sanitize_categoricals()
 
     def subset(self,
                column: str,
@@ -371,7 +396,7 @@ class Metadata(BaseSupplement):
             values = [values]
         self.dataframe = self.dataframe.loc[self.dataframe[column].isin(values)]
 
-    def _extract_metadata_factors(self):
+    def _extract_metadata_factors(self) -> list[str]:
         """returns all metadata columns that are not `sample_ID`, `file_name` or `staining`"""
         return [
             col
@@ -379,11 +404,11 @@ class Metadata(BaseSupplement):
             if all(k not in col for k in ["sample_ID", "sample_id", "file_name", "staining"])
         ]
 
-    def get_factors(self):
+    def get_factors(self) -> list[str]:
         """returns all metadata columns that are not `sample_ID`, `file_name` or `staining`"""
         return self._extract_metadata_factors()
     
-    def _sanitize_categoricals(self):
+    def _sanitize_categoricals(self) -> None:
         """removes unused categories"""
         for column in self.dataframe:
             if isinstance(self.dataframe[column].dtype, pd.CategoricalDtype):
@@ -441,8 +466,7 @@ class CofactorTable(BaseSupplement):
     -----
 
     See further usage examples in the following tutorials:
-    ### NEEDS DOCSTRING LINKS!
-    vignettes/cofactor_table_vignette.ipynb
+    :doc:`/vignettes/cofactortable_object`
 
     """
 
@@ -491,4 +515,9 @@ class CofactorTable(BaseSupplement):
             raise ValueError("Please provide a list of cofactors or set the cytof flag to True")
         if cytof and cofactors is not None:
             print("... warning cytof flag has been set to True, cofactors will be 5 for each channel.")
-        self.dataframe["cofactors"] = 5 if cytof else cofactors       
+        self.dataframe["cofactors"] = 5 if cytof else cofactors
+
+    def rename_channel(self,
+                       current_name,
+                       new_name) -> None:
+        self.dataframe.loc[self.dataframe["fcs_colname"] == current_name, "fcs_colname"] = new_name   

@@ -47,7 +47,6 @@ def _make_layers_valid(adata: AnnData) -> None:
                 adata.layers[slot_key.replace(disallowed_character, DISALLOWED_CHARACTERS_MAP[disallowed_character])] = adata.layers.pop(slot_key)
     return
 
-
 def _make_var_valid(adata: AnnData) -> None:
     for col in adata.var.columns:
         if adata.var[col].dtype != "category":
@@ -67,7 +66,7 @@ def _make_obs_valid(adata: AnnData) -> None:
             ### add warning!
     return
 
-def _restore_obsm_keys(adata: AnnData):
+def _restore_obsm_keys(adata: AnnData) -> None:
     slot_keys = list(adata.obsm.keys())
     for slot_key in slot_keys:
         for character_pointer in DISALLOWED_CHARACTER_INDICATORS:
@@ -75,7 +74,7 @@ def _restore_obsm_keys(adata: AnnData):
                 adata.obsm[slot_key.replace(character_pointer, DISALLOWED_CHARACTER_INDICATORS[character_pointer])] = adata.obsm.pop(slot_key)
     return
 
-def _restore_varm_keys(adata: AnnData):
+def _restore_varm_keys(adata: AnnData) -> None:
     slot_keys = list(adata.varm.keys())
     for slot_key in slot_keys:
         for character_pointer in DISALLOWED_CHARACTER_INDICATORS:
@@ -83,7 +82,7 @@ def _restore_varm_keys(adata: AnnData):
                 adata.varm[slot_key.replace(character_pointer, DISALLOWED_CHARACTER_INDICATORS[character_pointer])] = adata.varm.pop(slot_key)
     return
 
-def _restore_varp_keys(adata: AnnData):
+def _restore_varp_keys(adata: AnnData) -> None:
     slot_keys = list(adata.varp.keys())
     for slot_key in slot_keys:
         for character_pointer in DISALLOWED_CHARACTER_INDICATORS:
@@ -91,7 +90,7 @@ def _restore_varp_keys(adata: AnnData):
                 adata.varp[slot_key.replace(character_pointer, DISALLOWED_CHARACTER_INDICATORS[character_pointer])] = adata.varp.pop(slot_key)
     return
 
-def _restore_obsp_keys(adata: AnnData):
+def _restore_obsp_keys(adata: AnnData) -> None:
     slot_keys = list(adata.obsp.keys())
     for slot_key in slot_keys:
         for character_pointer in DISALLOWED_CHARACTER_INDICATORS:
@@ -99,7 +98,7 @@ def _restore_obsp_keys(adata: AnnData):
                 adata.obsp[slot_key.replace(character_pointer, DISALLOWED_CHARACTER_INDICATORS[character_pointer])] = adata.obsp.pop(slot_key)
     return
 
-def _restore_layers_keys(adata: AnnData):
+def _restore_layers_keys(adata: AnnData) -> None:
     slot_keys = list(adata.layers.keys())
     for slot_key in slot_keys:
         for character_pointer in DISALLOWED_CHARACTER_INDICATORS:

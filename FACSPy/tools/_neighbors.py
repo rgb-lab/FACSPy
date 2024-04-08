@@ -1,5 +1,5 @@
 from anndata import AnnData
-from typing import Optional, Literal
+from typing import Optional, Literal, Union
 from scipy.sparse import csr_matrix
 
 from ._utils import (_preprocess_adata,
@@ -10,14 +10,14 @@ from .._utils import _default_gate_and_default_layer, _enable_gate_aliases
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def neighbors(adata: AnnData,
-              gate: str = None,
-              layer: str = None,
+              gate: str,
+              layer: str,
               use_only_fluo: bool = True,
-              exclude: Optional[list[str]] = None,
+              exclude: Optional[Union[list[str], str]] = None,
               scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
               n_neighbors: int = 15,
-              use_rep: str = None,
-              n_pcs: int = None,
+              use_rep: Optional[str] = None,
+              n_pcs: Optional[int] = None,
               copy: bool = False,
               *args,
               **kwargs) -> Optional[AnnData]:
@@ -88,7 +88,13 @@ def neighbors(adata: AnnData,
     """
 
     adata = adata.copy() if copy else adata
-    
+
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]    
+
     uns_key = f"{gate}_{layer}"
     neighbors_key = f"{uns_key}_neighbors"
 
@@ -189,6 +195,3 @@ def _compute_neighbors(adata: AnnData,
         neighbors_dict['rp_forest'] = neighbors.rp_forest
 
     return (neighbors.distances, neighbors.connectivities, neighbors_dict)
- 
- 
-

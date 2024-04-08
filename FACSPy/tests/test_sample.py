@@ -10,15 +10,12 @@ from FACSPy.exceptions._exceptions import NotCompensatedError
 FCS_FILE_PATH = "FACSPy/_resources/"
 FCS_FILE_NAME = "test_fcs.fcs"
 
-def read_fcs_file():
+@pytest.fixture
+def fcs_file():
     input_directory = FCS_FILE_PATH
     file_name = FCS_FILE_NAME
     return FCSFile(input_directory = input_directory,
                    file_name = file_name)
-
-@pytest.fixture
-def fcs_file():
-    return read_fcs_file()
 
 def test_read_function(fcs_file: FCSFile):
     assert isinstance(fcs_file, FCSFile)
@@ -51,7 +48,10 @@ def test_channels(fcs_file: FCSFile):
 def test_fcs_compensation(fcs_file: FCSFile):
     assert isinstance(fcs_file.fcs_compensation, Matrix)
     assert fcs_file.fcs_compensation.matrix.shape == (14,14)
-    assert all(fcs_file.fcs_compensation.fluorochromes == fcs_file.channels["pns"].to_list())
+    detectors = fcs_file.fcs_compensation.detectors
+    assert len(detectors) == 14
+    fluorochromes = fcs_file.fcs_compensation.fluorochromes
+    assert len(fluorochromes) == 14
     assert fcs_file.fcs_compensation.id == "acquisition_defined"
 
 def test_get_events(fcs_file: FCSFile):

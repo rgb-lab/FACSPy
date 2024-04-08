@@ -5,6 +5,8 @@ import pandas as pd
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
+import seaborn as sns
+
 from typing import Literal, Optional, Union
 
 from ._utils import (_scale_data,
@@ -33,15 +35,15 @@ def _cluster_mfi_fop_baseplot(data_metric: str,
                               cluster_key: str,
                               marker: str,
                               splitby: Optional[str],
-                              cmap: str,
-                              order: list[str],
-                              stat_test: str,
+                              cmap: Optional[str],
+                              order: Optional[Union[list[str], str]],
+                              stat_test: Optional[str],
                               figsize: tuple[float, float],
                               return_dataframe: bool,
                               return_fig: bool,
-                              ax: Axes,
-                              save: bool,
-                              show: bool):
+                              ax: Optional[Axes],
+                              show: bool,
+                              save: Optional[str]):
 
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
@@ -83,16 +85,17 @@ def _cluster_mfi_fop_baseplot(data_metric: str,
     if show is False:
         return ax
 
+@_default_gate_and_default_layer
 @_enable_gate_aliases
 def cluster_fop(adata: AnnData,
-                gate: str = None,
-                layer: str = None,
-                cluster_key: str = None,
-                marker: str = None,
+                gate: str,
+                layer: str,
+                cluster_key: str,
+                marker: str,
                 splitby: Optional[str] = None,
-                cmap: str = None,
-                order: list[str] = None,
-                stat_test: str = "Kruskal",
+                cmap: Optional[str] = None,
+                order: Optional[Union[list[str], str]] = None,
+                stat_test: Optional[str] = "Kruskal",
                 figsize: tuple[float, float] = (3,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
@@ -100,13 +103,12 @@ def cluster_fop(adata: AnnData,
                 show: bool = True,
                 save: Optional[str] = None
                 ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the frequency of parent (fop) values as calculated by fp.tl.fop
     as a combined strip-/boxplot for the indicated clustering.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -159,25 +161,32 @@ def cluster_fop(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.tl.fop(dataset, groupby = "T_cells_transformed_leiden")
-    >>> fp.pl.cluster_fop(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     marker = "CD3",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     splitby = "sex"
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.tl.fop(dataset,
+                  layer = "compensated",
+                  groupby = "CD45+_transformed_leiden",
+                  aggregate = False)
+
+        fp.pl.cluster_fop(
+            dataset,
+            layer = "compensated",
+            cluster_key = "CD45+_transformed_leiden",
+            marker = "B220",
+            stat_test = False
+        )
     
     """
     
@@ -198,16 +207,17 @@ def cluster_fop(adata: AnnData,
                                      save = save,
                                      show = show)
 
+@_default_gate_and_default_layer
 @_enable_gate_aliases
 def cluster_mfi(adata: AnnData,
-                gate: str = None,
-                layer: str = None,
-                marker: str = None,
-                cluster_key: str = None,
+                gate: str,
+                layer: str,
+                marker: str,
+                cluster_key: str,
                 splitby: Optional[str] = None,
-                cmap: str = None,
-                order: list[str] = None,
-                stat_test: str = "Kruskal",
+                cmap: Optional[str] = None,
+                order: Optional[Union[list[str], str]] = None,
+                stat_test: Optional[str] = "Kruskal",
                 figsize: tuple[float, float] = (3,3),
                 return_dataframe: bool = False,
                 return_fig: bool = False,
@@ -215,13 +225,12 @@ def cluster_mfi(adata: AnnData,
                 show: bool = True,
                 save: Optional[str] = None
                 ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the median fluorescence intensity (mfi) values as calculated by fp.tl.mfi
     as a combined strip-/boxplot for the indicated clustering.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels
@@ -274,26 +283,33 @@ def cluster_mfi(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.tl.mfi(dataset, groupby = "T_cells_transformed_leiden")
-    >>> fp.pl.cluster_mfi(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     marker = "CD3",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     splitby = "sex"
-    ... )
-    
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.tl.mfi(dataset,
+                  layer = "compensated",
+                  groupby = "CD45+_transformed_leiden",
+                  aggregate = False)
+
+        fp.pl.cluster_mfi(
+            dataset,
+            layer = "compensated",
+            cluster_key = "CD45+_transformed_leiden",
+            marker = "B220",
+            stat_test = False
+        )
+   
     """
 
     return _cluster_mfi_fop_baseplot(data_metric = "mfi",
@@ -327,24 +343,25 @@ def prepare_plot_data(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def cluster_heatmap(adata: AnnData,
-                    gate: str = None,
-                    layer: str = None,
-                    cluster_key: Optional[Union[str, list[str]]] = None,
+                    gate: str,
+                    layer: str,
+                    cluster_key: str,
                     include_technical_channels: bool = False,
-                    data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
+                    exclude: Optional[Union[list[str], str]] = None,
+                    data_metric: Literal["mfi", "fop"] = "mfi",
                     scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                     corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
                     cluster_method: Literal["correlation", "distance"] = "distance",
                     annotate: Optional[Union[Literal["frequency"], str]] = None,
-                    annotation_kwargs: dict = {},
-                    cmap: str = "RdYlBu_r",
+                    annotation_kwargs: Optional[dict] = None,
+                    cmap: Optional[str] = "RdYlBu_r",
                     y_label_fontsize: Optional[Union[int, float]] = 10,
                     figsize: Optional[tuple[float, float]] = (5,3.8),
                     return_dataframe: bool = False,
                     return_fig: bool = False,
                     show: bool = True,
                     save: Optional[str] = None
-                    ) -> Optional[Union[Figure, pd.DataFrame]]:
+                    ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     """\
     Plots a heatmap where every column corresponds to one cluster and the rows display the marker expression.
 
@@ -366,6 +383,8 @@ def cluster_heatmap(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     data_metric
         One of `mfi` or `fop`. Using a different metric will calculate
         the asinh fold change on mfi and fop values, respectively
@@ -410,32 +429,51 @@ def cluster_heatmap(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.tl.mfi(dataset, groupby = "T_cells_transformed_leiden")
-    >>> fp.pl.cluster_heatmap(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     annotate = "frequency"
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.tl.mfi(dataset,
+                  groupby = "CD45+_transformed_leiden",
+                  aggregate = True)
+
+        fp.pl.cluster_heatmap(
+            dataset,
+            gate = "CD45+",
+            layer = "transformed",
+            cluster_key = "CD45+_transformed_leiden",
+            annotate = "frequency",
+            annotation_kwargs = {"groupby": "organ"},
+            figsize = (4,6)
+        )
 
     """
+    if annotation_kwargs is None:
+        annotation_kwargs = {}
+
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
+
     raw_data, plot_data = _prepare_heatmap_data(adata = adata,
                                                 gate = gate,
                                                 layer = layer,
                                                 data_metric = data_metric,
                                                 data_group = cluster_key,
                                                 include_technical_channels = include_technical_channels,
+                                                exclude = exclude,
                                                 scaling = scaling,
                                                 return_raw_data = True)
     
@@ -443,6 +481,8 @@ def cluster_heatmap(adata: AnnData,
         return plot_data
 
     cols_to_plot = _fetch_fluo_channels(adata) if not include_technical_channels else adata.var_names.tolist()
+    assert isinstance(exclude, list)
+    cols_to_plot = [col for col in cols_to_plot if col not in exclude]
     plot_data = plot_data.set_index(cluster_key)
 
     if cluster_method == "correlation":

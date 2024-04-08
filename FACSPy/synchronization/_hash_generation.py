@@ -2,7 +2,7 @@ from anndata import AnnData
 import pandas as pd
 
 
-def _generate_hash_dict(adata: AnnData):
+def _generate_hash_dict(adata: AnnData) -> dict:
     """
     Stores all wanted hashs in a dictionary.
     This function can be appended to the liking.
@@ -25,7 +25,7 @@ def _generate_hash_dict(adata: AnnData):
         "panel_var_names": HASH_FUNCTION_DICT["panel_var_names"](adata)
     }
 
-def _generate_dataset_obs_hash(adata: AnnData):
+def _generate_dataset_obs_hash(adata: AnnData) -> int:
     """
     Creates a hash based on the obs_names of the dataset
 
@@ -111,7 +111,7 @@ HASH_FUNCTION_DICT = {
         "adata_obs_columns": _generate_obs_columns_hash,
 
         "metadata_sample_ids": _generate_metadata_sample_ID_hash,
-        "metadata_columns": _generate_metadata_sample_ID_hash,
+        "metadata_columns": _generate_metadata_columns_hash,
 
         "adata_var_names": _generate_dataset_var_hash,
         "panel_var_names": _generate_panel_var_hash

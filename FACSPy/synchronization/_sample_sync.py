@@ -50,7 +50,7 @@ def _sync_columns_from_obs(adata: AnnData):
     metadata: pd.DataFrame = adata.uns["metadata"].dataframe
     metadata_columns = metadata.columns
     columns_to_transfer = [col for col in sample_specific_columns
-                           if not col in metadata_columns] + ["sample_ID"]
+                           if col not in metadata_columns] + ["sample_ID"]
 
     metadata_to_append = adata.obs[columns_to_transfer].drop_duplicates()
     appended_metadata = pd.merge(
@@ -64,6 +64,24 @@ def _sync_columns_from_obs(adata: AnnData):
     return
 
 def _sync_sample_ids_from_metadata(adata: AnnData):
+    """\
+    This function synchronizes the dataset by selecting the present sample_IDs
+    in `adata.uns["metadata"]` and subsetting the dataset accordingly.
+
+    Parameters
+    ----------
+    adata: AnnData
+        the current dataset with an uns dict
+    
+
+    Examples
+    --------
+    >>> dataset = fp.create_dataset(...)
+    >>> dataset.uns["metadata"].subset("sample_ID", ["1", "2", "3"])
+    >>> fp.sync.sample_ids_from_metadata_to_obs(dataset)
+
+
+    """
     print("\t... synchronizing dataset to contain sample_IDs of the metadata object")
     metadata_frame: pd.DataFrame = adata.uns["metadata"].dataframe.copy()
     obs = adata.obs
@@ -87,7 +105,28 @@ def _sync_sample_ids_from_metadata(adata: AnnData):
 
     return
 
-def _sync_sample_ids_from_obs(adata: AnnData):
+def _sync_sample_ids_from_obs(adata: AnnData) -> None:
+    """\
+    This function synchronizes the dataset by selecting the present sample_IDs
+    in `adata.obs["sample_ID"]` and subsetting the metadata stored in `adata.uns["metadata"]`
+    accordingly.
+
+    Parameters
+    ----------
+    adata: AnnData
+        the current dataset with an uns dict
+    
+
+    Examples
+    --------
+    >>> dataset = fp.create_dataset(...)
+    >>> dataset = dataset[dataset.obs["sample_ID"].isin(["1", "2", "3"]),:]
+    >>> fp.sync.sample_ids_from_obs_to_metadata(dataset)
+
+
+    """
+
+
     print("\t... synchronizing metadata object to contain sample_IDs of the dataset")
     metadata_frame: pd.DataFrame = adata.uns["metadata"].dataframe.copy()
     obs = adata.obs
@@ -108,7 +147,7 @@ def _sync_sample_ids_from_obs(adata: AnnData):
         columns_to_transfer = [col for col in metadata_columns
                                if col in adata.obs.columns]
         obs = adata.obs[columns_to_transfer]
-        metadata = obs.drop_duplicates()
+        metadata: pd.DataFrame = obs.drop_duplicates()
         
         # we make sure that the drop duplicates resulted
         # in a dataframe that only contains one line per sample_ID

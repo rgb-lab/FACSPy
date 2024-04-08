@@ -34,7 +34,7 @@ def _prep_cluster_abundance(adata: AnnData,
                  values = "count")
 
 def _order_dataframe(dataframe: pd.DataFrame,
-                     order: Union[str, list[str]]) -> pd.DataFrame:
+                     order: Union[list[str], str]) -> pd.DataFrame:
     return dataframe[order]
     
 def _prepare_cluster_frequencies(adata: AnnData,
@@ -58,17 +58,21 @@ def _prepare_cluster_frequencies(adata: AnnData,
         normalized_values = dataframe[["count"]] / cluster_sums
         dataframe["count"] = normalized_values["count"]
         dataframe = dataframe.reset_index()
+    observed_combinations = list(adata.obs[groupings].drop_duplicates().to_numpy())
+    dataframe = dataframe.set_index(groupings)
+    dataframe = dataframe.loc[observed_combinations]
+    dataframe = dataframe.reset_index()
     return dataframe[dataframe[cluster_key] == cluster]
 
 
 @_default_gate
 @_enable_gate_aliases
 def cluster_frequency(adata: AnnData,
-                      gate: str = None,
-                      cluster_key: str = None,
-                      cluster: str = None,
+                      gate: str,
+                      cluster_key: str,
+                      cluster: str,
                       normalize: bool = False,
-                      groupby: Optional[Union[str, list[str]]] = None,
+                      groupby: Optional[Union[list[str], str]] = None,
                       splitby: Optional[str] = None,
                       cmap: Optional[str] = None,
                       order: Optional[list[str]] = None,
@@ -134,25 +138,26 @@ def cluster_frequency(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.pl.cluster_frequency(
-    ...     dataset,
-    ...     gate = "live",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     cluster = "2",
-    ...     groupby = "condition",
-    ...     splitby = "sex",
-    ...     normalize = True
-    ... )
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.pl.cluster_frequency(
+            dataset,
+            cluster_key = "CD45+_transformed_leiden",
+            cluster = "0",
+            groupby = "organ"
+        )
 
     """
     
@@ -203,7 +208,7 @@ def cluster_frequency(adata: AnnData,
     return
 
 def cluster_abundance(adata: AnnData,
-                      groupby: Union[str, list[str]],
+                      groupby: str, 
                       cluster_key: str = None,
                       normalize: bool = True,
                       order: Optional[list[str]] = None,
@@ -254,23 +259,25 @@ def cluster_abundance(adata: AnnData,
     Examples
     --------
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.leiden(dataset, gate = "T_cells", layer = "transformed")
-    >>> fp.pl.cluster_abundance(
-    ...     dataset,
-    ...     gate = "live",
-    ...     cluster_key = "T_cells_transformed_leiden",
-    ...     groupby = "condition",
-    ...     normalize = True
-    ... )
+    .. plot::
+        :context: close-figs
 
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.settings.default_gate = "CD45+"
+        fp.settings.default_layer = "transformed"
+
+        fp.tl.pca(dataset)
+        fp.tl.neighbors(dataset)
+        fp.tl.leiden(dataset)
+
+        fp.pl.cluster_abundance(
+            dataset,
+            cluster_key = "CD45+_transformed_leiden",
+            groupby = "organ"
+        )
 
     """
     

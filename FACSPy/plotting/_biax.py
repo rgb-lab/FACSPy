@@ -41,7 +41,7 @@ def _create_expression_frame(adata: AnnData,
 
 def _calculate_density(x: np.ndarray,
                        y: np.ndarray,
-                       bins: float = 20) -> np.ndarray:
+                       bins: int = 20) -> np.ndarray:
     ## https://stackoverflow.com/questions/20105364/how-can-i-make-a-scatter-plot-colored-by-density
     data, x_e, y_e = np.histogram2d(x, y, bins = bins, density = True)
     z = interpn((0.5*(x_e[1:] + x_e[:-1]),
@@ -50,25 +50,26 @@ def _calculate_density(x: np.ndarray,
                  np.vstack([x,y]).T,
                  method = "splinef2d",
                  bounds_error = False)
+    assert z is not None
     z[np.where(np.isnan(z))] = 0.0
     return z
 
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def biax(adata: AnnData,
-         gate: str = None,
-         layer: Optional[str] = None,
-         x_channel: str = None,
-         y_channel: str = None,
+         gate: str,
+         layer: str,
+         x_channel: str,
+         y_channel: str,
+         sample_identifier: Optional[str] = None, 
          color: Optional[Union[str, Literal["density"]]] = "density",
-         sample_identifier: Union[str, list[str]] = None, 
-         add_cofactor: Literal["x", "y", "both"] = False,
-         x_scale: Literal["biex", "log", "linear"] = None,
-         y_scale: Literal["biex", "log", "linear"] = None,
+         add_cofactor: Union[Literal["x", "y", "both"], bool] = False,
+         x_scale: Optional[Literal["biex", "log", "linear"]] = None,
+         y_scale: Optional[Literal["biex", "log", "linear"]] = None,
          color_scale: Literal["biex", "log", "linear"] = "linear",
-         cmap: str = None,
-         vmin: float = None,
-         vmax: float = None,
+         cmap: Optional[str] = None,
+         vmin: Optional[Union[float, int]] = None,
+         vmax: Optional[Union[float, int]] = None,
          title: Optional[str] = None,
          figsize: tuple[float, float] = (4,4),
          return_dataframe: bool = False,
@@ -100,15 +101,15 @@ def biax(adata: AnnData,
         The channel that is plotted on the x axis.
     y_channel
         The channel that is plotted on the y axis
+    sample_identifier
+        Controls the data that are extracted. Defaults to None.
+        If set, has to be one of the sample_IDs or the file_names.
     color
         The parameter that controls the coloring of the plot.
         Can be set to categorical variables from the .obs slot
         or continuous variables corresponding to channels.
         Default is set to 'density', which calculates the point
         density in the plot.
-    sample_identifier
-        Controls the data that are extracted. Defaults to None.
-        If set, has to be one of the sample_IDs or the file_names.
     add_cofactor
         if set, adds the cofactor as a line to the plot for visualization.
         if `x`, sets the cofactor for the x-axis,
@@ -157,29 +158,25 @@ def biax(adata: AnnData,
     Examples
     --------
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated'
-    >>> fp.pl.biax(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "compensated",
-    ...     x_channel = "CD3",
-    ...     y_channel = "SSC-A",
-    ...     color = "batch",
-    ...     x_scale = "biex",
-    ...     y_scale = "linear"
-    ... )
-    
+    .. plot::
+        :context: close-figs
+
+        import FACSPy as fp
+
+        dataset = fp.mouse_lineages()
+
+        fp.pl.biax(
+            dataset,
+            gate = "CD45+",
+            layer = "compensated",
+            x_channel = "Ly6G",
+            y_channel = "SSC-A",
+            color = "density",
+            x_scale = "biex",
+            y_scale = "linear"
+        )
     """
     
-    if x_channel is None or y_channel is None:
-        raise ValueError("Please provide x_channel and y_channel")
     if x_scale not in ["biex", "linear", "log"] and x_scale is not None:
         raise ValueError("parameter x_scale has to be one of ['biex', 'linear', 'log']")
     if y_scale not in ["biex", "linear", "log"] and y_scale is not None:
@@ -241,6 +238,9 @@ def biax(adata: AnnData,
         transformed_color_vector= _transform_color_to_scale(color_vector,
                                                             color_cofactor,
                                                             color_scale)
+    else:
+        transformed_color_vector = None
+        color_vector = None
 
     continous_cmap = _get_cmap_biax(cmap, color)
 
@@ -304,7 +304,6 @@ def biax(adata: AnnData,
         cbar.ax.set_ylabel(f"{layer} expression\n{color}",
                            rotation = 270,
                            labelpad = 30)
-    #plt.tight_layout()
 
     if return_fig:
         return ax

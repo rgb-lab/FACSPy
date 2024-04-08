@@ -54,7 +54,7 @@ def test_save_settings_from_leiden(mock_dataset: AnnData):
     assert settings["gate"] == "live"
     assert settings["layer"] == "compensated"
     assert settings["resolution"] == 5
-    assert settings["use_only_fluo"] == False
+    assert settings["use_only_fluo"] is False
 
 def test_leiden_works_as_scanpy(mock_dataset: AnnData):
     adata = mock_dataset
@@ -137,4 +137,48 @@ def test_leiden_works_as_scanpy_all_scanpy_funcs(mock_dataset: AnnData):
                  exclude = None)
     assert "live_compensated_leiden" in facspy_adata.obs.columns
     assert all(leiden_clusters == facspy_adata.obs["live_compensated_leiden"])
+
+def test_decorator_default_gate_and_default_layer(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+
+    fp.tl.leiden(mock_dataset)
+    assert "live_compensated_leiden" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_only_gate_provided(mock_dataset: AnnData):
+    fp.settings.default_layer = "compensated"
+
+    fp.tl.leiden(mock_dataset, gate = "live")
+    assert "live_compensated_leiden" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_only_layer_provided(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+
+    fp.tl.leiden(mock_dataset, layer = "compensated")
+    assert "live_compensated_leiden" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.leiden(mock_dataset)
+    assert "live_compensated_leiden" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.leiden(mock_dataset, "my_personal_gate")
+    assert "live_compensated_leiden" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.leiden(mock_dataset, gate = "my_personal_gate")
+    assert "live_compensated_leiden" in mock_dataset.obs.columns
+
 

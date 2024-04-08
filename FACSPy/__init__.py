@@ -14,33 +14,32 @@ from ._utils import (subset_gate,
                      remove_channel,
                      equalize_groups,
                      convert_gate_to_obs,
-                     convert_gates_to_obs,
-                     add_metadata_to_obs,
                      rename_channel,
-                     convert_cluster_to_gate,
-                     is_fluo_channel)
+                     convert_cluster_to_gate)
 from .io._io import save_dataset, read_dataset
 from ._settings import settings, FACSPyConfig
 
+from .datasets._datasets import mouse_lineages
+
+
 import sys
 
-sys.modules.update({f'{__name__}.{m}': globals()[m] for m in ['tl', 'pl', 'ml', 'dt']})
+sys.modules.update({f'{__name__}.{m}': globals()[m] for m in ['tl', 'pl', 'ml', 'dt', 'sync']})
 
 all = [
     "tl",
     "pl",
     "ml",
     "dt",
+    "sync",
     "subset_gate",
     "subset_fluo_channels",
     "remove_unnamed_channels",
     "remove_channel",
     "equalize_groups",
     "convert_gate_to_obs",
-    "convert_gates_to_obs",
-    "add_metadata_to_obs",
     "rename_channel",
     "convert_cluster_to_gate",
-    "is_fluo_channel",
     "FACSPyConfig",
+    "mouse_lineages"
 ]

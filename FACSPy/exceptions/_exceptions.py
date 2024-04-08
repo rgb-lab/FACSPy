@@ -4,8 +4,8 @@ import warnings
 class DataModificationWarning(Warning):
     def __init__(self,
                  message) -> None:
-        message = "It was detected that cells are either appended "
-        message += "or deleted. Please make sure that the performed "
+        message = "It was detected that the dataset was modified."
+        message += "Please make sure that the performed "
         message += "analyses are still valid. Note that if you removed "
         message += "whole samples, mfi/fop calculations will not be affected."
         self.message = message
@@ -134,8 +134,8 @@ class ModificationAmbiguityError(Exception):
         )
         if param == "sample_ids" and mod_1 == "obs" and mod_2 == "metadata":
             self.message += (
-                "Please run either fp.sync.sample_ids_from_obs_to_metadata() " +
-                "or fp.sync.sample_ids_from_metadata_to_obs() in order to resolve " +
+                "Please run either fp.sync.sample_ids_from_obs() " +
+                "or fp.sync.sample_ids_from_metadata() in order to resolve " +
                 "that problem. You can then run fp.sync.synchronize_dataset() again."
             )
 

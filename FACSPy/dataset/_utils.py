@@ -20,7 +20,7 @@ def _replace_missing_cofactors(dataframe: pd.DataFrame) -> pd.DataFrame:
     return dataframe
 
 def _merge_cofactors_into_dataset_var(adata: AnnData,
-                                     cofactor_table: CofactorTable):
+                                     cofactor_table: CofactorTable) -> pd.DataFrame:
     if "cofactors" in adata.var.columns:
         adata.var = adata.var.drop("cofactors", axis = 1)
     adata_var = pd.merge(adata.var,
@@ -68,11 +68,11 @@ def _get_histogram_curve(data_array: np.ndarray) -> tuple[np.ndarray, np.ndarray
 
 def get_control_samples(dataframe: pd.DataFrame,
                         by: Literal["sample_ID", "file_name"]) -> list[str]:
-    return dataframe.loc[dataframe["staining"] != "stained", by].to_list()
+    return dataframe.loc[dataframe["staining"] != "stained", by].tolist()
 
 def get_stained_samples(dataframe: pd.DataFrame,
                         by: Literal["sample_ID", "file_name"]) -> list[str]:
-    return dataframe.loc[dataframe["staining"] == "stained", by].to_list()
+    return dataframe.loc[dataframe["staining"] == "stained", by].tolist()
 
 def reindex_metadata(metadata: pd.DataFrame,
                      indices: list[str]) -> pd.DataFrame:
@@ -82,8 +82,10 @@ def find_name_of_control_sample_by_metadata(sample,
                                             metadata_to_compare: pd.DataFrame,
                                             indexed_frame: pd.DataFrame,
                                             by = Literal["sample_ID", "file_name"]) -> list[str]:
+    assert metadata_to_compare.shape[0] == 1
     matching_metadata = indexed_frame.loc[tuple(metadata_to_compare.values[0])]
-    return matching_metadata.loc[matching_metadata[by] != sample, by].to_list()
+    matching_metadata = matching_metadata[matching_metadata["staining"] != "stained"]
+    return matching_metadata.loc[matching_metadata[by] != sample, by].tolist()
 
 def asinh_transform(data: np.ndarray,
                     cofactors: Union[np.ndarray, int, float]) -> np.ndarray:
@@ -248,14 +250,14 @@ def find_corresponding_control_samples(adata: AnnData,
         corresponding_controls[sample] = matching_control_samples or control_samples
     return stained_samples, corresponding_controls
 
-def _gather_fcs_files(input_directory: str):
+def _gather_fcs_files(input_directory: str) -> list[str]:
     return [file for file in os.listdir(input_directory)
             if file.endswith(".fcs")]
 
 def create_empty_metadata(input_directory: Optional[str] = None,
                           as_frame: bool = False,
                           save: bool = True,
-                          overwrite: bool = False):
+                          overwrite: bool = False) -> Union[pd.DataFrame, Metadata]:
     """\
     Creates a Metadata object from all .fcs files within a directory.
     The table will contain a sample_ID and the file_names.
@@ -312,7 +314,7 @@ def create_empty_metadata(input_directory: Optional[str] = None,
 def create_panel_from_fcs(input_directory: Optional[str],
                           as_frame: bool = False,
                           save: bool = True,
-                          overwrite: bool = False):
+                          overwrite: bool = False) -> Union[pd.DataFrame, Panel]:
     """\
     Creates a Panel object from all .fcs files within a directory.
     The table will contain the channel names and the antigens stored in the FCS file.

@@ -1,7 +1,7 @@
 import pandas as pd
 from anndata import AnnData
 
-from matplotlib.figure import Figure
+import seaborn as sns
 from typing import Literal, Union, Optional
 
 from ._utils import (_map_obs_to_cmap,
@@ -41,15 +41,16 @@ def _calculate_correlations(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def sample_correlation(adata: AnnData,
-                       gate: str = None,
-                       layer: str = None,
-                       metadata_annotation: Optional[Union[str, list[str]]] = None,
+                       gate: str,
+                       layer: str,
+                       metadata_annotation: Optional[Union[list[str], str]] = None,
                        include_technical_channels: bool = False,
-                       data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                       exclude: Optional[Union[list[str], str]] = None,
+                       data_group: str = "sample_ID",
                        data_metric: Literal["mfi", "fop"] = "mfi",
                        scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = "MinMaxScaler",
                        corr_method: Literal["pearson", "spearman", "kendall"] = "pearson",
-                       cmap: str = "inferno",
+                       cmap: Optional[str] = "inferno",
                        metaclusters: Optional[int] = None,
                        label_metaclusters_in_dataset: bool = True,
                        label_metaclusters_key: Optional[str] = "metacluster_sc",
@@ -58,7 +59,7 @@ def sample_correlation(adata: AnnData,
                        return_fig: bool = False,
                        show: bool = True,
                        save: Optional[str] = None
-                       ) -> Optional[Union[Figure, pd.DataFrame]]:
+                       ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
     """\
     Plot for sample correlation.
 
@@ -80,6 +81,8 @@ def sample_correlation(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     data_group
         When MFIs/FOPs are calculated, and the groupby parameter is used,
         use `data_group` to specify the right dataframe.
@@ -120,24 +123,28 @@ def sample_correlation(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.tl.mfi(dataset)
-    >>> fp.pl.sample_correlation(
-    ...     dataset,
-    ...     gate = "live",
-    ...     layer = "transformed",
-    ...     metadata_annotation = ["condition", "sex"]
-    ... )
+        import FACSPy as fp
 
+        dataset = fp.mouse_lineages()
+        
+        fp.tl.mfi(dataset, layer = "compensated")
+
+        fp.pl.sample_correlation(
+            dataset,
+            gate = "CD45+",
+            layer = "compensated",
+            metadata_annotation = ["organ", "sex"]
+        )
     """
+
+    if not isinstance(exclude, list):
+        if exclude is None:
+            exclude = []
+        else:
+            exclude = [exclude]
 
     plot_data = _prepare_heatmap_data(adata = adata,
                                       gate = gate,
@@ -145,6 +152,7 @@ def sample_correlation(adata: AnnData,
                                       data_metric = data_metric,
                                       data_group = data_group,
                                       include_technical_channels = include_technical_channels,
+                                      exclude = exclude,
                                       scaling = scaling)
     plot_data = _calculate_correlations(adata = adata,
                                         plot_data = plot_data,
@@ -185,7 +193,8 @@ def sample_correlation(adata: AnnData,
 
     clustermap = create_clustermap(data = plot_data[plot_data["sample_ID"].to_list()],
                                    row_colors = row_colors,
-                                   col_colors = col_colors,                                  row_linkage = row_linkage,
+                                   col_colors = col_colors,
+                                   row_linkage = row_linkage,
                                    col_linkage = row_linkage,
                                    cmap = cmap,
                                    figsize = figsize,

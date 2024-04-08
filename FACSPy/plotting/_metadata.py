@@ -15,10 +15,10 @@ from .._settings import settings
 def metadata(adata: AnnData,
              marker: str,
              groupby: str,
-             splitby: str = None,
-             cmap: str = None,
-             stat_test: str = "Kruskal",
-             order: list[str] = None,
+             splitby: Optional[str] = None,
+             cmap: Optional[str] = None,
+             stat_test: Optional[str] = "Kruskal",
+             order: Optional[Union[list[str], str]] = None,
              figsize: tuple[float, float] = (3,3),
              return_dataframe: bool = False,
              return_fig: bool = False,
@@ -26,12 +26,11 @@ def metadata(adata: AnnData,
              show: bool = True,
              save: Optional[str] = None
              ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
-    """
+    """\
     Plots the frequency of the metadata columns.
 
     Parameters
     ----------
-
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels

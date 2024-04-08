@@ -115,28 +115,33 @@ def diffmap(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+         :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.settings.default_gate = "T_cells"
-    >>> fp.settings.default_layer = "transformed"
-    >>> fp.tl.pca(dataset)
-    >>> fp.tl.neighbors(dataset)
-    >>> fp.tl.diffmap(dataset)
-    >>> fp.pl.diffmap(
-    ...     dataset,
-    ...     color = "condition"
-    ... )
+         import FACSPy as fp
+
+         dataset = fp.mouse_lineages()
+
+         fp.settings.default_gate = "CD45+"
+         fp.settings.default_layer = "transformed"
+
+         fp.tl.pca(dataset)
+         fp.tl.neighbors(dataset)
+         fp.tl.leiden(dataset)
+         fp.tl.diffmap(dataset)
+
+         dataset.obsm["X_diffmap_CD45+_transformed"] = dataset.obsm["X_diffmap_CD45+_transformed"][:,1:]
+
+         fp.pl.diffmap(
+             dataset,
+             color = "B220",
+             vmin = 0,
+             vmax = 4
+         )
 
     """
     
-    basis = f"X_{dimred}_{gate}_{layer}"
+    basis = f"X_diffmap_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
     dimred = "DMAP"
 
@@ -221,26 +226,27 @@ def pca(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+         :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.settings.default_gate = "T_cells"
-    >>> fp.settings.default_layer = "transformed"
-    >>> fp.tl.pca(dataset)
-    >>> fp.pl.pca(
-    ...     dataset,
-    ...     color = "condition"
-    ... )
+         import FACSPy as fp
 
+         dataset = fp.mouse_lineages()
+
+         fp.settings.default_gate = "CD45+"
+         fp.settings.default_layer = "transformed"
+
+         fp.tl.pca(dataset)
+
+         fp.pl.pca(
+             dataset,
+             color = "B220",
+             vmin = 0,
+             vmax = 4
+         )
     """
  
-    basis = f"X_{dimred}_{gate}_{layer}"
+    basis = f"X_pca_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
     dimred = "PCA"
 
@@ -326,28 +332,31 @@ def tsne(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+         :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.settings.default_gate = "T_cells"
-    >>> fp.settings.default_layer = "transformed"
-    >>> fp.tl.pca(dataset)
-    >>> fp.tl.neighbors(dataset)
-    >>> fp.tl.tsne(dataset)
-    >>> fp.pl.tsne(
-    ...     dataset,
-    ...     color = "condition",
-    ... )
+         import FACSPy as fp
+
+         dataset = fp.mouse_lineages()
+
+         fp.settings.default_gate = "CD45+"
+         fp.settings.default_layer = "transformed"
+
+         fp.tl.pca(dataset)
+         fp.tl.neighbors(dataset)
+         fp.tl.leiden(dataset)
+         fp.tl.tsne(dataset)
+
+         fp.pl.tsne(
+             dataset,
+             color = "B220",
+             vmin = 0,
+             vmax = 4
+         )
   
     """
  
-    basis = f"X_{dimred}_{gate}_{layer}"
+    basis = f"X_tsne_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
     dimred = "TSNE"
 
@@ -432,28 +441,31 @@ def umap(adata: AnnData,
 
     Examples
     --------
+    .. plot::
+         :context: close-figs
 
-    >>> import FACSPy as fp
-    >>> dataset
-    AnnData object with n_obs × n_vars = 615936 × 22
-    obs: 'sample_ID', 'file_name', 'condition', 'sex'
-    var: 'pns', 'png', 'pne', 'pnr', 'type', 'pnn'
-    uns: 'metadata', 'panel', 'workspace', 'gating_cols', 'dataset_status_hash'
-    obsm: 'gating'
-    layers: 'compensated', 'transformed'
-    >>> fp.settings.default_gate = "T_cells"
-    >>> fp.settings.default_layer = "transformed"
-    >>> fp.tl.pca(dataset)
-    >>> fp.tl.neighbors(dataset)
-    >>> fp.tl.umap(dataset)
-    >>> fp.pl.umap(
-    ...     dataset,
-    ...     color = "condition",
-    ... )
+         import FACSPy as fp
+
+         dataset = fp.mouse_lineages()
+
+         fp.settings.default_gate = "CD45+"
+         fp.settings.default_layer = "transformed"
+
+         fp.tl.pca(dataset)
+         fp.tl.neighbors(dataset)
+         fp.tl.leiden(dataset)
+         fp.tl.umap(dataset)
+
+         fp.pl.umap(
+             dataset,
+             color = "B220",
+             vmin = 0,
+             vmax = 4
+         )
 
     """
  
-    basis = f"X_{dimred}_{gate}_{layer}"
+    basis = f"X_umap_{gate}_{layer}"
     neighbors_key = f"{gate}_{layer}_neighbors"
     dimred = "UMAP"
 

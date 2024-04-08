@@ -1,5 +1,5 @@
 from anndata import AnnData
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 from ._tsne import _tsne
 from ._pca import _pca
@@ -23,10 +23,10 @@ from ..exceptions._exceptions import InvalidScalingError
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def pca(adata: AnnData,
-        gate: str = None,
-        layer: str = None,
+        gate: str,
+        layer: str,
         use_only_fluo: bool = True,
-        exclude: Optional[list[str]] = None,
+        exclude: Optional[Union[list[str], str]] = None,
         scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
         copy: bool = False,
         **kwargs) -> Optional[AnnData]:
@@ -99,10 +99,14 @@ def pca(adata: AnnData,
     """
 
     adata = adata.copy() if copy else adata
+    
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
 
-    exclude = [] if exclude is None else exclude
-
-    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+    if scaling not in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
 
     _save_dr_settings(adata = adata,
@@ -135,11 +139,11 @@ def pca(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def diffmap(adata: AnnData,
-            gate: str = None,
-            layer: str = None,
+            gate: str,
+            layer: str,
             recalculate_pca: bool = False,
             use_only_fluo: bool = True,
-            exclude: Optional[list[str]] = None,
+            exclude: Optional[Union[list[str], str]] = None,
             scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
             copy: bool = False,
             **kwargs) -> Optional[AnnData]:
@@ -228,9 +232,14 @@ def diffmap(adata: AnnData,
 
     adata = adata.copy() if copy else adata
 
-    exclude = [] if exclude is None else exclude
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
 
-    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+
+    if scaling not in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
 
     _save_dr_settings(adata = adata,
@@ -291,11 +300,11 @@ def diffmap(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def umap(adata: AnnData,
-         gate: str = None,
-         layer: str = None,
+         gate: str,
+         layer: str,
          recalculate_pca: bool = False,
          use_only_fluo: bool = True,
-         exclude: Optional[list[str]] = None,
+         exclude: Optional[Union[list[str], str]] = None,
          scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
          copy: bool = False,
          **kwargs) -> Optional[AnnData]:
@@ -369,9 +378,14 @@ def umap(adata: AnnData,
 
     adata = adata.copy() if copy else adata
 
-    exclude = [] if exclude is None else exclude
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
 
-    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+
+    if scaling not in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
 
     _save_dr_settings(adata = adata,
@@ -435,11 +449,11 @@ def umap(adata: AnnData,
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def tsne(adata: AnnData,
-         gate: str = None,
-         layer: str = None,
+         gate: str,
+         layer: str,
          recalculate_pca: bool = False,
          use_only_fluo: bool = True,
-         exclude: Optional[list[str]] = None,
+         exclude: Optional[Union[list[str], str]] = None,
          scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
          copy: bool = False,
          *args,
@@ -511,9 +525,14 @@ def tsne(adata: AnnData,
 
     adata = adata.copy() if copy else adata
 
-    exclude = [] if exclude is None else exclude
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
 
-    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+
+    if scaling not in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
     
     _save_dr_settings(adata = adata,

@@ -81,13 +81,13 @@ def calculate_pvalue(group1: np.ndarray,
 
 def _calculate_fold_changes(adata: AnnData,
                             groupby: str,
-                            group1: Union[str, list[Union[str, int]]],
-                            group2: Union[str, list[Union[str, int]]],
+                            group1: Union[list[Union[str, int]], str, int],
+                            group2: Union[list[Union[str, int]], str, int],
                             gate: str,
-                            data_group: Optional[Union[str, list[str]]] = "sample_ID",
+                            layer: str,
+                            data_group: str = "sample_ID",
                             data_metric: Literal["mfi", "fop", "gate_frequency"] = "mfi",
-                            layer: str = None,
-                            test: Literal["Kruskal", "t-test"] = "Kruskal"
+                            test: Literal["Kruskal", "Wilcoxon", "t-test"] = "Kruskal"
                             ) -> pd.DataFrame:
     
     """asinh fold change calculation"""

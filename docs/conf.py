@@ -5,6 +5,9 @@
 import os
 import sys
 
+import matplotlib
+matplotlib.use("agg")
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -16,6 +19,7 @@ author = 'Tarik Exner, Nicolaj Hackert'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 sys.path.insert(0, os.path.abspath('../../FACSPy/'))
+sys.path.insert(0, os.path.abspath('../../vignettes/'))
 
 extensions = [
     "sphinxcontrib.bibtex",
@@ -24,6 +28,9 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
+    "nbsphinx", # for notebook implementation
+    "nbsphinx_link", # necessary to keep vignettes outside of sphinx root directory
+    "matplotlib.sphinxext.plot_directive" # necessary to include inline plots via documentation
 ]
 
 templates_path = ['_templates']
@@ -37,6 +44,14 @@ autodoc_member_order = "bysource"
 
 # autodoc-typehint
 simplify_optional_unions = False
+
+# plot_directives
+plot_include_source = True
+plot_formats = [("png", 80)]
+plot_html_show_formats = False
+plot_html_show_source_link = False
+plot_rcparams = {"savefig.bbox": "tight"}
+plot_apply_rcparams = True
 
 # issues_github_path = ""
 # autodoc_default_flags = ['members']
@@ -52,3 +67,4 @@ napoleon_custom_sections = [("Params", "Parameters")]
 
 html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
+html_title = "FACSPy"

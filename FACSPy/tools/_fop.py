@@ -10,9 +10,9 @@ from ..dataset._utils import (_merge_cofactors_into_dataset_var,
                               _replace_missing_cofactors)
 
 def _calculate_fops_from_frame(input_frame: pd.DataFrame,
-                               gate,
-                               fluo_columns,
-                               groupby: Optional[str],
+                               gate: str,
+                               fluo_columns: list[str],
+                               groupby: Optional[Union[list[str], str]],
                                aggregate: bool) -> pd.DataFrame:
     if aggregate:
         groups = [groupby]
@@ -28,28 +28,30 @@ def _fop(adata: AnnData,
          layer: str,
          columns_to_analyze: list[str],
          cofactors: np.ndarray,
-         groupby: Union[str, list[str]],
+         groupby: Union[list[str], str],
          aggregate: bool) -> pd.DataFrame:
 
     dataframe = _concat_gate_info_and_obs_and_fluo_data(adata,
                                                         layer = layer)
     dataframe[columns_to_analyze] = dataframe[columns_to_analyze] > cofactors ## calculates positives as FI above cofactor
-    fop_frame = pd.concat([_calculate_fops_from_frame(dataframe,
-                                                      gate,
-                                                      columns_to_analyze,
-                                                      groupby,
-                                                      aggregate)
-                            for gate in adata.uns["gating_cols"]])
+    fop_frame = pd.concat([
+        _calculate_fops_from_frame(dataframe,
+                                   gate,
+                                   columns_to_analyze,
+                                   groupby,
+                                   aggregate)
+        for gate in adata.uns["gating_cols"]
+    ])
     return fop_frame
 
 def _save_settings(adata: AnnData,
                    groupby: str,
-                   cutoff: Optional[Union[int, float, list[int], list[float]]],
+                   cutoff: Optional[Union[list[int], list[float], int, float]],
                    cofactors: np.ndarray,
                    use_only_fluo: bool,
                    layer: str) -> None:
 
-    if not "settings" in adata.uns:
+    if "settings" not in adata.uns:
         adata.uns["settings"] = {}
     
     adata.uns["settings"][f"_fop_{groupby}_{layer}"] = {
@@ -63,8 +65,8 @@ def _save_settings(adata: AnnData,
 
 @_default_layer
 def fop(adata: AnnData,
-        layer: Union[str, list[str]] = None,
-        cutoff: Optional[Union[int, float, list[int], list[float]]] = None,
+        layer: Union[list[str], str] = "compensated",
+        cutoff: Optional[Union[list[int], list[float], int, float]] = None,
         groupby: Union[Literal["sample_ID"], str] = "sample_ID",
         use_only_fluo: bool = False,
         aggregate: bool = False,
@@ -141,8 +143,12 @@ def fop(adata: AnnData,
     >>> fp.tl.pca(dataset)
     >>> fp.tl.neighbors(dataset)
     >>> fp.tl.leiden(dataset)
-    >>> fp.tl.fop(dataset, groupby = "leiden", aggregate = True) # will calculate FOP per leiden cluster
-    >>> fp.tl.fop(dataset, groupby = "leiden", aggregate = False) # will calculate FOP per leiden cluster and sample_ID
+    >>> fp.tl.fop(dataset,
+    ...           groupby = "T_cells_transformed_leiden",
+    ...           aggregate = True) # will calculate FOP per leiden cluster
+    >>> fp.tl.fop(dataset,
+    ...           groupby = "T_cells_transformed_leiden",
+    ...           aggregate = False) # will calculate FOP per leiden cluster and sample_ID
     
     """
 
@@ -183,7 +189,7 @@ def fop(adata: AnnData,
         _save_settings(adata = adata,
                        groupby = groupby,
                        cutoff = cutoff,
-                       cofactors = cofactors,
+                       cofactors = np.array(cofactors),
                        use_only_fluo = use_only_fluo,
                        layer = _layer)
 

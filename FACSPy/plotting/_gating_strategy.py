@@ -250,7 +250,7 @@ def prepare_plot_data(adata: AnnData,
                                   y_channel = y_channel)
 
 def prepare_plot_dataframe(adata: AnnData,
-                           gates: Union[str, list[str]],
+                           gates: Union[list[str], str],
                            x_channel: str,
                            y_channel: str) -> pd.DataFrame:
 
@@ -382,7 +382,7 @@ def merge_plotting_parameters(facspy_plot_params: dict,
 def add_gates_to_plot(adata: AnnData,
                       ax: Axes,
                       gate_lut: dict,
-                      gates: Union[str, list[str]]) -> Axes:
+                      gates: Union[list[str], str]) -> Axes:
     
     gate_line_params = {
         "marker": ".",
@@ -471,7 +471,7 @@ def calculate_range_extension_viewLim(point: float,
 def manage_axis_scale(adata: AnnData,
                       ax: Axes,
                       gate_lut: dict,
-                      gates: Union[str, list[str]],
+                      gates: Union[list[str], str],
                       axis_kwargs: dict) -> Axes:
 
     x_channel, y_channel = extract_channels_for_gate(adata, gate_lut, gates)

@@ -125,3 +125,49 @@ def test_parc_works_as_parc_kwargs(mock_dataset: AnnData):
     assert "live_compensated_parc" in facspy_adata.obs.columns
     assert all(parc_clusters == facspy_adata.obs["live_compensated_parc"])
 
+
+def test_decorator_default_gate_and_default_layer(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+
+    fp.tl.parc(mock_dataset)
+    assert "live_compensated_parc" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_only_gate_provided(mock_dataset: AnnData):
+    fp.settings.default_layer = "compensated"
+
+    fp.tl.parc(mock_dataset, gate = "live")
+    assert "live_compensated_parc" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_only_layer_provided(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+
+    fp.tl.parc(mock_dataset, layer = "compensated")
+    assert "live_compensated_parc" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.parc(mock_dataset)
+    assert "live_compensated_parc" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.parc(mock_dataset, "my_personal_gate")
+    assert "live_compensated_parc" in mock_dataset.obs.columns
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg(mock_dataset: AnnData):
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.parc(mock_dataset, gate = "my_personal_gate")
+    assert "live_compensated_parc" in mock_dataset.obs.columns
+
+
+

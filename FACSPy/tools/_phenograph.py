@@ -14,11 +14,11 @@ from ..exceptions._exceptions import InvalidScalingError
 @_default_gate_and_default_layer
 @_enable_gate_aliases
 def phenograph(adata: AnnData,
-               gate: str = None,
-               layer: str = None,
+               gate: str,
+               layer: str,
                key_added: Optional[str] = None,
                use_only_fluo: bool = True,
-               exclude: Optional[Union[str, list[str]]] = None,
+               exclude: Optional[Union[list[str], str]] = None,
                scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
                copy: bool = False,
                **kwargs) -> Optional[AnnData]:
@@ -88,10 +88,16 @@ def phenograph(adata: AnnData,
     
     adata = adata.copy() if copy else adata
 
-    if not scaling in IMPLEMENTED_SCALERS and scaling is not None:
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
+
+    if scaling not in IMPLEMENTED_SCALERS and scaling is not None:
         raise InvalidScalingError(scaler = scaling)
 
-    if not "clustering_algo" in kwargs:
+    if "clustering_algo" not in kwargs:
         kwargs["clustering_algo"] = "leiden"
 
     _save_cluster_settings(adata = adata,
@@ -105,8 +111,6 @@ def phenograph(adata: AnnData,
 
     uns_key = f"{gate}_{layer}"
     cluster_key = key_added or f"{uns_key}_phenograph"
-    neighbors_key = f"{uns_key}_neighbors"
-    connectivities_key = f"{neighbors_key}_connectivities"
 
     preprocessed_adata = _preprocess_adata(adata,
                                            gate = gate,

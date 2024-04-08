@@ -71,15 +71,21 @@ def _prepare_heatmap_data(adata: AnnData,
                           data_metric: str,
                           data_group: str,
                           include_technical_channels: bool,
-                          scaling: str,
+                          exclude: Optional[Union[list[str], str]],
+                          scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]],
                           return_raw_data: bool = False) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
     raw_data = _get_uns_dataframe(adata = adata,
                                   gate = gate,
                                   table_identifier = f"{data_metric}_{data_group}_{layer}")
-    
+
     if not include_technical_channels:
         raw_data = _remove_technical_channels(adata,
                                               raw_data)
+    if exclude is not None:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
+        raw_data = raw_data.drop(exclude, axis = 1)
+
 
     plot_data = _scale_heatmap_data(adata = adata,
                                     raw_data = raw_data,
