@@ -1,11 +1,12 @@
 from functools import wraps
 from anndata import AnnData
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, MutableMapping
 import warnings
 import numpy as np
 import pandas as pd
 from itertools import combinations
 import inspect
+from scipy.sparse import csr_matrix
 
 from .exceptions._exceptions import (ChannelSubsetError,
                                      GateNotFoundError,
@@ -1213,3 +1214,115 @@ def convert_var_to_panel(adata: AnnData,
     adata.uns["panel"] = Panel(panel = new_panel)
     
     return adata if copy else None
+
+def _convert_to_str_categorical(df: pd.DataFrame) -> pd.DataFrame:
+    for col in df.columns:
+        if isinstance(df[col].dtype, pd.CategoricalDtype):
+            if df[col].cat.categories.dtype != "object":
+                df[col] = df[col].astype(str)
+                df[col] = df[col].astype("category")
+    return df
+
+
+def r_setup(adata: AnnData,
+            keep_gating: bool = False,
+            copy: bool = False
+            ) -> tuple[AnnData, MutableMapping, Optional[Union[csr_matrix, np.ndarray]]]:  # noqa
+    """\
+    AnnData setup function in order to be converted to R.
+
+    anndata2ri and rpy2 have prerequisites to the data formats. This function
+    solves this by converting the data in a convenient way.
+
+    Parameters
+    ----------
+
+    adata
+        The AnnData object to be converted
+    keep_gating
+        If False (default), will remove adata.obsm["gating"].
+    uns
+        The unstructured data from `adata.uns`
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    adata
+        The AnnData object with the necessary modifications
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.mouse_lineages()
+    >>> r_data, uns, gating = fp.r_setup(dataset, copy = True)
+
+    """
+
+    adata = adata.copy() if copy else adata
+
+    # 'Converting pandas "Category" series to R factor is only possible when
+    # categories are strings
+    adata.obs = _convert_to_str_categorical(adata.obs)
+    adata.var = _convert_to_str_categorical(adata.var)
+
+    # Custom objects stored in adata.uns are not supported by rpy2
+    # We delete the .uns slot and return it for the user
+
+    uns = adata.uns
+
+    del adata.uns
+    if not keep_gating:
+        gating: Union[csr_matrix, np.ndarray] = adata.obsm["gating"]
+        del adata.obsm["gating"]
+        return adata, uns, gating
+    else:
+        return adata, uns, None
+
+
+def r_restore(adata: AnnData,
+              uns: MutableMapping,
+              gating_matrix: Optional[Union[np.ndarray, csr_matrix]] = None,
+              copy: bool = False
+              ) -> Optional[AnnData]:
+    """\
+    AnnData restore function in order add the slots lost in the R conversion.
+    This function will add previously saved `.uns` back to `adata`.
+    Furthermore, the gating matrix, if saved, will be added back.
+
+    Parameters
+    ----------
+
+    adata
+        The AnnData object to be converted
+    uns
+        The previously saved `.uns` slot.
+    gating_matrix
+        The previously saved `.obsm["gating"]` matrix.
+    copy
+        Whether to copy the dataset.
+
+    Returns
+    -------
+    adata
+        The AnnData object with the necessary modifications
+
+    Examples
+    --------
+
+    >>> import FACSPy as fp
+    >>> dataset = fp.mouse_lineages()
+    >>> r_data, uns, gating = fp.r_setup(dataset, copy = True)
+    >>> # R code
+    >>> fp.r_restore(dataset, uns = uns, gating_matrix = gating)
+
+    """
+    adata = adata.copy() if copy else adata
+    adata.uns = uns
+    if gating_matrix is not None:
+        adata.obsm["gating"] = gating_matrix
+
+
+
+    return adata if copy else None
+
