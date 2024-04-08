@@ -632,13 +632,13 @@ class supervisedGating(BaseGating):
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels.
     
+
     Returns
     -------
     A :class:`~AnnData` object where the identified populations are stored in `adata.obsm["gating"]`.
     
     Examples
     --------
-
     >>> adata = fp.create_dataset([...])
     >>> gating = fp.ml.supervisedGating(dataset)
     >>> gating.run_data_setup(
@@ -648,13 +648,13 @@ class supervisedGating(BaseGating):
     ... )
     >>> gating.setup_classifier("DecisionTreeClassifier")
     >>> gating.tune_hyperparameters(
-    ...    method = "HalvingRandomSearchCV",
-    ...    grid = {"max_depth": [10,20,100]}
+    >>>     method = "HalvingRandomSearchCV",
+    ...     grid = {"max_depth": [10,20,100]}
     ... )
     >>> gating.setup_classifier("DecisionTreeClassifier")
     >>> gating.train()
     >>> gating.gate_dataset()
-    
+
     """
 
     def __init__(self,
