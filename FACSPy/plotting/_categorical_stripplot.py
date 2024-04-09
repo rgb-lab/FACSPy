@@ -10,22 +10,21 @@ from ._utils import (CATEGORICAL_BOXPLOT_PARAMS,
                      CATEGORICAL_STRIPPLOT_PARAMS)
 from .._utils import _create_comparisons
 
-def _add_statistic(ax: Axes,
-                   test: str,
+
+def _add_statistic(test: str,
                    dataframe: pd.DataFrame,
                    groupby: str,
                    plot_params: dict,
-                   splitby: Optional[str] = None) -> Axes:
-    
+                   splitby: Optional[str] = None) -> None:
     pairs = _create_comparisons(dataframe, groupby, splitby)
-    annotator = Annotator(ax,
-                          pairs,
+    annotator = Annotator(pairs = pairs,
                           **plot_params,
                           verbose = False)
     annotator.configure(test = test, text_format = "star", loc = "inside")
     annotator.apply_and_annotate()
 
-    return ax
+    return
+
 
 def _categorical_strip_box_plot(ax: Optional[Axes],
                                 data: pd.DataFrame,
@@ -41,6 +40,8 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
     else:
         fig = None
 
+    plot_params["ax"] = ax
+
     if groupby == "sample_ID":
         if plot_params["hue"]:
             raise TypeError("You selected a splitby parameter while plotting sample ID. Don't.")
@@ -55,14 +56,13 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
 
         if stat_test:
             try:
-                ax = _add_statistic(ax = ax,
-                                    test = stat_test,
-                                    dataframe = data,
-                                    groupby = groupby,
-                                    splitby = splitby,
-                                    plot_params = plot_params)
+                _add_statistic(test = stat_test,
+                               dataframe = data,
+                               groupby = groupby,
+                               splitby = splitby,
+                               plot_params = plot_params)
             except ValueError as e:
-                if str(e) != "All numbers are identical in kruskal":
+                if "numbers are identical" not in str(e):
                     raise ValueError(str(e)) from e
                 else:
                     print("warning... Values were uniform, no statistics to plot.")
@@ -77,5 +77,5 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
                   title = splitby or None)
     else:
         ax.legend().remove()
-    
-    return fig, ax        
+
+    return fig, ax
