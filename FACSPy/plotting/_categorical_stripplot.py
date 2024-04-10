@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
@@ -33,7 +34,6 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
                                 splitby: Optional[str],
                                 stat_test: Optional[str],
                                 figsize: tuple[float, float]):
-
     if ax is None:
         fig = plt.figure(figsize = figsize)
         ax = fig.add_subplot(111)
@@ -48,6 +48,7 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
         sns.barplot(**plot_params)
 
     else:
+        np.random.seed(187)  # necessary to keep jitters the same.
         sns.stripplot(**plot_params,
                       **CATEGORICAL_STRIPPLOT_PARAMS)
         handles, labels = ax.get_legend_handles_labels()
