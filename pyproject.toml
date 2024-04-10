@@ -19,6 +19,7 @@ classifiers = [
 dependencies = [
     "scanpy",
     "pandas>=2.0.2",
+    "matplotlib==3.8.0",
     "statsmodels>=0.10.0rc2",
     "lxml>=4.9",
     "flowutils",
