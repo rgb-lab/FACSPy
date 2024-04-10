@@ -502,8 +502,9 @@ def _retrieve_cofactor_or_set_to_default(adata, channel) -> float:
 
 def _get_cbar_normalizations(color_vector: np.ndarray,
                              color_scale: Literal["biex", "log", "linear"],
-                             color_cofactor: Optional[float]):
+                             color_cofactor: Optional[float]) -> Normalize:
     if color_scale == "biex":
+        assert color_cofactor is not None
         norm = SymLogNorm(vmin = np.min(color_vector),
                           vmax = np.max(color_vector),
                           linthresh = color_cofactor)
@@ -514,7 +515,7 @@ def _get_cbar_normalizations(color_vector: np.ndarray,
         assert color_scale == "linear"
         norm = Normalize(vmin = np.min(color_vector),
                          vmax = np.max(color_vector))
-        
+
     return norm
 
 def _transform_color_to_scale(color_vector: np.ndarray,
