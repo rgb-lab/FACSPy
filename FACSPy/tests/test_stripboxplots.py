@@ -8,9 +8,11 @@ import pandas as pd
 
 from pathlib import Path
 from matplotlib.testing.decorators import image_comparison
-
+import random
 import numpy as np
+
 np.random.seed(1)  # for jitters
+random.seed(1)  # for jitters
 
 HERE: Path = Path(__file__).parent
 ROOT = os.path.join(HERE, "_images")
@@ -20,6 +22,7 @@ IMG_COMP_KWARGS = {
     "style": 'mpl20',
     "savefig_kwarg": {"bbox_inches": "tight"}
 }
+
 
 @pytest.fixture
 def mouse_data() -> AnnData:
