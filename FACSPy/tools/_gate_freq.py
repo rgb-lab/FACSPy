@@ -63,6 +63,7 @@ def gate_frequencies_mem(adata: AnnData,
             ) + gates
         )
     )
+    unique_gates.sort()
     gates = ["root"] + gates
 
     gate_matrix = adata.obsm["gating"]
@@ -215,6 +216,7 @@ def gate_frequencies(adata: AnnData,
             ) + gates
         )
     )
+    unique_gates.sort()
     adata.uns["gate_frequencies"] = pd.concat(
         [_calculate_gate_freq_per_parent(data, gate, gates)
          for gate in unique_gates],
