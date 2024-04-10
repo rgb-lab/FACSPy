@@ -476,7 +476,10 @@ def cluster_heatmap(adata: AnnData,
                                                 exclude = exclude,
                                                 scaling = scaling,
                                                 return_raw_data = True)
-    
+
+    assert isinstance(plot_data, pd.DataFrame)
+    plot_data = plot_data.dropna(how = "any")
+
     if return_dataframe:
         return plot_data
 
