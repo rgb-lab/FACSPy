@@ -26,10 +26,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Tutorials and other data
+# Tutorials
 Tutorials/
-result_images/
-data/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

@@ -58,10 +58,7 @@ def _prepare_cluster_frequencies(adata: AnnData,
         normalized_values = dataframe[["count"]] / cluster_sums
         dataframe["count"] = normalized_values["count"]
         dataframe = dataframe.reset_index()
-    if groupby == "sample_ID":
-        observed_combinations = adata.obs[groupby].unique().tolist()
-    else:
-        observed_combinations = list(adata.obs[groupings].drop_duplicates().to_numpy())
+    observed_combinations = list(adata.obs[groupings].drop_duplicates().to_numpy())
     dataframe = dataframe.set_index(groupings)
     dataframe = dataframe.loc[observed_combinations]
     dataframe = dataframe.reset_index()
@@ -154,6 +151,7 @@ def cluster_frequency(adata: AnnData,
         fp.tl.pca(dataset)
         fp.tl.neighbors(dataset)
         fp.tl.leiden(dataset)
+
         fp.pl.cluster_frequency(
             dataset,
             cluster_key = "CD45+_transformed_leiden",
