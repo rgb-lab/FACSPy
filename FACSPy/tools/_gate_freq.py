@@ -56,14 +56,15 @@ def gate_frequencies_mem(adata: AnnData,
     sample_ID_cat_map = dict(zip(sample_ID_cat_codes, sample_IDs))
 
     gates = adata.uns["gating_cols"].tolist()
-    unique_gates = list(
-        set(
-            _flatten_nested_list(
-                [_find_parents_recursively(gate) for gate in gates]
-            ) + gates
+    unique_gates = sorted(
+        list(
+            set(
+                _flatten_nested_list(
+                    [_find_parents_recursively(gate) for gate in gates]
+                ) + gates
+            )
         )
     )
-    unique_gates.sort()
     gates = ["root"] + gates
 
     gate_matrix = adata.obsm["gating"]
@@ -209,14 +210,15 @@ def gate_frequencies(adata: AnnData,
     
     data = _concat_gate_info_and_sample_ID(adata)
     data["root"] = True
-    unique_gates = list(
-        set(
-            _flatten_nested_list(
-                [_find_parents_recursively(gate) for gate in gates]
-            ) + gates
+    unique_gates = sorted(
+        list(
+            set(
+                _flatten_nested_list(
+                    [_find_parents_recursively(gate) for gate in gates]
+                ) + gates
+            )
         )
     )
-    unique_gates.sort()
     adata.uns["gate_frequencies"] = pd.concat(
         [_calculate_gate_freq_per_parent(data, gate, gates)
          for gate in unique_gates],
