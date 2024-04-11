@@ -221,7 +221,7 @@ def biax(adata: AnnData,
     
     ### if plotting categorical colors with multiple sample
     ### this step is necessary to shuffle the colors
-    dataframe = dataframe.sample(frac = 1, random_state = 187)
+    dataframe = dataframe.sample(frac = 1)
 
     categorical_color = _color_var_is_categorical(dataframe[color])
     if not categorical_color:
