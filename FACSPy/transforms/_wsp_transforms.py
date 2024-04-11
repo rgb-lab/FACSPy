@@ -199,13 +199,14 @@ class WSPBiexTransform(Transform):
     :param positive: Value for the FlowJo biex option 'positive' (float)
     :param max_value: parameter for the top of the linear scale (default=262144.000029)
     """
+
     def __init__(
         self,
         transform_id,
-        negative=0,
-        width=-10,
-        positive=4.418540,
-        max_value=262144.000029
+        negative: float = 0,
+        width: float = -10,
+        positive: float = 4.418540,
+        max_value: float = 262144.000029
     ):
         Transform.__init__(self, transform_id)
 

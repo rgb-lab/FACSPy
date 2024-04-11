@@ -1,3 +1,6 @@
+from typing import Optional
+
+
 class Dimension(object):
     """
     Represents a single dimension of an array of FCS data.
@@ -10,10 +13,11 @@ class Dimension(object):
     :param range_max: For use in defining the boundaries of a RectangleGate. A float defining the maximum boundary
         for the dimension. If None, the maximum is unbounded.
     """
+
     def __init__(
             self,
             dimension_id,
-            compensation_ref='uncompensated',
+            compensation_ref: Optional[str] = 'uncompensated',
             transformation_ref=None,
             range_min=None,
             range_max=None

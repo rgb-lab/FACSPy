@@ -8,6 +8,7 @@ used to assemble the gate tree. They also each provide a
 `convert_to_parent_class` for converting them to their parent class for
 public interaction in a GatingStrategy.
 """
+from typing import Optional
 from .. import gates
 from . import _gate_utils
 
@@ -36,7 +37,7 @@ class GMLRectangleGate(gates.RectangleGate):
             gating_namespace,
             data_type_namespace
         )
-        self.parent = parent_gate_name
+        self.parent: Optional[str] = parent_gate_name
 
         super().__init__(
             gate_name,
@@ -72,7 +73,7 @@ class GMLPolygonGate(gates.PolygonGate):
             gating_namespace,
             data_type_namespace
         )
-        self.parent = parent_gate_name
+        self.parent: Optional[str] = parent_gate_name
 
         vert_els = gate_element.findall(
             '%s:vertex' % gating_namespace,
@@ -235,7 +236,7 @@ class GMLQuadrantGate(gates.QuadrantGate):
             gating_namespace,
             data_type_namespace
         )
-        self.parent = parent_gate_name
+        self.parent: Optional[str] = parent_gate_name
 
         # First, we'll check dimension count
         if len(dividers) < 1:
@@ -338,7 +339,7 @@ class GMLBooleanGate(gates.BooleanGate):
             gating_namespace,
             data_type_namespace
         )
-        self.parent = parent_gate_name
+        self.parent: Optional[str] = parent_gate_name
         
         # boolean gates do not mix multiple operations, so there should be only
         # one of the following: 'and', 'or', or 'not'

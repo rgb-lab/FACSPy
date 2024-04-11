@@ -3,6 +3,7 @@ Module containing FlowJo compatible versions of gate classes
 """
 import copy
 import numpy as np
+from typing import Optional
 from ._base_gate import Gate
 from ..gates import PolygonGate
 from ..transforms import WSPBiexTransform
@@ -51,6 +52,8 @@ class WSPEllipsoidGate(Gate):
             gating_namespace,
             data_type_namespace
         )
+
+        self.parent: Optional[str] = parent_gate_name
 
         # First, check the dimensions for transformation references
         # There shouldn't be one, as FJ uses the dimension ID to lookup transforms.
