@@ -99,7 +99,7 @@ def test_marker_density(mouse_data):
                          gate = "Neutrophils",
                          layer = "compensated",
                          marker = "Ly6G",
-                         groupby = "sex",
+                         groupby = "experiment",
                          ridge = True,
                          plot_aspect = 2,
                          show = False)
@@ -112,6 +112,6 @@ def test_marker_density_line(mouse_data):
                          gate = "Neutrophils",
                          layer = "compensated",
                          marker = "Ly6G",
-                         groupby = "sex",
+                         groupby = "experiment",
                          ridge = False,
                          show = False)
