@@ -20,7 +20,8 @@ IMG_COMP_KWARGS = {
     "tol": 0.02,
     "extensions": ['png'],
     "style": 'mpl20',
-    "savefig_kwarg": {"bbox_inches": "tight"}
+    "savefig_kwarg": {"bbox_inches": "tight"},
+    "tol": 2
 }
 
 

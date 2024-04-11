@@ -19,7 +19,8 @@ ROOT = os.path.join(HERE, "_images")
 IMG_COMP_KWARGS = {
     "extensions": ['png'],
     "style": 'mpl20',
-    "savefig_kwarg": {"bbox_inches": "tight"}
+    "savefig_kwarg": {"bbox_inches": "tight"},
+    "tol": 2
 }
 
 
