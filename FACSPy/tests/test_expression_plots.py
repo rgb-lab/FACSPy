@@ -115,6 +115,7 @@ def test_marker_density_line(mouse_data):
                          layer = "compensated",
                          marker = "Ly6G",
                          groupby = "experiment",
+                         colorby = "experiment",
                          ridge = False,
                          figsize = (5, 5),
                          show = False)
