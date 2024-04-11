@@ -17,7 +17,6 @@ ROOT = os.path.join(HERE, "_images")
 IMG_COMP_KWARGS = {
     "extensions": ['png'],
     "style": 'mpl20',
-    "savefig_kwarg": {"bbox_inches": "tight"},
     "tol": 2
 }
 
@@ -54,6 +53,7 @@ def test_fold_change(mouse_data):
                       groupby = "sex",
                       group1 = "m",
                       group2 = "f",
+                      figsize = (6, 9),
                       show = False)
 
 
@@ -69,6 +69,7 @@ def test_fold_change_plot_annotation(mouse_data):
                       comparison_label = "COMPARISON",
                       group1_label = "male",
                       group2_label = "female",
+                      figsize = (6, 9),
                       show = False)
 
 
@@ -102,6 +103,7 @@ def test_marker_density(mouse_data):
                          groupby = "experiment",
                          ridge = True,
                          plot_aspect = 2,
+                         figsize = (5, 4),
                          show = False)
 
 
@@ -114,4 +116,5 @@ def test_marker_density_line(mouse_data):
                          marker = "Ly6G",
                          groupby = "experiment",
                          ridge = False,
+                         figsize = (5, 5),
                          show = False)
