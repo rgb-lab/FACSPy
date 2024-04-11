@@ -54,7 +54,7 @@ def test_mfi_plot(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               show = False)
 
 
@@ -76,7 +76,7 @@ def test_mfi_plot_figsize(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               figsize = (1, 1),
               show = False)
 
@@ -88,8 +88,8 @@ def test_mfi_plot_splitby(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
-              splitby = "experiment",
+              groupby = "experiment",
+              splitby = "sex",
               show = False)
 
 
@@ -100,9 +100,9 @@ def test_mfi_plot_splitby_cmap(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               cmap = "Set2",
-              splitby = "experiment",
+              splitby = "sex",
               show = False)
 
 
@@ -116,9 +116,9 @@ def test_mfi_plot_ax_return(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               cmap = "Set2",
-              splitby = "experiment",
+              splitby = "sex",
               show = False,
               ax = ax)
     ax.set_title("test_plot")
@@ -134,9 +134,9 @@ def test_mfi_plot_ax_return_double(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               cmap = "Set2",
-              splitby = "experiment",
+              splitby = "sex",
               show = False,
               ax = ax[0])
     ax[0].set_title("left plot")
@@ -144,9 +144,9 @@ def test_mfi_plot_ax_return_double(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               cmap = "Set2",
-              splitby = "experiment",
+              splitby = "sex",
               show = False,
               ax = ax[1])
     ax[1].set_title("right plot")
@@ -157,7 +157,7 @@ def test_mfi_plot_dataframe(mouse_data):
                    marker = "Ly6G",
                    gate = "Neutrophils",
                    layer = "compensated",
-                   groupby = "sex",
+                   groupby = "experiment",
                    return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
     assert all(k in df.columns
@@ -183,8 +183,8 @@ def test_mfi_plot_dataframe_splitby(mouse_data):
                    marker = "Ly6G",
                    gate = "Neutrophils",
                    layer = "compensated",
-                   groupby = "sex",
-                   splitby = "experiment",
+                   groupby = "experiment",
+                   splitby = "sex",
                    return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
     assert all(k in df.columns
@@ -214,7 +214,7 @@ def test_fop_plot(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               show = False)
 
 
@@ -236,7 +236,7 @@ def test_fop_plot_figsize(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               figsize = (1, 1),
               show = False)
 
@@ -251,9 +251,9 @@ def test_fop_plot_ax_return(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               cmap = "Set2",
-              splitby = "experiment",
+              splitby = "sex",
               show = False,
               ax = ax)
     ax.set_title("test_plot")
@@ -269,9 +269,9 @@ def test_fop_plot_ax_return_double(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               cmap = "Set2",
-              splitby = "experiment",
+              splitby = "sex",
               show = False,
               ax = ax[0])
     ax[0].set_title("left plot")
@@ -279,9 +279,9 @@ def test_fop_plot_ax_return_double(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               cmap = "Set2",
-              splitby = "experiment",
+              splitby = "sex",
               show = False,
               ax = ax[1])
     ax[1].set_title("right_plot")
@@ -294,8 +294,8 @@ def test_fop_plot_splitby(mouse_data):
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
-              splitby = "experiment",
+              groupby = "experiment",
+              splitby = "sex",
               show = False)
 
 
@@ -308,9 +308,9 @@ def test_fop_plot_splitby_cmap():
               marker = "Ly6G",
               gate = "Neutrophils",
               layer = "compensated",
-              groupby = "sex",
+              groupby = "experiment",
               cmap = "Set2",
-              splitby = "experiment",
+              splitby = "sex",
               show = False)
 
 
@@ -319,7 +319,7 @@ def test_fop_plot_dataframe(mouse_data):
                    marker = "Ly6G",
                    gate = "Neutrophils",
                    layer = "compensated",
-                   groupby = "sex",
+                   groupby = "experiment",
                    return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
     assert all(k in df.columns
@@ -346,8 +346,8 @@ def test_fop_plot_dataframe_splitby(mouse_data):
                    marker = "Ly6G",
                    gate = "Neutrophils",
                    layer = "compensated",
-                   groupby = "sex",
-                   splitby = "experiment",
+                   groupby = "experiment",
+                   splitby = "sex",
                    return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
     assert all(k in df.columns
@@ -448,7 +448,7 @@ def test_cluster_mfi_splitby(mouse_data):
                       cluster_key = "Neutrophils_compensated_leiden",
                       marker = "Ly6G",
                       stat_test = False,
-                      splitby = "experiment",
+                      splitby = "sex",
                       show = False)
 
 
@@ -521,7 +521,7 @@ def test_cluster_mfi_dataframe_splitby(mouse_data):
                            cmap = "Set2",
                            stat_test = False,
                            show = False,
-                           splitby = "experiment",
+                           splitby = "sex",
                            return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
     assert all(k in df.columns
@@ -623,7 +623,7 @@ def test_cluster_fop_splitby(mouse_data):
                       layer = "compensated",
                       cluster_key = "Neutrophils_compensated_leiden",
                       marker = "Ly6G",
-                      splitby = "experiment",
+                      splitby = "sex",
                       stat_test = False,
                       show = False)
 
@@ -700,7 +700,7 @@ def test_cluster_fop_dataframe_splitby(mouse_data):
                            cmap = "Set2",
                            show = False,
                            stat_test = False,
-                           splitby = "experiment",
+                           splitby = "sex",
                            return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
     assert all(k in df.columns
@@ -734,7 +734,7 @@ def test_cluster_fop_dataframe_splitby(mouse_data):
 def test_cofactor_distribution_plot(mouse_data):
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
-                                groupby = "sex",
+                                groupby = "experiment",
                                 show = False)
 
 
@@ -752,7 +752,7 @@ def test_cofactor_distribution_barplot(mouse_data):
 def test_cofactor_distribution_plot_figsize(mouse_data):
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
-                                groupby = "sex",
+                                groupby = "experiment",
                                 figsize = (1, 1),
                                 show = False)
 
@@ -762,8 +762,8 @@ def test_cofactor_distribution_plot_figsize(mouse_data):
 def test_cofactor_distribution_splitby(mouse_data):
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
-                                groupby = "sex",
-                                splitby = "experiment",
+                                groupby = "experiment",
+                                splitby = "sex",
                                 figsize = (1, 1),
                                 show = False)
 
@@ -773,8 +773,8 @@ def test_cofactor_distribution_splitby(mouse_data):
 def test_cofactor_distribution_splitby_cmap(mouse_data):
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
-                                groupby = "sex",
-                                splitby = "experiment",
+                                groupby = "experiment",
+                                splitby = "sex",
                                 cmap = "Set2",
                                 figsize = (1, 1),
                                 show = False)
@@ -788,8 +788,8 @@ def test_cofactor_distribution_ax_return(mouse_data):
                          figsize = (3, 3))
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
-                                groupby = "sex",
-                                splitby = "experiment",
+                                groupby = "experiment",
+                                splitby = "sex",
                                 cmap = "Set2",
                                 ax = ax,
                                 show = False)
@@ -804,16 +804,16 @@ def test_cofactor_distribution_ax_return_double(mouse_data):
                          figsize = (4, 2))
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
-                                groupby = "sex",
-                                splitby = "experiment",
+                                groupby = "experiment",
+                                splitby = "sex",
                                 cmap = "Set2",
                                 ax = ax[0],
                                 show = False)
     ax[0].set_title("left plot")
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "CD3",
-                                groupby = "sex",
-                                splitby = "experiment",
+                                groupby = "experiment",
+                                splitby = "sex",
                                 cmap = "Set2",
                                 ax = ax[1],
                                 show = False)
@@ -823,7 +823,7 @@ def test_cofactor_distribution_ax_return_double(mouse_data):
 def test_cofactor_distribution_dataframe(mouse_data):
     df = fp.pl.cofactor_distribution(mouse_data,
                                      marker = "Ly6G",
-                                     groupby = "sex",
+                                     groupby = "experiment",
                                      show = False,
                                      return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
@@ -840,8 +840,8 @@ def test_cofactor_distribution_dataframe(mouse_data):
 def test_cofactor_distribution_dataframe_splitby(mouse_data):
     df = fp.pl.cofactor_distribution(mouse_data,
                                      marker = "Ly6G",
-                                     groupby = "sex",
-                                     splitby = "experiment",
+                                     groupby = "experiment",
+                                     splitby = "sex",
                                      show = False,
                                      return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
@@ -865,7 +865,7 @@ def test_cluster_frequency_plot(mouse_data):
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
                             cluster = "0",
-                            groupby = "sex",
+                            groupby = "experiment",
                             show = False)
 
 
@@ -887,7 +887,7 @@ def test_cluster_frequency_plot_figsize(mouse_data):
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
                             cluster = "0",
-                            groupby = "sex",
+                            groupby = "experiment",
                             figsize = (2, 2),
                             show = False)
 
@@ -899,8 +899,8 @@ def test_cluster_frequency_splitby(mouse_data):
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
                             cluster = "0",
-                            groupby = "sex",
-                            splitby = "experiment",
+                            groupby = "experiment",
+                            splitby = "sex",
                             show = False)
 
 
@@ -911,8 +911,8 @@ def test_cluster_frequency_splitby_cmap(mouse_data):
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
                             cluster = "0",
-                            groupby = "sex",
-                            splitby = "experiment",
+                            groupby = "experiment",
+                            splitby = "sex",
                             cmap = "Set2",
                             show = False)
 
@@ -927,8 +927,8 @@ def test_cluster_frequency_distribution_ax_return(mouse_data):
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
                             cluster = "0",
-                            groupby = "sex",
-                            splitby = "experiment",
+                            groupby = "experiment",
+                            splitby = "sex",
                             ax = ax,
                             show = False)
     ax.set_title("test_plot")
@@ -944,8 +944,8 @@ def test_cluster_frequency_ax_return_double(mouse_data):
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
                             cluster = "0",
-                            groupby = "sex",
-                            splitby = "experiment",
+                            groupby = "experiment",
+                            splitby = "sex",
                             ax = ax[0],
                             show = False)
     ax[0].set_title("left plot")
@@ -953,8 +953,8 @@ def test_cluster_frequency_ax_return_double(mouse_data):
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
                             cluster = "0",
-                            groupby = "sex",
-                            splitby = "experiment",
+                            groupby = "experiment",
+                            splitby = "sex",
                             ax = ax[1],
                             show = False)
     ax[1].set_title("right plot")
@@ -965,8 +965,8 @@ def test_cluster_frequency_dataframe(mouse_data):
                                  gate = "Neutrophils",
                                  cluster_key = "Neutrophils_compensated_leiden",
                                  cluster = "0",
-                                 groupby = "sex",
-                                 splitby = "experiment",
+                                 groupby = "experiment",
+                                 splitby = "sex",
                                  show = False,
                                  return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
@@ -994,8 +994,8 @@ def test_cluster_frequency_dataframe_splitby(mouse_data):
                                  gate = "Neutrophils",
                                  cluster_key = "Neutrophils_compensated_leiden",
                                  cluster = "0",
-                                 groupby = "sex",
-                                 splitby = "experiment",
+                                 groupby = "experiment",
+                                 splitby = "sex",
                                  show = False,
                                  return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
@@ -1026,7 +1026,7 @@ def test_cluster_frequency_dataframe_splitby(mouse_data):
 def test_cluster_abundance_plot(mouse_data):
     fp.pl.cluster_abundance(mouse_data,
                             cluster_key = "Neutrophils_compensated_leiden",
-                            groupby = "sex",
+                            groupby = "experiment",
                             show = False)
 
 
@@ -1035,7 +1035,7 @@ def test_cluster_abundance_plot(mouse_data):
 def test_cluster_abundance_plot_figsize(mouse_data):
     fp.pl.cluster_abundance(mouse_data,
                             cluster_key = "Neutrophils_compensated_leiden",
-                            groupby = "sex",
+                            groupby = "experiment",
                             figsize = (2, 2),
                             show = False)
 
@@ -1049,7 +1049,7 @@ def test_cluster_abundance_distribution_ax_return(mouse_data):
                          figsize = (3, 3))
     fp.pl.cluster_abundance(mouse_data,
                             cluster_key = "Neutrophils_compensated_leiden",
-                            groupby = "sex",
+                            groupby = "experiment",
                             ax = ax,
                             show = False)
     ax.set_title("test_plot")
@@ -1063,13 +1063,13 @@ def test_cluster_abundance_ax_return_double(mouse_data):
                          figsize = (4, 2))
     fp.pl.cluster_abundance(mouse_data,
                             cluster_key = "Neutrophils_compensated_leiden",
-                            groupby = "sex",
+                            groupby = "experiment",
                             ax = ax[0],
                             show = False)
     ax[0].set_title("left plot")
     fp.pl.cluster_abundance(mouse_data,
                             cluster_key = "Neutrophils_compensated_leiden",
-                            groupby = "sex",
+                            groupby = "experiment",
                             ax = ax[1],
                             show = False)
     ax[1].set_title("right plot")
@@ -1078,25 +1078,26 @@ def test_cluster_abundance_ax_return_double(mouse_data):
 def test_cluster_abundance_dataframe(mouse_data):
     df = fp.pl.cluster_abundance(mouse_data,
                                  cluster_key = "Neutrophils_compensated_leiden",
-                                 groupby = "sex",
+                                 groupby = "experiment",
                                  show = False,
                                  return_dataframe = True)
     assert isinstance(df, pd.DataFrame)
     assert all(k in df.columns
-               for k in mouse_data.uns["metadata"].dataframe["sex"].unique().tolist())
+               for k in mouse_data.uns["metadata"].dataframe["experiment"].unique().tolist())
     neus: AnnData = fp.subset_gate(mouse_data, "Neutrophils", copy = True)
-    cluster_count = neus.obs.groupby(["sex", "Neutrophils_compensated_leiden"]).count() / neus.obs.groupby(["Neutrophils_compensated_leiden"]).count()
-    cluster_count = cluster_count.drop("sex", axis = 1)
+    cluster_count = neus.obs.groupby(["experiment", "Neutrophils_compensated_leiden"]).count() / neus.obs.groupby(["Neutrophils_compensated_leiden"]).count()
+    cluster_count = cluster_count.drop("experiment", axis = 1)
     cluster_count = cluster_count.reset_index()
+    print(cluster_count)
     spec_count = cluster_count.loc[
         (cluster_count["Neutrophils_compensated_leiden"] == "0") &
-        (cluster_count["sex"] == "f"),
+        (cluster_count["experiment"] == 1),
         "sample_ID"
     ].iloc[0]
     print(spec_count)
     assert df.loc[
         (df.index == "0"),
-        "f"
+        1
     ].iloc[0] == spec_count
 
 
@@ -1107,7 +1108,7 @@ def test_cluster_abundance_dataframe(mouse_data):
 def test_metadata(mouse_data):
     fp.pl.metadata(mouse_data,
                    marker = "age",
-                   groupby = "sex",
+                   groupby = "experiment",
                    show = False)
 
 
@@ -1116,7 +1117,7 @@ def test_metadata(mouse_data):
 def test_metadata_figsize(mouse_data):
     fp.pl.metadata(mouse_data,
                    marker = "age",
-                   groupby = "sex",
+                   groupby = "experiment",
                    figsize = (1, 1),
                    show = False)
 
@@ -1126,8 +1127,8 @@ def test_metadata_figsize(mouse_data):
 def test_metadata_splitby(mouse_data):
     fp.pl.metadata(mouse_data,
                    marker = "age",
-                   groupby = "sex",
-                   splitby = "experiment",
+                   groupby = "experiment",
+                   splitby = "sex",
                    figsize = (1, 1),
                    show = False)
 
@@ -1137,8 +1138,8 @@ def test_metadata_splitby(mouse_data):
 def test_metadata_splitby_cmap(mouse_data):
     fp.pl.metadata(mouse_data,
                    marker = "age",
-                   groupby = "sex",
-                   splitby = "experiment",
+                   groupby = "experiment",
+                   splitby = "sex",
                    cmap = "Set2",
                    figsize = (1, 1),
                    show = False)
@@ -1152,8 +1153,8 @@ def test_metadata_ax_return(mouse_data):
                          figsize = (3, 4))
     fp.pl.metadata(mouse_data,
                    marker = "age",
-                   groupby = "sex",
-                   splitby = "experiment",
+                   groupby = "experiment",
+                   splitby = "sex",
                    cmap = "Set2",
                    ax = ax,
                    show = False)
@@ -1168,7 +1169,7 @@ def test_metadata_ax_return_double(mouse_data):
                          figsize = (4, 2))
     fp.pl.metadata(mouse_data,
                    marker = "age",
-                   groupby = "sex",
+                   groupby = "experiment",
                    ax = ax[0],
                    show = False)
     ax[0].set_title("left plot")
@@ -1336,12 +1337,12 @@ def test_gate_frequency_dataframe(mouse_data):
     df = fp.pl.gate_frequency(mouse_data,
                               gate = "Neutrophils",
                               freq_of = "parent",
-                              groupby = "sex",
+                              groupby = "experiment",
                               return_dataframe = True,
                               show = False)
     assert isinstance(df, pd.DataFrame)
     assert all(k in df.columns
-               for k in ["sample_ID", "gate", "sex", "freq_of", "freq"])
+               for k in ["sample_ID", "gate", "experiment", "freq_of", "freq"])
     assert df["gate"].nunique() == 1
     assert df["freq_of"].nunique() == 1
     neus = mouse_data.copy()
@@ -1361,7 +1362,6 @@ def test_gate_frequency_dataframe(mouse_data):
         df["sample_ID"] == "3",
         "freq"
     ].iloc[0] == freq
-
 
 
 def test_gate_frequency_dataframe_splitby(mouse_data):
@@ -1404,7 +1404,7 @@ def test_gate_frequency_dataframe_splitby(mouse_data):
 def test_cell_counts_plot(mouse_data):
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
-                      groupby = "sex",
+                      groupby = "experiment",
                       show = False)
 
 
@@ -1432,8 +1432,8 @@ def test_cell_count_figsize(mouse_data):
 def test_cell_count_splitby(mouse_data):
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
-                      groupby = "sex",
-                      splitby = "experiment",
+                      groupby = "experiment",
+                      splitby = "sex",
                       show = False)
 
 
@@ -1442,8 +1442,8 @@ def test_cell_count_splitby(mouse_data):
 def test_cell_count_splitby_cmap(mouse_data):
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
-                      groupby = "sex",
-                      splitby = "experiment",
+                      groupby = "experiment",
+                      splitby = "sex",
                       cmap = "Set2",
                       show = False)
 
@@ -1456,8 +1456,8 @@ def test_cell_count_ax_return(mouse_data):
                          figsize = (3, 4))
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
-                      groupby = "sex",
-                      splitby = "experiment",
+                      groupby = "experiment",
+                      splitby = "sex",
                       ax = ax,
                       show = False)
     ax.set_title("test_plot")
@@ -1471,8 +1471,8 @@ def test_cell_count_ax_return_double(mouse_data):
                          figsize = (4, 2))
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
-                      groupby = "sex",
-                      splitby = "experiment",
+                      groupby = "experiment",
+                      splitby = "sex",
                       ax = ax[0],
                       show = False)
     ax[0].set_title("left plot")

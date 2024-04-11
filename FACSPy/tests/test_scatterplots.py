@@ -17,7 +17,6 @@ HERE: Path = Path(__file__).parent
 ROOT = os.path.join(HERE, "_images")
 
 IMG_COMP_KWARGS = {
-    "tol": 0.02,
     "extensions": ['png'],
     "style": 'mpl20',
     "savefig_kwarg": {"bbox_inches": "tight"},
