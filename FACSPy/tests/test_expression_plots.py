@@ -8,8 +8,8 @@ import pandas as pd
 from pathlib import Path
 from matplotlib.testing.decorators import image_comparison
 
-import numpy as np
-np.random.seed(1)  # for jitters
+import matplotlib
+matplotlib.use("agg")
 
 HERE: Path = Path(__file__).parent
 ROOT = os.path.join(HERE, "_images")

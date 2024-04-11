@@ -8,11 +8,10 @@ import pandas as pd
 
 from pathlib import Path
 from matplotlib.testing.decorators import image_comparison
-import random
 import numpy as np
 
-np.random.seed(1)  # for jitters
-random.seed(1)  # for jitters
+import matplotlib
+matplotlib.use("agg")
 
 HERE: Path = Path(__file__).parent
 ROOT = os.path.join(HERE, "_images")
@@ -1212,7 +1211,8 @@ def test_gate_frequency_plot(mouse_data):
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
-                         groupby = "sex",
+                         groupby = "experiment",
+                         stat_test = False,
                          show = False)
 
 
@@ -1232,7 +1232,7 @@ def test_gate_frequency_figsize(mouse_data):
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
-                         groupby = "sex",
+                         groupby = "experiment",
                          figsize = (2, 2),
                          show = False)
 
@@ -1243,8 +1243,8 @@ def test_gate_frequency_splitby(mouse_data):
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
-                         groupby = "sex",
-                         splitby = "experiment",
+                         groupby = "experiment",
+                         splitby = "age",
                          figsize = (2, 2),
                          show = False)
 
@@ -1255,8 +1255,8 @@ def test_gate_frequency_splitby_cmap(mouse_data):
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
-                         groupby = "sex",
-                         splitby = "experiment",
+                         groupby = "experiment",
+                         splitby = "age",
                          cmap = "Set2",
                          figsize = (2, 2),
                          show = False)
@@ -1271,8 +1271,8 @@ def test_gate_frequency_ax_return(mouse_data):
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
-                         groupby = "sex",
-                         splitby = "experiment",
+                         groupby = "experiment",
+                         splitby = "age",
                          ax = ax,
                          show = False)
     ax.set_title("test_plot")
@@ -1287,8 +1287,7 @@ def test_gate_frequency_ax_return_double(mouse_data):
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
-                         groupby = "sex",
-                         splitby = "experiment",
+                         groupby = "experiment",
                          ax = ax[0],
                          show = False)
     ax[0].set_title("left plot")
@@ -1296,7 +1295,6 @@ def test_gate_frequency_ax_return_double(mouse_data):
                          gate = "Neutrophils",
                          freq_of = "parent",
                          groupby = "experiment",
-                         splitby = "sex",
                          ax = ax[1],
                          show = False)
     ax[1].set_title("right plot")
@@ -1331,6 +1329,38 @@ def test_gate_frequency_dataframe(mouse_data):
         df["sample_ID"] == "3",
         "freq"
     ].iloc[0] == freq
+
+
+def test_gate_frequency_dataframe(mouse_data):
+    df = fp.pl.gate_frequency(mouse_data,
+                              gate = "Neutrophils",
+                              freq_of = "parent",
+                              groupby = "sex",
+                              return_dataframe = True,
+                              show = False)
+    assert isinstance(df, pd.DataFrame)
+    assert all(k in df.columns
+               for k in ["sample_ID", "gate", "sex", "freq_of", "freq"])
+    assert df["gate"].nunique() == 1
+    assert df["freq_of"].nunique() == 1
+    neus = mouse_data.copy()
+    assert isinstance(neus, AnnData)
+    fp.convert_gate_to_obs(neus, "Neutrophils", key_added = "neus")
+    fp.convert_gate_to_obs(neus,
+                           fp._utils._find_parent_gate(
+                               fp._utils._find_gate_path_of_gate(
+                                   neus, "Neutrophils"
+                               )
+                           ), key_added = "parent")
+    neus = neus[neus.obs["sample_ID"] == "3"]
+    neus = neus[neus.obs["parent"] == "parent"]
+    neu_freq = neus.obs["neus"].value_counts() / neus.obs.shape[0]
+    freq = neu_freq.loc[neu_freq.index == "neus"].iloc[0]
+    assert df.loc[
+        df["sample_ID"] == "3",
+        "freq"
+    ].iloc[0] == freq
+
 
 
 def test_gate_frequency_dataframe_splitby(mouse_data):
