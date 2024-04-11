@@ -103,7 +103,7 @@ def test_marker_density(mouse_data):
                          groupby = "experiment",
                          ridge = True,
                          plot_aspect = 2,
-                         figsize = (5, 4),
+                         figsize = (5, 6),
                          show = False)
 
 
