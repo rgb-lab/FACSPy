@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.utils.validation import check_is_fitted
 # not accessed but necessary
-from sklearn.experimental import enable_halving_search_cv
+from sklearn.experimental import enable_halving_search_cv  # noqa
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 from sklearn.preprocessing import (MinMaxScaler,
@@ -49,9 +49,15 @@ from .._utils import (subset_gate,
 
 from ..exceptions._exceptions import (ClassifierNotImplementedError,
                                       ParentGateNotFoundError)
+from pandas.core.series import Series
+from pandas.core.indexes.base import Index
+from pandas.core.arrays.base import ExtensionArray
+ArrayLike = Union["ExtensionArray", np.ndarray]
+AnyArrayLike = Union[ArrayLike, "Index", "Series"]
+
 
 class BaseGating:
-    
+
     def __init__(self):
         self.adata: AnnData
         return
@@ -65,18 +71,18 @@ class BaseGating:
     def _subset_anndata_by_sample(self,
                                   samples,
                                   adata: Optional[AnnData] = None,
-                                  copy: bool = False):
+                                  copy: bool = False) -> AnnData:
         if not isinstance(samples, list):
             samples = [samples]
         if adata is not None:
             if copy:
-                return adata[adata.obs["file_name"].isin(samples),:].copy()
+                return adata[adata.obs["file_name"].isin(samples), :].copy()
             else:
-                return adata[adata.obs["file_name"].isin(samples),:]
+                return adata[adata.obs["file_name"].isin(samples), :]
         if copy:
-            return self.adata[self.adata.obs["file_name"].isin(samples),:].copy()
+            return self.adata[self.adata.obs["file_name"].isin(samples), :].copy()
         else:
-            return self.adata[self.adata.obs["file_name"].isin(samples),:]
+            return self.adata[self.adata.obs["file_name"].isin(samples), :]
 
     def _add_gating_to_input_dataset(self,
                                      subset: AnnData,
@@ -84,7 +90,8 @@ class BaseGating:
                                      gate_indices: list[int]) -> None:
         sample_indices = get_idx_loc(adata = self.adata,
                                      idx_to_loc = subset.obs_names)
-        ### otherwise, broadcast error if multiple columns are indexed and sample_indices
+        # otherwise, broadcast error if multiple columns are indexed and
+        # sample_indices
         for i, gate_index in enumerate(gate_indices):
             self.adata.obsm["gating"][
                 sample_indices,
@@ -93,14 +100,20 @@ class BaseGating:
 
     def _append_gate_column_to_adata(self,
                                      gate_path) -> None:
-        self.adata.uns["gating_cols"] = self.adata.uns["gating_cols"].append(pd.Index([gate_path]))
+        self.adata.uns["gating_cols"] = self.adata.uns["gating_cols"].append(
+            pd.Index([gate_path])
+        )
         empty_column = np.zeros(
-                shape = (self.adata.obsm["gating"].shape[0],
-                         1),
-                dtype = bool
-            )
-        self.adata.obsm["gating"] = np.hstack([self.adata.obsm["gating"], empty_column])
+            shape = (
+                self.adata.obsm["gating"].shape[0],
+                1
+            ),
+            dtype = bool
+        )
+        self.adata.obsm["gating"] = np.hstack([self.adata.obsm["gating"],
+                                               empty_column])
         return
+
 
 class ManualGating(BaseGating):
 
@@ -115,12 +128,17 @@ class ManualGating(BaseGating):
                  sample_identifier: Optional[str] = None
                  ) -> None:
         self.adata: AnnData = adata
-        
-        self.gate_coordinates = self._preprocess_gate_coordinates(gate_coordinates)
+
+        self.gate_coordinates = self._preprocess_gate_coordinates(
+            gate_coordinates
+        )
+
         self._create_hull_from_gate_coordinates()
-        
-        self.subset = self._preprocess_adata(sample_identifier = sample_identifier,
-                                             parent_population = parent_population)
+
+        self.subset = self._preprocess_adata(
+            sample_identifier = sample_identifier,
+            parent_population = parent_population
+        )
         self._cells = self._extract_cells(self.subset,
                                           x_channel,
                                           y_channel,
@@ -137,75 +155,90 @@ class ManualGating(BaseGating):
                              gate = parent_population,
                              as_view = True)
 
+        assert isinstance(subset, AnnData)
+
         if sample_identifier is None:
             return subset
 
         if _is_valid_sample_ID(subset, sample_identifier):
-            subset = subset[subset.obs["sample_ID"] == str(sample_identifier),:]
+            subset = subset[
+                subset.obs["sample_ID"] == str(sample_identifier),
+                :
+            ]
         elif _is_valid_filename(subset, sample_identifier):
-            subset = subset[subset.obs["file_name"] == str(sample_identifier),:]
+            subset = subset[
+                subset.obs["file_name"] == str(sample_identifier),
+                :
+            ]
         else:
             raise ValueError(f"{sample_identifier} not found")
-        return subset 
+        return subset
 
     def _create_gate_path(self):
-        parent_path = _find_gate_path_of_gate(self.adata, self.parent_population)
+        parent_path = _find_gate_path_of_gate(self.adata,
+                                              self.parent_population)
         return GATE_SEPARATOR.join([parent_path, self.gate_name])
 
     def _preprocess_gate_coordinates(self,
-                                     gate_coordinates: np.ndarray) -> np.ndarray:
+                                     gate_coordinates: np.ndarray
+                                     ) -> np.ndarray:
         if gate_coordinates.shape[0] <= 2:
             # means we likely have a rectangle range and
             # cannot create a hull from that
             return np.array(
-                np.meshgrid(gate_coordinates[:,0], gate_coordinates[:,1])
-            ).T.reshape(-1,2)
+                np.meshgrid(gate_coordinates[:, 0], gate_coordinates[:, 1])
+            ).T.reshape(-1, 2)
         return gate_coordinates
 
     def _extract_cells(self,
                        adata: AnnData,
                        x_channel: str,
                        y_channel: str,
-                       data_origin: Literal["compensated", "transformed"]) -> np.ndarray:
+                       data_origin: Literal["compensated", "transformed"]
+                       ) -> AnyArrayLike:
         return adata.to_df(layer = data_origin)[[x_channel, y_channel]].values
-    
+
     def _create_hull_from_gate_coordinates(self):
         self.hull = ConvexHull(self.gate_coordinates)
         return
-    
+
     def gate(self):
-        self.adata.obsm["gating"] = self.adata.obsm["gating"].todense()
+        gate_matrix = self.adata.obsm["gating"]
+        assert isinstance(gate_matrix, csr_matrix)
+        self.adata.obsm["gating"] = gate_matrix.todense()
         gating_result = self._points_in_gate()
-        
+
         self._append_gate_column_to_adata(self.gating_path)
         gate_index = _find_gate_indices(self.adata, self.gating_path)
-        
+
         self._add_gating_to_input_dataset(self.subset,
                                           predictions = gating_result,
                                           gate_indices = gate_index)
-        
+
         self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
         return
 
     def _points_in_gate(self,
                         tol: float = 1e-12) -> np.ndarray:
         gate_results: np.ndarray = np.all(
-            self.hull.equations[:,:-1] @ self._cells.T + np.repeat(
-                self.hull.equations[:,-1][None,:],
+            self.hull.equations[:, :-1] @ self._cells.T + np.repeat(
+                self.hull.equations[:, -1][None, :],
                 len(self._cells), axis=0).T <= tol, 0
-            )
+        )
         return gate_results.reshape(gate_results.shape[0], 1)
+
 
 class unsupervisedGating(BaseGating):
 
     """\
-    Class for semi-supervised gating. This class allows to identify cell populations
-    based on their marker expression. Cells are first clustered using one of the four 
-    implemented algorithms (parc, leiden, phenograph and FlowSOM). The clusters are then 
-    analyzed and compared to a user-defined gating strategy.
+    Class for semi-supervised gating. This class allows to identify cell
+    populations based on their marker expression. Cells are first clustered
+    using one of the four implemented algorithms (parc, leiden, phenograph and
+    FlowSOM). The clusters are then analyzed and compared to a user-defined
+    gating strategy.
 
     Gating strategies are dicts with the following naming convention:
-    gating_strategy = {population_name: [parent_population, [marker1+, marker2-]]}
+    gating_strategy = {population_name: [parent_population, [marker1+, marker2-]]}  # noqa
     where the population name is the population that is identified, the parent
     population states which cell population is used to derive the population from 
     and the marker specify the population characteristics.
@@ -257,27 +290,34 @@ class unsupervisedGating(BaseGating):
                  adata: AnnData,
                  gating_strategy: dict,
                  layer: str,
-                 clustering_algorithm: Literal["leiden", "FlowSOM", "phenograph", "parc"] = "leiden",
+                 clustering_algorithm: Literal["leiden", "FlowSOM", "phenograph", "parc"] = "leiden",  # noqa
                  cluster_key: Optional[str] = None,
                  sensitivity: float = 1,
-                 intervals: list[float] = [0.33,0.66]) -> None:
+                 intervals: list[float] = [0.33, 0.66]) -> None:
         if not gating_strategy:
             raise ValueError("Please provide a gating strategy.")
         gating_strategy = gating_strategy
-        self.gating_strategy: dict = self._preprocess_gating_strategy(gating_strategy)
+        self.gating_strategy: dict = self._preprocess_gating_strategy(
+            gating_strategy
+        )
         self.clustering_algorithm: str = clustering_algorithm
         self.adata: AnnData = adata
         self.cluster_key: str = cluster_key or "clusters"
         self.layer: str = layer
         # sensitivity controls the cutoff.
-        self.sensitivity = sensitivity # will be logtransformed so that 1 is a cut
+        # will be logtransformed so that 1 is a cut
+        self.sensitivity = sensitivity
         if len(intervals) != 2:
-            raise TypeError("Please provide intervals in two steps (e.g. [0.33, 0.66]).")
+            raise TypeError(
+                "Please provide intervals in two steps (e.g. [0.33, 0.66])."
+            )
         self.intervals = intervals
         self._define_disallowed_characters()
 
     def _define_disallowed_characters(self) -> None:
-        self._disallowed_characters = ["/", "[", "{", "(", ")", "}", "]", ".", "-"]
+        self._disallowed_characters = [
+            "/", "[", "{", "(", ")", "}", "]", ".", "-"
+        ]
         replacement_dict = {char: "" for char in self._disallowed_characters}
         self._transtab = str.maketrans(replacement_dict)
         return
@@ -286,25 +326,29 @@ class unsupervisedGating(BaseGating):
                                adata: AnnData,
                                layer: str,
                                sensitivity: float,
-                               intervals: list[float, float]) -> dict:
-        data_array = adata.layers[layer]
+                               intervals: list[float]) -> dict:
+        data_array: AnyArrayLike = adata.layers[layer]
         cutoffs = {}
         for i, marker in enumerate(adata.var_names):
             marker = self._remove_disallowed_character(marker)
-            lo_end_cutoff = self._calculate_cutoff_interval(data_array[:,i], intervals[0])
-            int_end_cutoff = self._calculate_cutoff_interval(data_array[:,i], intervals[1])
+            lo_end_cutoff = self._calculate_cutoff_interval(
+                data_array[:, i], intervals[0]
+            )
+            int_end_cutoff = self._calculate_cutoff_interval(
+                data_array[:, i], intervals[1]
+            )
             cutoffs[marker] = {
                 "pos": np.arcsinh(1) - (0.1 * np.log10(sensitivity)),
-                "lo": (np.min(data_array[:,i]), lo_end_cutoff),
+                "lo": (np.min(data_array[:, i]), lo_end_cutoff),
                 "int": (lo_end_cutoff, int_end_cutoff),
-                "hi": (int_end_cutoff, np.max(data_array[:,i])),
+                "hi": (int_end_cutoff, np.max(data_array[:, i])),
             }
         return cutoffs
 
     def _calculate_cutoff_interval(self,
                                    data: np.ndarray,
                                    quantile: float) -> float:
-        return np.percentile(data, quantile * 100)
+        return float(np.percentile(data, quantile * 100))
 
     def identify_populations(self,
                              cluster_kwargs: Optional[dict] = None):
@@ -316,8 +360,9 @@ class unsupervisedGating(BaseGating):
 
         Returns
         -------
-        modifies :class:`~AnnData` object where the identified populations are stored in `adata.obsm["gating"]`.
-        
+        modifies :class:`~AnnData` object where the identified populations
+        are stored in `adata.obsm["gating"]`.
+
 
         Examples
         --------
@@ -336,11 +381,13 @@ class unsupervisedGating(BaseGating):
         if cluster_kwargs is None:
             cluster_kwargs = {}
         if isinstance(self.adata.obsm["gating"], csr_matrix):
-            self.adata.obsm["gating"] = self.adata.obsm["gating"].toarray()
-        ### mutable object to keep track of analyzed gates. this is necessary
-        ### because if parents are not present immediately, the population
-        ### is analyzed beforehand but still a key in the dictionary and
-        ### therefore analyzed twice.
+            gate_matrix = self.adata.obsm["gating"]
+            assert isinstance(gate_matrix, csr_matrix)
+            self.adata.obsm["gating"] = gate_matrix.toarray()
+        # mutable object to keep track of analyzed gates. this is necessary
+        # because if parents are not present immediately, the population
+        # is analyzed beforehand but still a key in the dictionary and
+        # therefore analyzed twice.
         self.already_analyzed = []
         for cell_population in self.gating_strategy:
             self._identify_population(cell_population,
@@ -348,12 +395,13 @@ class unsupervisedGating(BaseGating):
         self.adata.obsm["gating"] = csr_matrix(self.adata.obsm["gating"])
 
         return
-    
+
     def _preprocess_gating_strategy(self,
                                     gating_strategy: dict) -> dict:
         """
-        reshapes gating strategy: 
-        [CD4CM, ["CD4+", "CD197-"]] instead of [CD4_T_cells, ["CD4+", "CD197-"]]
+        reshapes gating strategy:
+        [CD4CM, ["CD4+", "CD197-"]] instead of
+        [CD4_T_cells, ["CD4+", "CD197-"]]
         """
         parent_populations = {entry[0] for _, entry in gating_strategy.items()}
         return {
@@ -361,7 +409,7 @@ class unsupervisedGating(BaseGating):
                 [
                     key,
                     value[1],
-                ]  ## 
+                ]
                 for key, value in gating_strategy.items()
                 if value[0] == population
             ]
@@ -370,10 +418,13 @@ class unsupervisedGating(BaseGating):
 
     def _population_is_already_a_gate(self,
                                       parent_population) -> bool:
-        """checks if the population is already named in adata.uns["gating_cols"]"""
+        """
+        checks if the population is already named in
+        adata.uns["gating_cols"]
+        """
         return parent_population in [_find_current_population(gate)
                                      for gate in self.adata.uns["gating_cols"]]
-    
+
     def _process_markers(self,
                          markers: list[str]) -> dict[str, list[Optional[str]]]:
         if not isinstance(markers, list):
@@ -401,7 +452,8 @@ class unsupervisedGating(BaseGating):
         return marker_dict
 
     def _find_parent_population_in_gating_strategy(self,
-                                                   query_population: str) -> str:
+                                                   query_population: str
+                                                   ) -> str:
         for entry in self.gating_strategy:
             for population in self.gating_strategy[entry]:
                 if population[0] == query_population:
@@ -415,19 +467,22 @@ class unsupervisedGating(BaseGating):
             return
         print(f"Analyzing population: {population_to_cluster}")
 
-        # handles the case when the parent lives within the gating strategy        
+        # handles the case when the parent lives within the gating strategy
         if not self._population_is_already_a_gate(population_to_cluster):
-            parent_of_population_to_cluster = self._find_parent_population_in_gating_strategy(population_to_cluster)
+            parent_of_population_to_cluster = \
+                self._find_parent_population_in_gating_strategy(
+                    population_to_cluster
+                )
             if parent_of_population_to_cluster in self.gating_strategy:
                 self._identify_population(parent_of_population_to_cluster,
                                           cluster_kwargs)
             else:
                 raise ParentGateNotFoundError(population_to_cluster)
-            
+
         if self.adata.shape[0] <= 1:
             """
-            Handles the case where no parent cells have been found. In order to avoid missing gates,
-            empty gates are appended.
+            Handles the case where no parent cells have been found. In order to
+            avoid missing gates, empty gates are appended.
             TODO: code doubling...
             """
             for population_list in self.gating_strategy[population_to_cluster]:
@@ -440,73 +495,109 @@ class unsupervisedGating(BaseGating):
                     self._append_gate_column_to_adata(population_gate_path)
 
         else:
-            gate_subset = subset_gate(self.adata, gate = population_to_cluster, as_view = True)
+            gate_subset = subset_gate(self.adata,
+                                      gate = population_to_cluster,
+                                      as_view = True)
+            assert gate_subset is not None
             if gate_subset.shape[0] >= 1:
-                self.cutoffs = self._generate_cutoff_table(gate_subset,
-                                                           layer = self.layer,
-                                                           sensitivity = self.sensitivity,
-                                                           intervals = self.intervals)
+                self.cutoffs = self._generate_cutoff_table(
+                    gate_subset,
+                    layer = self.layer,
+                    sensitivity = self.sensitivity,
+                    intervals = self.intervals
+                )
             for sample in self.adata.obs["file_name"].unique():
                 print(f"... sample {sample}")
-                file_subset = self._subset_anndata_by_sample(adata = self.adata,
-                                                             samples = sample,
-                                                             copy = True)
-                if file_subset.shape[0] <= 1 or self._has_no_cells_in_gate(file_subset,
-                                                                           gate = population_to_cluster):
+                file_subset = self._subset_anndata_by_sample(
+                    adata = self.adata,
+                    samples = sample,
+                    copy = True
+                )
+                if file_subset.shape[0] <= 1 or \
+                        self._has_no_cells_in_gate(
+                            file_subset,
+                            gate = population_to_cluster
+                ):
                     """
-                    Handles the case where no parent cells have been found. In order to avoid missing gates,
-                    empty gates are appended.
+                    Handles the case where no parent cells have been found.
+                    In order to avoid missing gates, empty gates are appended.
                     TODO: code doubling...
                     """
-                    for population_list in self.gating_strategy[population_to_cluster]:
+                    for population_list in \
+                            self.gating_strategy[population_to_cluster]:
                         population_name: str = population_list[0]
                         print(f"... gating population {population_name}")
-                        parent_gate_path = _find_gate_path_of_gate(file_subset, population_to_cluster)
-                        population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
+                        parent_gate_path = _find_gate_path_of_gate(
+                            file_subset, population_to_cluster
+                        )
+                        population_gate_path = GATE_SEPARATOR.join(
+                            [parent_gate_path, population_name]
+                        )
 
-                        if not self._population_is_already_a_gate(population_name):
-                            self._append_gate_column_to_adata(population_gate_path)
+                        if not self._population_is_already_a_gate(
+                            population_name
+                        ):
+                            self._append_gate_column_to_adata(
+                                population_gate_path
+                            )
                     continue
 
-                file_subset = self._cluster_dataset(adata = file_subset,
-                                                    gate = population_to_cluster,
-                                                    layer = self.layer,
-                                                    cluster_kwargs = cluster_kwargs)
+                file_subset = self._cluster_dataset(
+                    adata = file_subset,
+                    gate = population_to_cluster,
+                    layer = self.layer,
+                    cluster_kwargs = cluster_kwargs
+                )
 
-                for population_list in self.gating_strategy[population_to_cluster]:
+                for population_list in \
+                        self.gating_strategy[population_to_cluster]:
                     population_name: str = population_list[0]
                     print(f"     ... gating population {population_name}")
-                    
-                    ## each entry is a list with the structure [population_name, [marker1, marker2, marker3]]
-                    parent_gate_path = _find_gate_path_of_gate(file_subset, population_to_cluster)
-                    population_gate_path = GATE_SEPARATOR.join([parent_gate_path, population_name])
+
+                    # each entry is a list with the structure
+                    # [population_name, [marker1, marker2, marker3]]
+                    parent_gate_path = _find_gate_path_of_gate(
+                        file_subset, population_to_cluster
+                    )
+                    population_gate_path = GATE_SEPARATOR.join(
+                        [parent_gate_path, population_name]
+                    )
 
                     if not self._population_is_already_a_gate(population_name):
                         self._append_gate_column_to_adata(population_gate_path)
-                    
-                    gate_index: list[int] = _find_gate_indices(self.adata,
-                                                               population_gate_path)
+
+                    gate_index: list[int] = _find_gate_indices(
+                        self.adata,
+                        population_gate_path
+                    )
 
                     markers: list[str] = population_list[1]
                     markers_of_interest = self._process_markers(markers)
-                    cluster_vector = self._identify_clusters_of_interest(file_subset,
-                                                                         markers_of_interest)
-                    cell_types = self._map_cell_types_to_cluster(file_subset,
-                                                                 cluster_vector,
-                                                                 population_name)
+                    cluster_vector = self._identify_clusters_of_interest(
+                        file_subset,
+                        markers_of_interest
+                    )
+                    cell_types = self._map_cell_types_to_cluster(
+                        file_subset,
+                        cluster_vector,
+                        population_name
+                    )
                     predictions = self._convert_cell_types_to_bool(cell_types)
-                    self._add_gating_to_input_dataset(file_subset,
-                                                      predictions,
-                                                      gate_index)
+                    self._add_gating_to_input_dataset(
+                        file_subset,
+                        predictions,
+                        gate_index
+                    )
         self.already_analyzed.append(population_to_cluster)
-        return 
-  
+        return
+
     def _has_no_cells_in_gate(self,
                               adata: AnnData,
                               gate: str):
         gate_subset = subset_gate(adata,
                                   gate,
                                   as_view = True)
+        assert gate_subset is not None
         return gate_subset.shape[0] <= 1
 
     def _convert_cell_types_to_bool(self,
@@ -515,7 +606,7 @@ class unsupervisedGating(BaseGating):
             list(map(lambda x: x != "other", cell_types)),
             dtype=bool
         ).reshape((len(cell_types), 1))
-        
+
     def _map_cell_types_to_cluster(self,
                                    subset: AnnData,
                                    cluster_vector: pd.Index,
@@ -523,11 +614,12 @@ class unsupervisedGating(BaseGating):
         # TODO: map function...
         return [population if cluster in cluster_vector else "other"
                 for cluster in subset.obs[self.cluster_key].to_list()]
-    
-    def _convert_markers_to_query_string(self,
-                                         markers_of_interest: dict[str: list[Optional[str]]]) -> str:
 
-        #cutoff = str(np.arcsinh(1) - (0.1 * np.log10(self.sensitivity)))
+    def _convert_markers_to_query_string(
+            self,
+            markers_of_interest: dict[str, list[Optional[str]]]) -> str:
+
+        # cutoff = str(np.arcsinh(1) - (0.1 * np.log10(self.sensitivity)))
         cutoffs = self.cutoffs
         up_markers = markers_of_interest["up"]
         down_markers = markers_of_interest["down"]
@@ -549,8 +641,12 @@ class unsupervisedGating(BaseGating):
         return " & ".join(query_strings)
 
     def _clean_marker_names(self,
-                            markers: Union[pd.Index, dict]) -> Union[list[str], dict, pd.Index]:
-        """This function checks for disallowed characters that would otherwise mess up the pd.query function"""
+                            markers: Union[pd.Index, dict]
+                            ) -> Union[list[str], dict, pd.Index]:
+        """
+        This function checks for disallowed characters that would otherwise
+        mess up the pd.query function
+        """
         if not isinstance(markers, pd.Index) and not isinstance(markers, dict):
             raise ValueError("Input type not valid.")
         if isinstance(markers, pd.Index):
@@ -559,29 +655,35 @@ class unsupervisedGating(BaseGating):
         if isinstance(markers, dict):
             for direction in markers:
                 for i, _ in enumerate(markers[direction]):
-                    markers[direction][i] = self._remove_disallowed_character(markers[direction][i])
+                    markers[direction][i] = self._remove_disallowed_character(
+                        markers[direction][i]
+                    )
         return markers
 
     def _remove_disallowed_character_list(self,
                                           str_list: pd.Index) -> list[str]:
         """removes disallowed characters from strings of a list"""
-        return [self._remove_disallowed_character(string) for string in str_list]
+        return [
+            self._remove_disallowed_character(string)
+            for string in str_list
+        ]
 
     def _remove_disallowed_character(self,
                                      input_str: str) -> str:
         """removes disallowed characters from a string"""
         return input_str.translate(self._transtab)
 
-    def _identify_clusters_of_interest(self,
-                                       adata: AnnData,
-                                       markers_of_interest: dict[str: list[Optional[str]]]) -> list[str]:
+    def _identify_clusters_of_interest(
+            self,
+            adata: AnnData,
+            markers_of_interest: dict) -> pd.Index:
         df = adata.to_df(layer = self.layer)
         df.columns = self._clean_marker_names(df.columns)
         markers_of_interest = self._clean_marker_names(markers_of_interest)
         df[self.cluster_key] = adata.obs[self.cluster_key].to_list()
         medians = df.groupby(self.cluster_key).median()
         query = self._convert_markers_to_query_string(markers_of_interest)
-        cells_of_interest: pd.DataFrame = medians.query(query) 
+        cells_of_interest: pd.DataFrame = medians.query(query)
         return cells_of_interest.index
 
     def _cluster_dataset(self,
@@ -590,7 +692,7 @@ class unsupervisedGating(BaseGating):
                          layer: str,
                          cluster_kwargs: dict) -> AnnData:
 
-        #set reasonable defaults for now:
+        # set reasonable defaults for now:
         if "scaling" not in cluster_kwargs:
             cluster_kwargs["scaling"] = None
         if "key_added" not in cluster_kwargs:
@@ -622,8 +724,8 @@ class unsupervisedGating(BaseGating):
 class supervisedGating(BaseGating):
 
     """\
-    Class for supervised gating. This class implements the learning of a 
-    gating strategy based on pregated samples with according prediction of 
+    Class for supervised gating. This class implements the learning of a
+    gating strategy based on pregated samples with according prediction of
     ungated samples.
 
     Parameters
@@ -631,11 +733,12 @@ class supervisedGating(BaseGating):
     adata
         The anndata object of shape `n_obs` x `n_vars`
         where rows correspond to cells and columns to the channels.
-    
+
     Returns
     -------
-    A :class:`~AnnData` object where the identified populations are stored in `adata.obsm["gating"]`.
-    
+    A :class:`~AnnData` object where the identified populations are stored
+    in `adata.obsm["gating"]`.
+
     Examples
     --------
 
@@ -654,7 +757,7 @@ class supervisedGating(BaseGating):
     >>> gating.setup_classifier("DecisionTreeClassifier")
     >>> gating.train()
     >>> gating.gate_dataset()
-    
+
     """
 
     def __init__(self,
@@ -663,11 +766,11 @@ class supervisedGating(BaseGating):
         self._tuned_hyperparameters = {}
 
     def setup_classifier(self,
-                        classifier: Literal["RandomForestClassifier",
-                                            "DecisionTreeClassifier",
-                                            "ExtraTreesClassifier",
-                                            "ExtraTreeClassifier"],
-                        **kwargs) -> None:
+                         classifier: Literal["RandomForestClassifier",
+                                             "DecisionTreeClassifier",
+                                             "ExtraTreesClassifier",
+                                             "ExtraTreeClassifier"],
+                         **kwargs) -> None:
         """\
         Setup method.
 
@@ -675,9 +778,10 @@ class supervisedGating(BaseGating):
         ----------
         classifier
             The classifier to use. Can be any of `RandomForestClassifier`,
-            `DecisionTreeClassifier`, `ExtraTreeClassifier` or `ExtraTreesClassifier`.
+            `DecisionTreeClassifier`, `ExtraTreeClassifier` or
+            `ExtraTreesClassifier`.
         kwargs
-            keyword arguments passed to the classifier instance. If there are 
+            keyword arguments passed to the classifier instance. If there are
             tuned hyperparameters, keywords will not be passed.
 
         Returns
@@ -701,12 +805,13 @@ class supervisedGating(BaseGating):
         >>> gating.setup_classifier("DecisionTreeClassifier")
         >>> gating.train()
         >>> gating.gate_dataset()
-        
 
         """
         if self._tuned_hyperparameters:
-            self.classifier = self._select_classifier(classifier,
-                                                      **self._tuned_hyperparameters)
+            self.classifier = self._select_classifier(
+                classifier,
+                **self._tuned_hyperparameters
+            )
         else:
             self.classifier = self._select_classifier(classifier,
                                                       **kwargs)
@@ -730,10 +835,11 @@ class supervisedGating(BaseGating):
         ----------
 
         method
-            One of `HalvingRandomSearchCV`, `GridSearchCV` or `RandomizedSearchCV`. The 
-            method that is used for the gridsearch.
+            One of `HalvingRandomSearchCV`, `GridSearchCV` or
+            `RandomizedSearchCV`. The method that is used for the gridsearch.
         grid
-            The parameters to test. For further documentation, refer to the sklearn documentation.
+            The parameters to test. For further documentation, refer to the
+            sklearn documentation.
 
         Returns
         -------
@@ -759,13 +865,15 @@ class supervisedGating(BaseGating):
 
         """
 
-        self._conduct_hyperparameter_search(method, grid, **hyperparameter_search_kwargs)
+        self._conduct_hyperparameter_search(
+            method, grid, **hyperparameter_search_kwargs
+        )
 
     def sample_cells(self,
                      sampler: GateSampler):
         """\
-        Method to sample the cells. For further documentation, refer to the documentation 
-        of the GateSampler class
+        Method to sample the cells. For further documentation, refer to the
+        documentation of the GateSampler class.
 
         Parameters
         ----------
@@ -800,10 +908,11 @@ class supervisedGating(BaseGating):
         """
         self.X, self.y = sampler.fit_resample(self.X, self.y)
 
-    def _conduct_hyperparameter_search(self,
-                                       method: str,
-                                       grid: dict,
-                                       hyperparameter_search_kwargs: Optional[dict] = None):
+    def _conduct_hyperparameter_search(
+            self,
+            method: str,
+            grid: dict,
+            hyperparameter_search_kwargs: Optional[dict] = None):
         if hyperparameter_search_kwargs is None:
             hyperparameter_search_kwargs = {}
         if method == "RandomizedSearchCV":
@@ -826,18 +935,20 @@ class supervisedGating(BaseGating):
                                        verbose = 3,
                                        error_score = 0.0)
         elif method == "HalvingGridSearchCV":
-            raise NotImplementedError("Needs a seperate class to allow for multioutput")
-            #grid_result = HalvingGridSearchCV(estimator = model,
-            #                                  param_grid = grid,
-            #                                  scoring = "f1_macro",
-            #                                  factor = 3,
-            #                                  resource = "n_samples",
-            #                                  min_resources = 1000,
-            #                                  cv = 5,
-            #                                  n_jobs = -1,
-            #                                  verbose = 3,
-            #                                  error_score = 0.0,
-            #                                  random_state = 187).fit(X_train, y_train)
+            raise NotImplementedError(
+                "Needs a seperate class to allow for multioutput"
+            )
+            # grid_result = HalvingGridSearchCV(estimator = model,
+            #                                   param_grid = grid,
+            #                                   scoring = "f1_macro",
+            #                                   factor = 3,
+            #                                   resource = "n_samples",
+            #                                   min_resources = 1000,
+            #                                   cv = 5,
+            #                                   n_jobs = -1,
+            #                                   verbose = 3,
+            #                                   error_score = 0.0,
+            #                                   random_state = 187).fit(X_train, y_train)
 
         elif method == "HalvingRandomSearchCV":
             grid_result = HalvingRandomSearchCV_TE(estimator = self.classifier,
@@ -851,6 +962,8 @@ class supervisedGating(BaseGating):
                                                    verbose = 3,
                                                    error_score = 0.0,
                                                    random_state = 187)
+        else:
+            raise NotImplementedError(f"{method} is not implemented")
         grid_result.fit(self.X, self.y)
 
         self._tuned_hyperparameters = grid_result.best_params_
@@ -884,33 +997,39 @@ class supervisedGating(BaseGating):
         >>> gating.gate_dataset()
 
         """
-        self.ungated_data = self.adata[~self.adata.obs["sample_ID"].isin(self.gated_samples)]
+        self.ungated_data = self.adata[
+            ~self.adata.obs["sample_ID"].isin(self.gated_samples)
+        ]
         X_pred = self.ungated_data.layers[self.layer]
         if self.scaler is not None:
             X_pred = self.scaler.transform(X_pred)
 
         predicted_gating = self.classifier.predict(X_pred)
 
-        self._add_gating_to_input_dataset(self.ungated_data,
-                                          predicted_gating,
-                                          gate_indices = list(range(predicted_gating.shape[1])))
+        self._add_gating_to_input_dataset(
+            self.ungated_data,
+            predicted_gating,
+            gate_indices = list(range(predicted_gating.shape[1]))
+        )
 
     def run_data_setup(self,
                        gated_samples: list[str],
                        layer: str,
                        scaling: Optional[str] = "StandardScaler"):
         """\
-        Public method to run the data setup. Extracts gated samples and scales the data.
-        
+        Public method to run the data setup. Extracts gated samples and scales
+        the data.
+
         Parameters
         ----------
         gated_samples:
             A list of sample_IDs of gated samples
         layer
-            The slot in adata.layers that contains the data to be used for training the
-            classifier.
+            The slot in adata.layers that contains the data to be used for
+            training the classifier.
         scaling
-            Scaling method. Can be one of `MinMaxScaler`, `StandardScaler` or `RobustScaler`.
+            Scaling method. Can be one of `MinMaxScaler`, `StandardScaler` or
+            `RobustScaler`.
 
         Returns
         -------
@@ -940,9 +1059,11 @@ class supervisedGating(BaseGating):
 
         self.layer = layer
         self.gated_samples = gated_samples
-        self.gated_adata = self.adata[self.adata.obs["sample_ID"].isin(self.gated_samples)]
+        self.gated_adata = self.adata[
+            self.adata.obs["sample_ID"].isin(self.gated_samples),
+            :
+        ]
         assert self.gated_adata.is_view
-
         self.X = self.gated_adata.layers[layer]
         self.y = self.gated_adata.obsm["gating"].toarray()
 
@@ -952,23 +1073,27 @@ class supervisedGating(BaseGating):
 
     def _scale_data(self,
                     X: np.ndarray,
-                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]
-                    ) -> tuple[np.ndarray, Union[StandardScaler, MinMaxScaler, RobustScaler]]:
+                    scaling: Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]  # noqa
+                    ) -> tuple[np.ndarray, Union[StandardScaler, MinMaxScaler, RobustScaler]]:  # noqa
         if scaling == "MinMaxScaler":
             scaler = MinMaxScaler()
         elif scaling == "RobustScaler":
             scaler = RobustScaler()
         elif scaling == "StandardScaler":
             scaler = StandardScaler()
-        
+
         X = scaler.fit_transform(X)
         return X, scaler
 
-    def _select_classifier(self, classifier, **kwargs) -> Union[RandomForest, DecisionTree]:
+    def _select_classifier(self,
+                           classifier,
+                           **kwargs
+                           ) -> Union[RandomForest, DecisionTree]:
         try:
             classifier = IMPLEMENTED_ESTIMATORS[classifier](**kwargs)
         except KeyError:
-            raise ClassifierNotImplementedError(classifier, IMPLEMENTED_ESTIMATORS)
+            raise ClassifierNotImplementedError(classifier,
+                                                IMPLEMENTED_ESTIMATORS)
 
         return classifier
 
@@ -977,7 +1102,7 @@ class supervisedGating_generalized(BaseGating):
     """
     Class to unify functionality for supervised gating approaches.
 
-    The user inputs the anndata object containing the data as well 
+    The user inputs the anndata object containing the data as well
     as the workspace group (corresponding to the FlowJo groups) that
     contains the gates.
     This is meant to account for the fact that the same sample can

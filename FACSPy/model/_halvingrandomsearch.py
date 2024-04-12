@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from copy import deepcopy
-from sklearn.model_selection._search_successive_halving import _SubsampleMetaSplitter, _top_k
+from sklearn.model_selection._search_successive_halving import (_SubsampleMetaSplitter,  # noqa
+                                                                _top_k)
 from math import ceil, floor, log
 from sklearn.model_selection._search import BaseSearchCV
 from numbers import Integral, Real
@@ -13,6 +14,7 @@ from sklearn.utils.validation import _num_samples
 
 import numpy as np
 from sklearn.model_selection import ParameterSampler
+
 
 class BaseSuccessiveHalving_TE(BaseSearchCV):
     """Implements successive halving.
