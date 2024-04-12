@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 import warnings
 
 
@@ -321,7 +321,7 @@ class ClassifierNotImplementedError(Exception):
 
     def __init__(self,
                  classifier: Any,
-                 implemented_classifiers: list[str]):
+                 implemented_classifiers: Union[list[str], dict]):
         self.message = (
             "Classifier is not implemented. Please select one "
             f"of {implemented_classifiers}, was {classifier}"
