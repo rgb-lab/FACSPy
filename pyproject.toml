@@ -17,8 +17,8 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "scanpy",
-    "pandas>=2.0.2",
+    "scanpy<=1.9.3",
+    "pandas>=2.0.2,<=2.1.1",
     "statsmodels>=0.10.0rc2",
     "lxml>=4.9",
     "flowutils",
@@ -30,7 +30,7 @@ dependencies = [
     "minisom",
     "phenograph",
     "flowsom-clustering",
-    "seaborn>0.12",
+    "seaborn==0.12.2",
     "imblearn"
 ]
 
