@@ -17,7 +17,6 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-<<<<<<< HEAD
     "flowsom@git+https://github.com/saeyslab/FlowSOM_Python.git",
     "scanpy<=1.9.3",
     "pandas>=2.0.2,<=2.1.1",
