@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "FACSPy"
@@ -17,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "flowsom@git+https://github.com/saeyslab/FlowSOM_Python.git#egg=main",
+    "flowsom@git+https://github.com/saeyslab/FlowSOM_Python.git@main",
     "scanpy<=1.9.3",
     "pandas>=2.0.2,<=2.1.1",
     "statsmodels>=0.10.0rc2",
@@ -32,13 +32,16 @@ dependencies = [
     "seaborn==0.12.2",
     "imblearn"
 ]
+[tool.setuptools.packages.find]
+where = ["FACSPy"]
 
+[project.optional-dependencies]
 r_env = ["rpy2", "anndata2ri"]
 
 # dont move this paragraph above dependencies.
 # noqa
-[tool.hatch.metadata]
-allow-direct-references = true
+#[tool.hatch.metadata]
+#allow-direct-references = true
 
 #[project.urls]
 #"Homepage" = "http://www.google.de/"
