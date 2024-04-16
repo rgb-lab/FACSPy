@@ -33,7 +33,7 @@ dependencies = [
     "imblearn"
 ]
 [tool.setuptools.packages.find]
-where = ["FACSPy"]
+where = [""]
 
 [project.optional-dependencies]
 r_env = ["rpy2", "anndata2ri"]
