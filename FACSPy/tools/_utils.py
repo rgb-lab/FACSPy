@@ -517,7 +517,7 @@ def _save_cluster_settings(adata: AnnData,
     }
     settings_dict = {**settings_dict, **kwargs}
     adata.uns["settings"][f"_{clustering}_{gate}_{layer}"] = settings_dict
-    
+
     return
 
 def _save_samplewise_dr_settings(adata: AnnData,
