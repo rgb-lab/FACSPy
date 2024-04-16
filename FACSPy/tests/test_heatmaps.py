@@ -4,7 +4,6 @@ import os
 import FACSPy as fp
 from anndata import AnnData
 import pandas as pd
-
 from pathlib import Path
 from matplotlib.testing.decorators import image_comparison
 
