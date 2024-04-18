@@ -59,12 +59,10 @@ def test_flowsom_works_as_flowsom(mock_dataset: AnnData):
     flowsom_adata = adata.copy()
     flowsom_adata.X = flowsom_adata.layers["compensated"]
 
-    fse = FlowSOMEstimator(cluster_kwargs = {"seed": 187},
-                           metacluster_kwargs = {"n_clusters": 30})
+    fse = FlowSOMEstimator(seed = 187, n_clusters = 30)
     flowsom_clusters = fse.fit_predict(flowsom_adata.X)
 
-    fse2 = FlowSOMEstimator(cluster_kwargs = {"seed": 187},
-                            metacluster_kwargs = {"n_clusters": 30})
+    fse2 = FlowSOMEstimator(seed = 187, n_clusters = 30)
     flowsom_clusters2 = fse2.fit_predict(flowsom_adata.X)
 
     assert all(flowsom_clusters == flowsom_clusters2)
@@ -86,10 +84,7 @@ def test_flowsom_works_as_flowsom_kwargs(mock_dataset: AnnData):
     flowsom_adata = adata.copy()
     flowsom_adata.X = flowsom_adata.layers["compensated"]
 
-    fse = FlowSOMEstimator(cluster_kwargs = {"xdim": 5,
-                                             "ydim": 5,
-                                             "seed": 187},
-                           metacluster_kwargs = {"n_clusters": 15})
+    fse = FlowSOMEstimator(xdim = 5, ydim = 5, seed = 187, n_clusters = 15)
     flowsom_clusters = fse.fit_predict(flowsom_adata.layers["compensated"])
 
     facspy_adata = adata.copy()
@@ -97,8 +92,10 @@ def test_flowsom_works_as_flowsom_kwargs(mock_dataset: AnnData):
                   gate = "live",
                   layer = "compensated",
                   use_only_fluo = False,
-                  cluster_kwargs = {"xdim": 5, "ydim": 5, "seed": 187},
-                  metacluster_kwargs = {"n_clusters": 15},
+                  xdim = 5,
+                  ydim = 5,
+                  seed = 187,
+                  n_clusters = 15,
                   scaling = None,
                   exclude = None)
     assert "live_compensated_flowsom" in facspy_adata.obs.columns

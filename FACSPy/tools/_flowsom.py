@@ -23,10 +23,8 @@ def flowsom(adata: AnnData,
             use_only_fluo: bool = True,
             exclude: Optional[Union[list[str], str]] = None,
             scaling: Optional[Literal["MinMaxScaler", "RobustScaler", "StandardScaler"]] = None,
-            cluster_kwargs: Optional[dict] = None,
-            metacluster_kwargs: Optional[dict] = None,
             copy: bool = False,
-            ) -> Optional[AnnData]:
+            **kwargs) -> Optional[AnnData]:
     """\
     Computes FlowSOM clustering. 
 
@@ -55,12 +53,9 @@ def flowsom(adata: AnnData,
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
         `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
-    cluster_kwargs : dict, optional
-        keyword arguments passed to the SOMEstimator class. The defaults include
-        a map size of 10x10 Neurons.
-    metacluster_kwargs : dict, optional
-        keyword arguments passed to the Consensus Cluster class. Sets
-        n_clusters to 30 by default.
+    kwargs: dict, optional
+        keyword arguments passed to the FlowSOMEstimator class. The defaults include
+        a map size of 10x10 Neurons as well as n_clusters of 30.
     copy
         Return a copy of adata instead of modifying inplace
 
@@ -111,16 +106,13 @@ def flowsom(adata: AnnData,
     uns_key = f"{gate}_{layer}"
     cluster_key = key_added or f"{uns_key}_flowsom"
 
-    if not cluster_kwargs:
-        cluster_kwargs = {}
+    if not kwargs:
+        kwargs= {}
 
-    if not metacluster_kwargs:
-        metacluster_kwargs = {}
-
-    if "n_clusters" not in metacluster_kwargs:
-        metacluster_kwargs["n_clusters"] = 30
-    if "seed" not in cluster_kwargs:
-        cluster_kwargs["seed"] = 187
+    if "n_clusters" not in kwargs:
+        kwargs["n_clusters"] = 30
+    if "seed" not in kwargs:
+        kwargs["seed"] = 187
 
     _save_cluster_settings(adata = adata,
                            gate = gate,
@@ -129,8 +121,7 @@ def flowsom(adata: AnnData,
                            exclude = exclude,
                            scaling = scaling,
                            clustering = "flowsom",
-                           **cluster_kwargs,
-                           **metacluster_kwargs)
+                           **kwargs)
 
     preprocessed_adata = _preprocess_adata(adata,
                                            gate = gate,
@@ -139,8 +130,7 @@ def flowsom(adata: AnnData,
                                            exclude = exclude,
                                            scaling = scaling)
 
-    fse = FlowSOMEstimator(cluster_kwargs = cluster_kwargs,
-                           metacluster_kwargs = metacluster_kwargs)
+    fse = FlowSOMEstimator(**kwargs)
     cluster_annotations = fse.fit_predict(preprocessed_adata.X)
 
     adata = _merge_cluster_info_into_adata(
