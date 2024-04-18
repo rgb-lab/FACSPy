@@ -17,6 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "flowsom@git+https://github.com/TarikExner/FlowSOM_Python.git@pip_issue",
     "scanpy<=1.9.3",
     "pandas>=2.0.2,<=2.1.1",
     "statsmodels>=0.10.0rc2",
@@ -27,14 +28,17 @@ dependencies = [
     "anytree",
     "statannotations",
     "parc",
-    "minisom",
     "phenograph",
-    "flowsom-clustering",
     "seaborn==0.12.2",
     "imblearn"
 ]
 
 r_env = ["rpy2", "anndata2ri"]
+
+# dont move this paragraph above dependencies.
+# noqa
+[tool.hatch.metadata]
+allow-direct-references = true
 
 #[project.urls]
 #"Homepage" = "http://www.google.de/"

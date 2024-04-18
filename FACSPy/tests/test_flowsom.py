@@ -10,7 +10,7 @@ from FACSPy.dataset._workspaces import FlowJoWorkspace
 
 from FACSPy.exceptions._exceptions import InvalidScalingError
 
-from FlowSOM import flowsom
+from flowsom.models import FlowSOMEstimator
 
 WSP_FILE_PATH = "FACSPy/_resources/"
 WSP_FILE_NAME = "test_wsp.wsp"
@@ -44,11 +44,7 @@ def test_save_settings_from_flowsom(mock_dataset: AnnData):
     fp.tl.flowsom(adata,
                   gate = "live",
                   layer = "compensated",
-                  random_state = 187,
                   use_only_fluo = False,
-                  x_dim = 10,
-                  y_dim = 10,
-                  sigma = 0.1,
                   scaling = None,
                   exclude = None)
     assert "settings" in adata.uns
@@ -56,29 +52,27 @@ def test_save_settings_from_flowsom(mock_dataset: AnnData):
     settings = adata.uns["settings"]["_flowsom_live_compensated"]
     assert settings["gate"] == "live"
     assert settings["layer"] == "compensated"
-    assert settings["x_dim"] == 10
-    assert settings["y_dim"] == 10
-    assert settings["sigma"] == 0.1
 
 def test_flowsom_works_as_flowsom(mock_dataset: AnnData):
     adata = mock_dataset
     fp.subset_gate(adata, "live")
     flowsom_adata = adata.copy()
     flowsom_adata.X = flowsom_adata.layers["compensated"]
-    
-    flowsom_clusters = flowsom(flowsom_adata.X,
-                               x_dim = 10,
-                               y_dim = 10,
-                               random_state = 187)
+
+    fse = FlowSOMEstimator(seed = 187, n_clusters = 30)
+    flowsom_clusters = fse.fit_predict(flowsom_adata.X)
+
+    fse2 = FlowSOMEstimator(seed = 187, n_clusters = 30)
+    flowsom_clusters2 = fse2.fit_predict(flowsom_adata.X)
+
+    assert all(flowsom_clusters == flowsom_clusters2)
 
     facspy_adata = adata.copy()
     fp.tl.flowsom(facspy_adata,
                   gate = "live",
                   layer = "compensated",
-                  random_state = 187,
                   use_only_fluo = False,
-                  x_dim = 10,
-                  y_dim = 10,
+                  cluster_kwargs = {"seed": 187},
                   scaling = None,
                   exclude = None)
     assert "live_compensated_flowsom" in facspy_adata.obs.columns
@@ -89,25 +83,23 @@ def test_flowsom_works_as_flowsom_kwargs(mock_dataset: AnnData):
     fp.subset_gate(adata, "live")
     flowsom_adata = adata.copy()
     flowsom_adata.X = flowsom_adata.layers["compensated"]
-    
-    flowsom_clusters = flowsom(flowsom_adata.X,
-                               x_dim = 10,
-                               y_dim = 10,
-                               sigma = 0.1,
-                               random_state = 187)
+
+    fse = FlowSOMEstimator(xdim = 5, ydim = 5, seed = 187, n_clusters = 15)
+    flowsom_clusters = fse.fit_predict(flowsom_adata.layers["compensated"])
 
     facspy_adata = adata.copy()
     fp.tl.flowsom(facspy_adata,
                   gate = "live",
                   layer = "compensated",
-                  random_state = 187,
                   use_only_fluo = False,
-                  sigma = 0.1,
-                  x_dim = 10,
-                  y_dim = 10,
+                  xdim = 5,
+                  ydim = 5,
+                  seed = 187,
+                  n_clusters = 15,
                   scaling = None,
                   exclude = None)
     assert "live_compensated_flowsom" in facspy_adata.obs.columns
+    assert len(flowsom_clusters) == facspy_adata.shape[0]
     assert all(flowsom_clusters == facspy_adata.obs["live_compensated_flowsom"])
 
 
@@ -153,5 +145,3 @@ def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kw
 
     fp.tl.flowsom(mock_dataset, gate = "my_personal_gate")
     assert "live_compensated_flowsom" in mock_dataset.obs.columns
-
-    

@@ -1,8 +1,9 @@
 
 from anndata import AnnData
-from FlowSOM import flowsom as _flowsom
 
 from typing import Optional, Literal, Union
+
+from flowsom.models import FlowSOMEstimator
 
 from ._utils import (_preprocess_adata,
                      _merge_cluster_info_into_adata,
@@ -52,12 +53,12 @@ def flowsom(adata: AnnData,
     scaling
         Whether to apply scaling to the data for display. One of `MinMaxScaler`,
         `RobustScaler` or `StandardScaler` (Z-score). Defaults to None.
+    kwargs: dict, optional
+        keyword arguments passed to the FlowSOMEstimator class. The defaults include
+        a map size of 10x10 Neurons as well as n_clusters of 30.
     copy
         Return a copy of adata instead of modifying inplace
-    **kwargs : dict, optional
-        keyword arguments that are passed directly to the `flowsom.flowsom`
-        function. Please refer to its documentation.
-    
+
     Returns
     -------
     :class:`~anndata.AnnData` or None
@@ -84,10 +85,13 @@ def flowsom(adata: AnnData,
     >>> fp.settings.default_layer = "transformed"
     >>> fp.tl.pca(dataset)
     >>> fp.tl.neighbors(dataset)
-    >>> fp.tl.flowsom(dataset)
+    >>> fp.tl.flowsom(dataset,
+                      cluster_kwargs = {"xdim": 15,
+                                        "ydim": 15),
+                      metacluster_kwargs = {"n_clusters": 25})
 
     """
-    
+
     adata = adata.copy() if copy else adata
 
     if exclude is None:
@@ -103,15 +107,12 @@ def flowsom(adata: AnnData,
     cluster_key = key_added or f"{uns_key}_flowsom"
 
     if not kwargs:
-        from multiprocessing import cpu_count
-        kwargs = {
-            "x_dim": 50,
-            "y_dim": 50,
-            "n_jobs": max(1, cpu_count() - 2)
-        }
+        kwargs= {}
 
-    if "consensus_cluster_max_n" not in kwargs:
-        kwargs["consensus_cluster_max_n"] = min(50, adata.shape[0])
+    if "n_clusters" not in kwargs:
+        kwargs["n_clusters"] = 30
+    if "seed" not in kwargs:
+        kwargs["seed"] = 187
 
     _save_cluster_settings(adata = adata,
                            gate = gate,
@@ -129,12 +130,14 @@ def flowsom(adata: AnnData,
                                            exclude = exclude,
                                            scaling = scaling)
 
-    cluster_annotations = _flowsom(preprocessed_adata.X,
-                                   **kwargs)
+    fse = FlowSOMEstimator(**kwargs)
+    cluster_annotations = fse.fit_predict(preprocessed_adata.X)
 
-    adata = _merge_cluster_info_into_adata(adata,
-                                           preprocessed_adata,
-                                           cluster_key = cluster_key,
-                                           cluster_assignments = cluster_annotations)
-    
+    adata = _merge_cluster_info_into_adata(
+        adata,
+        preprocessed_adata,
+        cluster_key = cluster_key,
+        cluster_assignments = cluster_annotations
+    )
+
     return adata if copy else None
