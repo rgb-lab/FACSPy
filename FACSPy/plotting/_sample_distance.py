@@ -21,9 +21,13 @@ from ._utils import (_map_obs_to_cmap,
 from ._clustermap import create_clustermap
 
 from .._utils import _default_gate_and_default_layer, _enable_gate_aliases
+from ..exceptions._exceptions import InfRemovalWarning
 
 def _calculate_distances(adata: AnnData,
                          plot_data: pd.DataFrame) -> pd.DataFrame:
+    if plot_data.isna().any(axis = None):
+        InfRemovalWarning("NA Values were found and will be removed.")
+        plot_data = plot_data.dropna(how = "any")
     sample_IDs = plot_data["sample_ID"].tolist()
     channels = [col for col in plot_data.columns if col in adata.var_names]
 
@@ -35,7 +39,9 @@ def _calculate_distances(adata: AnnData,
     plot_data = plot_data.fillna(0)
     plot_data["sample_ID"] = sample_IDs
     plot_data = _append_metadata(adata, plot_data)
+    plot_data = plot_data.dropna(how = "any")
     return plot_data
+
 
 @_default_gate_and_default_layer
 @_enable_gate_aliases
@@ -58,7 +64,6 @@ def sample_distance(adata: AnnData,
                     show: bool = True,
                     save: Optional[str] = None
                     ) -> Optional[Union[sns.matrix.ClusterGrid, pd.DataFrame]]:
-    
     """\
     Plot to display sample to sample distance as a heatmap.
 
@@ -156,6 +161,7 @@ def sample_distance(adata: AnnData,
                                       include_technical_channels = include_technical_channels,
                                       exclude = exclude,
                                       scaling = scaling)
+
     plot_data = _calculate_distances(adata = adata,
                                      plot_data = plot_data)
 
