@@ -32,7 +32,21 @@ dependencies = [
     "seaborn==0.12.2",
     "imblearn"
 ]
-
+[project.optional-dependencies]
+dev = ["pre-commit", "twine>=4.0.2"]
+doc = [
+    "sphinx>=4",
+    "sphinx-book-theme>=1.0.0",
+    "sphinxcontrib-bibtex>=1.0.0",
+    "sphinx-autodoc-typehints",
+    "nbsphinx",
+    "nbsphinx-link",
+    "pandoc",
+    "myst_parser"
+]
+test = [
+    "pytest"
+]
 r_env = ["rpy2", "anndata2ri"]
 
 # dont move this paragraph above dependencies.
