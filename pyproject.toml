@@ -27,7 +27,7 @@ dependencies = [
     "KDEpy",
     "anytree",
     "statannotations",
-    "parc",
+    "parc@git+https://github.com/ShobiStassen/PARC.git@master", # pip version is not up to date.
     "phenograph",
     "seaborn==0.12.2",
     "imblearn"
