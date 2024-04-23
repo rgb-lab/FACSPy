@@ -71,7 +71,6 @@ def _clip_to_xlim(df: pd.DataFrame,
                   xlim: tuple[float, float]):
     return df.loc[df["x"].between(xlim[0], xlim[1]),:]
 
-
 #TODO: check if mapping is possible: either the colorby is not in metadata or the grouping by sampleID leads to multiple outputs, not mappable.
 @_default_gate_and_default_layer
 @_enable_gate_aliases
@@ -83,12 +82,14 @@ def marker_density(adata: AnnData,
                    colorby: Optional[str] = None,
                    highlight: Optional[Union[list[str], str]] = None,
                    ridge: bool = False,
+                   alpha: float = 0.1,
                    add_cofactor: bool = False,
                    cmap: Optional[str] = "Set1",
                    plot_height: float = 1,
                    plot_spacing: float = -0.5,
-                   plot_aspect: float = 1,
+                   plot_aspect: float = 3,
                    linewidth: float = 0.5,
+                   linecolor: Optional[str] = None,
                    xlim: Optional[tuple[float, float]] = None,
                    x_scale: Literal["biex", "log", "linear"] = "linear",
                    figsize: tuple[float, float] = (3,3),
@@ -127,6 +128,8 @@ def marker_density(adata: AnnData,
     ridge
         If `True`, a ridge-plot is shown. If `False`, an overlayed
         line plot is shown.
+    alpha
+        Controls the opaqueness of area under the curve. Defaults to 0.1.
     add_cofactor
         If True, adds a line at the level of the cofactor. 
     cmap
@@ -140,7 +143,10 @@ def marker_density(adata: AnnData,
     plot_aspect
         Controls the aspect of the plot if `ridge==True`.
     linewidth
-        Controls the linewidth of the histogram lines. Ignored if `ridge==True`.
+        Controls the linewidth of the histogram lines.
+    linecolor
+        Controls the coloring of the line if `ridge==True`. Defaults to `None` which
+        results in a line coloring based on the `groupby` variable.
     xlim
         Sets the limits of the x-axis.
     x_scale
@@ -223,7 +229,6 @@ def marker_density(adata: AnnData,
     if xlim is not None:
         histogram_df = _clip_to_xlim(histogram_df,
                                      xlim = xlim)
-
     if colorby is not None:
         histogram_df = _append_colorby_variable(adata = adata,
                                                 dataframe = histogram_df,
@@ -236,6 +241,7 @@ def marker_density(adata: AnnData,
         return histogram_df
     
     if highlight is not None:
+        assert colorby is not None, "Please set colorby if you want to highlight."
         colorby_pal = {
             group: "red" if group in highlight else "grey"
             for group in list(histogram_df[colorby].unique())
@@ -249,7 +255,14 @@ def marker_density(adata: AnnData,
             for i, group in enumerate(list(histogram_df[colorby].unique()))
         }
     else:
-        colorby_pal = None
+        user_defined_cmap = sns.color_palette(
+            cmap,
+            len(histogram_df[groupby].unique())
+        )
+        colorby_pal = {group: user_defined_cmap[i]
+            for i, group in enumerate(list(histogram_df[groupby].unique()))
+        }
+
 
     x_channel_cofactor = _retrieve_cofactor_or_set_to_default(adata,
                                                               marker)
@@ -260,10 +273,12 @@ def marker_density(adata: AnnData,
     if ridge:
         sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
 
-        if groupby != colorby and colorby_pal is not None:
+        if groupby != colorby and colorby is not None:
             pal = _map_pal_to_groupby(colorby_pal, histogram_df, groupby, colorby)
         else:
             pal = colorby_pal
+
+        assert pal is not None
 
         fig: sns.FacetGrid = sns.FacetGrid(histogram_df,
                                            row = groupby,
@@ -273,17 +288,23 @@ def marker_density(adata: AnnData,
                                            height = plot_height,
                                            palette = pal)
         
-        fig.map(sns.lineplot, "x", "y", clip_on = False)
+        fig.map(sns.lineplot, "x", "y",
+                clip_on = False,
+                color = linecolor,
+                linewidth = linewidth)
 
         if add_cofactor is True:
             fig.map(plt.axvline, x = x_channel_cofactor, color = "black")
         
-        for _ax, _ax_name in zip(fig.axes.flat, fig._axes_dict.keys()):
+        for i, (_ax, _ax_name) in enumerate(zip(fig.axes, fig._axes_dict.keys())):
             _ax: Axes
-            _ax.fill_between(x = histogram_df.loc[histogram_df[groupby] == _ax, "x"].to_numpy(dtype = np.float32),
-                             y1 = histogram_df.loc[histogram_df[groupby] == _ax, "y"].to_numpy(dtype = np.float32),
-                             y2 = 0,
-                             alpha = 0.1)
+            _ax = _ax[0]
+
+            fig.axes[i][0].fill_between(x = histogram_df.loc[histogram_df[groupby] == _ax_name, "x"].to_numpy(dtype = np.float32),
+                                        y1 = histogram_df.loc[histogram_df[groupby] == _ax_name, "y"].to_numpy(dtype = np.float32),
+                                        y2 = 0,
+                                        alpha = alpha,
+                                        color = pal[_ax_name])
             _ax.set_xscale(**x_scale_kwargs)
             _ax.set_title("")
             _ax.set_ylabel("")
@@ -296,6 +317,12 @@ def marker_density(adata: AnnData,
             _ax.set_xlabel(f'{marker}\n{layer}\nexpression', fontsize = 10)
             if xlim is not None:
                 _ax.set_xlim(xlim)
+
+            _ax.set_yticklabels([])
+            if i == len(fig._axes_dict.keys())-1:
+                _ax.tick_params(left = False)
+            else:
+                _ax.tick_params(left = False, bottom = False)
 
         if colorby is not None:
             handles = [Patch(facecolor = colorby_pal[name]) for name in colorby_pal]
