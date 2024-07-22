@@ -56,10 +56,14 @@ def _prepare_dataframe_gate_frequency(adata: AnnData,
         freq_of = _find_gate_path_of_gate(adata, freq_of)
 
     df = df.loc[(df["gate"] == gate) & (df["freq_of"] == freq_of)]
+
+    metadata = adata.uns["metadata"].to_df()
+    return df.merge(metadata, on = "sample_ID")
     
-    obs = _prepare_dataframe_cell_counts(adata, groupby, splitby = splitby)
-    obs = obs.drop("counts", axis = 1)
-    return obs.merge(df, on = "sample_ID")
+    # return _merge_metadata_into_gate_frequency_frame(adata, df)
+    # obs = _prepare_dataframe_cell_counts(adata, groupby, splitby = splitby)
+    # obs = obs.drop("counts", axis = 1)
+    # return obs.merge(df, on = "sample_ID")
 
 def _prepare_dataframe_cell_counts(adata: AnnData,
                                    groupby: Optional[str],
@@ -75,7 +79,9 @@ def _prepare_dataframe_cell_counts(adata: AnnData,
         groupings.append(splitby)
     groupings = list(set(groupings)) ## in case the user chooses groupby and splitby as the same
 
-    return adata.obs[groupings].value_counts().to_frame(name = "counts").reset_index()
+    counts = adata.obs[groupings].value_counts().to_frame(name = "counts").reset_index()
+    metadata = adata.uns["metadata"].to_df()
+    return counts.merge(metadata, left_on = groupings, right_on = groupings)
 
 @_default_gate
 @_enable_gate_aliases
