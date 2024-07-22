@@ -54,6 +54,7 @@ def fold_change(adata: AnnData,
                 data_group: str = "sample_ID",
                 data_metric: Literal["mfi", "fop"] = "mfi",
                 include_technical_channels: bool = False,
+                exclude: Optional[Union[list[str], str]] = None,
                 stat: Literal["p", "p_adj"] = "p",
                 cmap: Optional[str] = "Reds_r",
                 test: Literal["Kruskal", "Wilcoxon"] = "Kruskal",
@@ -105,6 +106,8 @@ def fold_change(adata: AnnData,
     include_technical_channels
         Whether to include technical channels. If set to False, will exclude
         all channels that are not labeled with `type=="fluo"` in adata.var.
+    exclude
+        Channels to be excluded from plotting.
     stat
         One of `p` or `p_adj`. Specifies whether to show the calculated
         p value or the adjusted p value.
@@ -178,9 +181,15 @@ def fold_change(adata: AnnData,
     if not include_technical_channels:
          fluo_channels = _fetch_fluo_channels(adata)
          fold_changes = fold_changes[fold_changes["index"].isin(fluo_channels)]
+    if exclude is not None:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
+        fold_changes = fold_changes[~fold_changes["index"].isin(exclude)]
 
     if return_dataframe:
+        assert isinstance(fold_changes, pd.DataFrame)
         return fold_changes
+
     colorbar, p_colors = _create_custom_cbar(cmap = cmap,
                                              fold_changes = fold_changes,
                                              stat = stat,
