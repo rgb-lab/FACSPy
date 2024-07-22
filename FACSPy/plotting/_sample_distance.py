@@ -25,11 +25,12 @@ from ..exceptions._exceptions import InfRemovalWarning
 
 def _calculate_distances(adata: AnnData,
                          plot_data: pd.DataFrame) -> pd.DataFrame:
-    if plot_data.isna().any(axis = None):
-        InfRemovalWarning("NA Values were found and will be removed.")
-        plot_data = plot_data.dropna(how = "any")
     sample_IDs = plot_data["sample_ID"].tolist()
     channels = [col for col in plot_data.columns if col in adata.var_names]
+
+    if plot_data[channels].isna().any(axis = None):
+        InfRemovalWarning("NA Values were found and will be removed.")
+        plot_data = plot_data.dropna(how = "any")
 
     sample_distances = _calculate_sample_distance(plot_data[channels])
     plot_data = pd.DataFrame(data = sample_distances,
@@ -39,7 +40,7 @@ def _calculate_distances(adata: AnnData,
     plot_data = plot_data.fillna(0)
     plot_data["sample_ID"] = sample_IDs
     plot_data = _append_metadata(adata, plot_data)
-    plot_data = plot_data.dropna(how = "any")
+    # plot_data = plot_data.dropna(how = "any")
     return plot_data
 
 

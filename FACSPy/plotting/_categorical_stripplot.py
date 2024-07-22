@@ -33,7 +33,8 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
                                 groupby: str,
                                 splitby: Optional[str],
                                 stat_test: Optional[str],
-                                figsize: tuple[float, float]):
+                                figsize: tuple[float, float],
+                                **kwargs):
     if ax is None:
         fig = plt.figure(figsize = figsize)
         ax = fig.add_subplot(111)
@@ -48,9 +49,12 @@ def _categorical_strip_box_plot(ax: Optional[Axes],
         sns.barplot(**plot_params)
 
     else:
+        if "linewidth" not in kwargs:
+            kwargs["linewidth"] = 0.5
         np.random.seed(187)  # necessary to keep jitters the same.
         sns.stripplot(**plot_params,
-                      **CATEGORICAL_STRIPPLOT_PARAMS)
+                      **CATEGORICAL_STRIPPLOT_PARAMS,
+                      **kwargs)
         handles, labels = ax.get_legend_handles_labels()
         sns.boxplot(**plot_params,
                     **CATEGORICAL_BOXPLOT_PARAMS)

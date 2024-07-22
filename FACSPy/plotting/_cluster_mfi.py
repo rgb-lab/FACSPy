@@ -43,7 +43,8 @@ def _cluster_mfi_fop_baseplot(data_metric: str,
                               return_fig: bool,
                               ax: Optional[Axes],
                               show: bool,
-                              save: Optional[str]):
+                              save: Optional[str],
+                              **kwargs):
 
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
@@ -70,7 +71,8 @@ def _cluster_mfi_fop_baseplot(data_metric: str,
                                           groupby = cluster_key,
                                           splitby = splitby,
                                           stat_test = stat_test,
-                                          figsize = figsize)
+                                          figsize = figsize,
+                                          **kwargs)
 
     ax.set_title(f"{marker}\ngrouped by {cluster_key}")
     ax.set_xlabel("")
@@ -101,7 +103,8 @@ def cluster_fop(adata: AnnData,
                 return_fig: bool = False,
                 ax: Optional[Axes] = None,
                 show: bool = True,
-                save: Optional[str] = None
+                save: Optional[str] = None,
+                **kwargs
                 ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the frequency of parent (fop) values as calculated by fp.tl.fop
@@ -151,6 +154,8 @@ def cluster_fop(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.stripplot.
 
 
     Returns
@@ -205,7 +210,8 @@ def cluster_fop(adata: AnnData,
                                      return_fig = return_fig,
                                      ax = ax,
                                      save = save,
-                                     show = show)
+                                     show = show,
+                                     **kwargs)
 
 @_default_gate_and_default_layer
 @_enable_gate_aliases
@@ -223,7 +229,8 @@ def cluster_mfi(adata: AnnData,
                 return_fig: bool = False,
                 ax: Optional[Axes] = None,
                 show: bool = True,
-                save: Optional[str] = None
+                save: Optional[str] = None,
+                **kwargs
                 ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the median fluorescence intensity (mfi) values as calculated by fp.tl.mfi
@@ -273,6 +280,8 @@ def cluster_mfi(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.stripplot.
 
 
     Returns
@@ -327,7 +336,8 @@ def cluster_mfi(adata: AnnData,
                                      return_fig = return_fig,
                                      ax = ax,
                                      save = save,
-                                     show = show)
+                                     show = show,
+                                     **kwargs)
 
 def prepare_plot_data(adata: AnnData,
                       raw_data: pd.DataFrame,

@@ -85,7 +85,8 @@ def cluster_frequency(adata: AnnData,
                       return_fig: bool = False,
                       ax: Optional[Axes] = None,
                       show: bool = True,
-                      save: Optional[str] = None
+                      save: Optional[str] = None,
+                      **kwargs
                       ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the cluster frequency per cluster as a combined strip-/boxplot.
@@ -132,6 +133,8 @@ def cluster_frequency(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.stripplot.
  
     Returns
     -------
@@ -193,7 +196,8 @@ def cluster_frequency(adata: AnnData,
                                           groupby = groupby,
                                           splitby = splitby,
                                           stat_test = stat_test,
-                                          figsize = figsize)
+                                          figsize = figsize,
+                                          **kwargs)
 
     ax.set_title(f"Cluster frequency\nper {groupby}")
     ax.set_xlabel("")

@@ -38,7 +38,8 @@ def _samplewise_dr_plot(adata: AnnData,
                         return_dataframe,
                         ax: Optional[Axes],
                         save: bool,
-                        show: bool):
+                        show: bool,
+                        **kwargs):
 
     data = _get_uns_dataframe(adata = adata,
                               gate = gate,
@@ -84,7 +85,7 @@ def _samplewise_dr_plot(adata: AnnData,
         fig = plt.figure(figsize = figsize)
         ax = fig.add_subplot(111)
 
-    sns.scatterplot(**plot_params)
+    sns.scatterplot(**plot_params, **kwargs)
     
     if categorical_color:
         ax.legend(bbox_to_anchor = (1.1, 0.5), loc = "center left")
@@ -131,7 +132,8 @@ def pca_samplewise(adata: AnnData,
                    return_fig: bool = False,
                    ax: Optional[Axes] = None,
                    show: bool = True,
-                   save: Optional[str] = None
+                   save: Optional[str] = None,
+                   **kwargs
                    ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plot for visualizing sample-wise dimensionality reduction (PCA)
@@ -186,6 +188,8 @@ def pca_samplewise(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.scatterplot.
 
     Returns
     -------
@@ -229,7 +233,8 @@ def pca_samplewise(adata: AnnData,
                                return_dataframe = return_dataframe,
                                return_fig = return_fig,
                                save = save,
-                               show = show)
+                               show = show,
+                               **kwargs)
 
 
 @_default_gate_and_default_layer 
@@ -249,7 +254,8 @@ def mds_samplewise(adata: AnnData,
                    return_fig: bool = False,
                    ax: Optional[Axes] = None,
                    show: bool = True,
-                   save: Optional[str] = None
+                   save: Optional[str] = None,
+                   **kwargs
                    ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plot for visualizing sample-wise dimensionality reduction (MDS).
@@ -303,6 +309,8 @@ def mds_samplewise(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.scatterplot.
 
     Returns
     -------
@@ -348,7 +356,8 @@ def mds_samplewise(adata: AnnData,
                                return_dataframe = return_dataframe,
                                return_fig = return_fig,
                                save = save,
-                               show = show)
+                               show = show,
+                               **kwargs)
 
 @_default_gate_and_default_layer 
 @_enable_gate_aliases
@@ -367,7 +376,8 @@ def umap_samplewise(adata: AnnData,
                     return_fig: bool = False,
                     ax: Optional[Axes] = None,
                     show: bool = True,
-                    save: Optional[str] = None
+                    save: Optional[str] = None,
+                    **kwargs
                     ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plot for visualizing sample-wise dimensionality reduction (UMAP).
@@ -421,6 +431,8 @@ def umap_samplewise(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.scatterplot.
 
     Returns
     -------
@@ -465,7 +477,8 @@ def umap_samplewise(adata: AnnData,
                                return_dataframe = return_dataframe,
                                return_fig = return_fig,
                                save = save,
-                               show = show)
+                               show = show,
+                               **kwargs)
 
 
 @_default_gate_and_default_layer 
@@ -485,7 +498,8 @@ def tsne_samplewise(adata: AnnData,
                     return_fig: bool = False,
                     ax: Optional[Axes] = None,
                     show: bool = True,
-                    save: Optional[str] = None
+                    save: Optional[str] = None,
+                    **kwargs
                     ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plot for visualizing sample-wise dimensionality reduction (TSNE).
@@ -539,6 +553,8 @@ def tsne_samplewise(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.scatterplot
 
     Returns
     -------
@@ -583,4 +599,5 @@ def tsne_samplewise(adata: AnnData,
                                return_dataframe = return_dataframe,
                                return_fig = return_fig,
                                save = save,
-                               show = show)
+                               show = show,
+                               **kwargs)
