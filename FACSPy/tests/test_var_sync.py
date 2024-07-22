@@ -1,18 +1,12 @@
 import pytest
 import os
 
-import numpy as np
-
-
 from anndata import AnnData
 import pandas as pd
 import FACSPy as fp
 from FACSPy.synchronization._var_sync import _sync_panel_from_var, _sync_var_from_panel
-from FACSPy.synchronization._synchronize import _dataset_has_been_modified
 from FACSPy.dataset._supplements import Metadata, Panel
 from FACSPy.dataset._workspaces import FlowJoWorkspace
-from FACSPy._utils import remove_channel
-from FACSPy.dataset._supplements import CofactorTable
 
 WSP_FILE_PATH = "FACSPy/_resources/"
 WSP_FILE_NAME = "test_wsp.wsp"

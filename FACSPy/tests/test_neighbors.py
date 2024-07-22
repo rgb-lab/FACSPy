@@ -1,38 +1,13 @@
-import pytest
 from anndata import AnnData
-import os
 
 import scanpy as sc
 import numpy as np
 
 import FACSPy as fp
 
-from FACSPy.dataset._supplements import Metadata, Panel
-from FACSPy.dataset._workspaces import FlowJoWorkspace
 
-WSP_FILE_PATH = "FACSPy/_resources/"
-WSP_FILE_NAME = "test_wsp.wsp"
-
-def create_supplement_objects():
-    INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
-    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
-    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
-    return INPUT_DIRECTORY, panel, metadata, workspace
-
-@pytest.fixture
-def mock_dataset() -> AnnData:
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    adata = fp.create_dataset(input_directory = input_directory,
-                              panel = panel,
-                              metadata = metadata,
-                              workspace = workspace,
-                              subsample_fcs_to = 100)
-    sc.pp.subsample(adata, n_obs = 200, random_state = 187)
-    return adata
-
-def test_neighbors_same_as_scanpy_use_rep_X(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_neighbors_same_as_scanpy_use_rep_X(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     adata.X = adata.layers["compensated"]
     fp.subset_gate(adata, "live")
     scanpy_adata = adata.copy()
@@ -54,8 +29,8 @@ def test_neighbors_same_as_scanpy_use_rep_X(mock_dataset: AnnData):
     assert (conns!= conns_facspy).nnz == 0
     assert (dists!= dists_facspy).nnz == 0
 
-def test_neighbors_same_as_scanpy_use_rep_pca(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_neighbors_same_as_scanpy_use_rep_pca(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     fp.subset_gate(adata, "live")
     adata.X = adata.layers["compensated"]
     scanpy_adata = adata.copy()
@@ -90,8 +65,8 @@ def test_neighbors_same_as_scanpy_use_rep_pca(mock_dataset: AnnData):
     assert (conns != conns_facspy).nnz == 0
     assert (dists != dists_facspy).nnz == 0
 
-def test_neighbors_same_as_scanpy_use_rep_pca_kwarg_passing(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_neighbors_same_as_scanpy_use_rep_pca_kwarg_passing(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     fp.subset_gate(adata, "live")
     adata.X = adata.layers["compensated"]
     scanpy_adata = adata.copy()
@@ -128,8 +103,8 @@ def test_neighbors_same_as_scanpy_use_rep_pca_kwarg_passing(mock_dataset: AnnDat
     assert (conns != conns_facspy).nnz == 0
     assert (dists != dists_facspy).nnz == 0
     
-def test_neighbors_same_as_scanpy_use_rep_pca_kwarg_passing_2(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_neighbors_same_as_scanpy_use_rep_pca_kwarg_passing_2(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     fp.subset_gate(adata, "live")
     adata.X = adata.layers["compensated"]
     scanpy_adata = adata.copy()

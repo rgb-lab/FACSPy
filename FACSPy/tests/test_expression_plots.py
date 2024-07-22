@@ -1,8 +1,5 @@
-import pytest
-
 import os
 import FACSPy as fp
-from anndata import AnnData
 import pandas as pd
 
 from pathlib import Path
@@ -20,33 +17,11 @@ IMG_COMP_KWARGS = {
     "tol": 2
 }
 
-@pytest.fixture
-def mouse_data() -> AnnData:
-    adata = fp.mouse_lineages()
-    fp.tl.gate_frequencies(adata)
-    fp.tl.mfi(adata, layer = "compensated")
-    fp.tl.fop(adata, layer = "compensated")
-    gate = "Neutrophils"
-    layer = "compensated"
-    fp.tl.pca(adata, gate = gate, layer = layer)
-    fp.tl.neighbors(adata, gate = gate, layer = layer)
-    fp.tl.leiden(adata, gate = gate, layer = layer)
-    fp.tl.mfi(adata,
-              groupby = "Neutrophils_compensated_leiden",
-              aggregate = False)
-    fp.tl.fop(adata,
-              groupby = "Neutrophils_compensated_leiden",
-              aggregate = False)
-
-    return adata
-
-
-# fold change
-
 
 @image_comparison(baseline_images = ['fold_change_mfi'],
                   **IMG_COMP_KWARGS)
 def test_fold_change(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.fold_change(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -60,6 +35,7 @@ def test_fold_change(mouse_data):
 @image_comparison(baseline_images = ['fold_change_plot_annotation'],
                   **IMG_COMP_KWARGS)
 def test_fold_change_plot_annotation(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.fold_change(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -74,6 +50,7 @@ def test_fold_change_plot_annotation(mouse_data):
 
 
 def test_fold_change_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.fold_change(mouse_data,
                            gate = "Neutrophils",
                            layer = "compensated",
@@ -110,6 +87,7 @@ def test_fold_change_dataframe(mouse_data):
 @image_comparison(baseline_images = ['marker_density_line'],
                   **IMG_COMP_KWARGS)
 def test_marker_density_line(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.marker_density(mouse_data,
                          gate = "Neutrophils",
                          layer = "compensated",

@@ -1,46 +1,20 @@
 
 import pytest
-import os
 from anndata import AnnData
-import scanpy as sc
 import FACSPy as fp
-
-from FACSPy.dataset._supplements import Metadata, Panel
-from FACSPy.dataset._workspaces import FlowJoWorkspace
-
+import parc as _parc
 from FACSPy.exceptions._exceptions import InvalidScalingError
 
-import parc as _parc
 
-WSP_FILE_PATH = "FACSPy/_resources/"
-WSP_FILE_NAME = "test_wsp.wsp"
-
-def create_supplement_objects():
-    INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
-    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
-    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
-    return INPUT_DIRECTORY, panel, metadata, workspace
-
-@pytest.fixture
-def mock_dataset() -> AnnData:
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    adata = fp.create_dataset(input_directory = input_directory,
-                              panel = panel,
-                              metadata = metadata,
-                              workspace = workspace,
-                              subsample_fcs_to = 100)
-    sc.pp.subsample(adata, n_obs = 200, random_state = 187)
-    return adata
-
-def test_invalid_scaling_error(mock_dataset: AnnData):
+def test_invalid_scaling_error(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     with pytest.raises(InvalidScalingError):
-        fp.tl.parc(mock_dataset,
+        fp.tl.parc(mock_dataset_downsampled,
                    gate = "live",
                    scaling = "CustomScaler")
 
-def test_save_settings_from_parc(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_save_settings_from_parc(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     fp.subset_gate(adata, "live")
     fp.tl.pca(adata,
               gate = "live",
@@ -61,8 +35,8 @@ def test_save_settings_from_parc(mock_dataset: AnnData):
     assert settings["dist_std_local"] == 1
     assert settings["use_only_fluo"] == False
 
-def test_parc_works_as_parc(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_parc_works_as_parc(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     fp.subset_gate(adata, "live")
     fp.tl.pca(adata,
               gate = "live",
@@ -94,8 +68,8 @@ def test_parc_works_as_parc(mock_dataset: AnnData):
     assert "live_compensated_parc" in facspy_adata.obs.columns
     assert all(parc_clusters == facspy_adata.obs["live_compensated_parc"])
 
-def test_parc_works_as_parc_kwargs(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_parc_works_as_parc_kwargs(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     fp.subset_gate(adata, "live")
     fp.tl.pca(adata,
               gate = "live",
@@ -126,48 +100,51 @@ def test_parc_works_as_parc_kwargs(mock_dataset: AnnData):
     assert all(parc_clusters == facspy_adata.obs["live_compensated_parc"])
 
 
-def test_decorator_default_gate_and_default_layer(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
 
-    fp.tl.parc(mock_dataset)
-    assert "live_compensated_parc" in mock_dataset.obs.columns
+    fp.tl.parc(mock_dataset_downsampled)
+    assert "live_compensated_parc" in mock_dataset_downsampled.obs.columns
 
-def test_decorator_default_gate_and_default_layer_only_gate_provided(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_gate_provided(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_layer = "compensated"
 
-    fp.tl.parc(mock_dataset, gate = "live")
-    assert "live_compensated_parc" in mock_dataset.obs.columns
+    fp.tl.parc(mock_dataset_downsampled, gate = "live")
+    assert "live_compensated_parc" in mock_dataset_downsampled.obs.columns
 
-def test_decorator_default_gate_and_default_layer_only_layer_provided(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_layer_provided(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
 
-    fp.tl.parc(mock_dataset, layer = "compensated")
-    assert "live_compensated_parc" in mock_dataset.obs.columns
+    fp.tl.parc(mock_dataset_downsampled, layer = "compensated")
+    assert "live_compensated_parc" in mock_dataset_downsampled.obs.columns
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias(mock_dataset: AnnData):
-    fp.settings.default_gate = "live"
-    fp.settings.default_layer = "compensated"
-    fp.settings.add_new_alias("live", "my_personal_gate")
-
-    fp.tl.parc(mock_dataset)
-    assert "live_compensated_parc" in mock_dataset.obs.columns
-
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.parc(mock_dataset, "my_personal_gate")
-    assert "live_compensated_parc" in mock_dataset.obs.columns
+    fp.tl.parc(mock_dataset_downsampled)
+    assert "live_compensated_parc" in mock_dataset_downsampled.obs.columns
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.parc(mock_dataset, gate = "my_personal_gate")
-    assert "live_compensated_parc" in mock_dataset.obs.columns
+    fp.tl.parc(mock_dataset_downsampled, "my_personal_gate")
+    assert "live_compensated_parc" in mock_dataset_downsampled.obs.columns
 
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
 
-
+    fp.tl.parc(mock_dataset_downsampled, gate = "my_personal_gate")
+    assert "live_compensated_parc" in mock_dataset_downsampled.obs.columns

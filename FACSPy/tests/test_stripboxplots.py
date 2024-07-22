@@ -23,33 +23,12 @@ IMG_COMP_KWARGS = {
     "tol": 2
 }
 
-
-@pytest.fixture
-def mouse_data() -> AnnData:
-    adata = fp.mouse_lineages()
-    fp.tl.gate_frequencies(adata)
-    fp.tl.mfi(adata, layer = "compensated")
-    fp.tl.fop(adata, layer = "compensated")
-    gate = "Neutrophils"
-    layer = "compensated"
-    fp.tl.pca(adata, gate = gate, layer = layer)
-    fp.tl.neighbors(adata, gate = gate, layer = layer)
-    fp.tl.leiden(adata, gate = gate, layer = layer)
-    fp.tl.mfi(adata,
-              groupby = "Neutrophils_compensated_leiden",
-              aggregate = False)
-    fp.tl.fop(adata,
-              groupby = "Neutrophils_compensated_leiden",
-              aggregate = False)
-
-    return adata
-
-
 # MFI Plot
 
 @image_comparison(baseline_images = ['mfi_compensated_sex'],
                   **IMG_COMP_KWARGS)
 def test_mfi_plot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.mfi(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -61,6 +40,7 @@ def test_mfi_plot(mouse_data):
 @image_comparison(baseline_images = ['mfi_compensated_sampleID'],
                   **IMG_COMP_KWARGS)
 def test_mfi_barplot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.mfi(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -72,6 +52,7 @@ def test_mfi_barplot(mouse_data):
 @image_comparison(baseline_images = ['mfi_compensated_sex_figsize'],
                   **IMG_COMP_KWARGS)
 def test_mfi_plot_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.mfi(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -84,6 +65,7 @@ def test_mfi_plot_figsize(mouse_data):
 @image_comparison(baseline_images = ['mfi_compensated_sex_experiment'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_mfi_plot_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.mfi(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -96,6 +78,7 @@ def test_mfi_plot_splitby(mouse_data):
 @image_comparison(baseline_images = ['mfi_compensated_sex_experiment_set2'],
                   **IMG_COMP_KWARGS)
 def test_mfi_plot_splitby_cmap(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.mfi(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -109,6 +92,7 @@ def test_mfi_plot_splitby_cmap(mouse_data):
 @image_comparison(baseline_images = ['mfi_compensated_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_mfi_plot_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 4))
@@ -127,6 +111,7 @@ def test_mfi_plot_ax_return(mouse_data):
 @image_comparison(baseline_images = ['mfi_compensated_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_mfi_plot_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -153,6 +138,7 @@ def test_mfi_plot_ax_return_double(mouse_data):
 
 
 def test_mfi_plot_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.mfi(mouse_data,
                    marker = "Ly6G",
                    gate = "Neutrophils",
@@ -179,6 +165,7 @@ def test_mfi_plot_dataframe(mouse_data):
 
 
 def test_mfi_plot_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.mfi(mouse_data,
                    marker = "Ly6G",
                    gate = "Neutrophils",
@@ -210,6 +197,7 @@ def test_mfi_plot_dataframe_splitby(mouse_data):
 @image_comparison(baseline_images = ['fop_compensated_sex'],
                   **IMG_COMP_KWARGS)
 def test_fop_plot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.fop(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -221,6 +209,7 @@ def test_fop_plot(mouse_data):
 @image_comparison(baseline_images = ['fop_compensated_sampleID'],
                   **IMG_COMP_KWARGS)
 def test_fop_barplot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.fop(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -232,6 +221,7 @@ def test_fop_barplot(mouse_data):
 @image_comparison(baseline_images = ['fop_compensated_sex_figsize'],
                   **IMG_COMP_KWARGS)
 def test_fop_plot_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.fop(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -244,6 +234,7 @@ def test_fop_plot_figsize(mouse_data):
 @image_comparison(baseline_images = ['fop_compensated_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_fop_plot_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 3))
@@ -262,6 +253,7 @@ def test_fop_plot_ax_return(mouse_data):
 @image_comparison(baseline_images = ['fop_compensated_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_fop_plot_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -290,6 +282,7 @@ def test_fop_plot_ax_return_double(mouse_data):
 @image_comparison(baseline_images = ['fop_compensated_sex_experiment'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_fop_plot_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.fop(mouse_data,
               marker = "Ly6G",
               gate = "Neutrophils",
@@ -315,6 +308,7 @@ def test_fop_plot_splitby_cmap():
 
 
 def test_fop_plot_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.fop(mouse_data,
                    marker = "Ly6G",
                    gate = "Neutrophils",
@@ -342,6 +336,7 @@ def test_fop_plot_dataframe(mouse_data):
 
 
 def test_fop_plot_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.fop(mouse_data,
                    marker = "Ly6G",
                    gate = "Neutrophils",
@@ -374,6 +369,7 @@ def test_fop_plot_dataframe_splitby(mouse_data):
 @image_comparison(baseline_images = ['cluster_mfi'],
                   **IMG_COMP_KWARGS)
 def test_cluster_mfi(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_mfi(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -386,6 +382,7 @@ def test_cluster_mfi(mouse_data):
 @image_comparison(baseline_images = ['cluster_mfi_figsize'],
                   **IMG_COMP_KWARGS)
 def test_cluster_mfi_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_mfi(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -399,6 +396,7 @@ def test_cluster_mfi_figsize(mouse_data):
 @image_comparison(baseline_images = ['cluster_mfi_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_cluster_mfi_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 3))
@@ -416,6 +414,7 @@ def test_cluster_mfi_ax_return(mouse_data):
 @image_comparison(baseline_images = ['cluster_mfi_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_cluster_mfi_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -442,6 +441,7 @@ def test_cluster_mfi_ax_return_double(mouse_data):
 @image_comparison(baseline_images = ['cluster_mfi_splitby'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_cluster_mfi_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_mfi(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -455,6 +455,7 @@ def test_cluster_mfi_splitby(mouse_data):
 @image_comparison(baseline_images = ['cluster_mfi_cmap'],
                   **IMG_COMP_KWARGS)
 def test_cluster_mfi_cmap(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_mfi(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -481,6 +482,7 @@ def test_cluster_mfi_typerror(mouse_data):
 
 
 def test_cluster_mfi_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cluster_mfi(mouse_data,
                            gate = "Neutrophils",
                            layer = "compensated",
@@ -513,6 +515,7 @@ def test_cluster_mfi_dataframe(mouse_data):
 
 
 def test_cluster_mfi_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cluster_mfi(mouse_data,
                            gate = "Neutrophils",
                            layer = "compensated",
@@ -550,6 +553,7 @@ def test_cluster_mfi_dataframe_splitby(mouse_data):
 @image_comparison(baseline_images = ['cluster_fop'],
                   **IMG_COMP_KWARGS)
 def test_cluster_fop(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_fop(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -562,6 +566,7 @@ def test_cluster_fop(mouse_data):
 @image_comparison(baseline_images = ['cluster_fop_figsize'],
                   **IMG_COMP_KWARGS)
 def test_cluster_fop_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_fop(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -575,6 +580,7 @@ def test_cluster_fop_figsize(mouse_data):
 @image_comparison(baseline_images = ['cluster_fop_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_cluster_fop_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 3))
@@ -592,6 +598,7 @@ def test_cluster_fop_ax_return(mouse_data):
 @image_comparison(baseline_images = ['cluster_fop_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_cluster_fop_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -618,6 +625,7 @@ def test_cluster_fop_ax_return_double(mouse_data):
 @image_comparison(baseline_images = ['cluster_fop_splitby'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_cluster_fop_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_fop(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -631,6 +639,7 @@ def test_cluster_fop_splitby(mouse_data):
 @image_comparison(baseline_images = ['cluster_fop_cmap'],
                   **IMG_COMP_KWARGS)
 def test_cluster_fop_cmap(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_fop(mouse_data,
                       gate = "Neutrophils",
                       layer = "compensated",
@@ -657,6 +666,7 @@ def test_cluster_fop_typerror(mouse_data):
 
 
 def test_cluster_fop_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cluster_fop(mouse_data,
                            gate = "Neutrophils",
                            layer = "compensated",
@@ -692,6 +702,7 @@ def test_cluster_fop_dataframe(mouse_data):
 
 
 def test_cluster_fop_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cluster_fop(mouse_data,
                            gate = "Neutrophils",
                            layer = "compensated",
@@ -732,6 +743,7 @@ def test_cluster_fop_dataframe_splitby(mouse_data):
 @image_comparison(baseline_images = ['cofac_distrib'],
                   **IMG_COMP_KWARGS)
 def test_cofactor_distribution_plot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
                                 groupby = "experiment",
@@ -741,6 +753,7 @@ def test_cofactor_distribution_plot(mouse_data):
 @image_comparison(baseline_images = ['cofac_distrib_barplot'],
                   **IMG_COMP_KWARGS)
 def test_cofactor_distribution_barplot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
                                 groupby = "sample_ID",
@@ -750,6 +763,7 @@ def test_cofactor_distribution_barplot(mouse_data):
 @image_comparison(baseline_images = ['cofac_distrib_sex_figsize'],
                   **IMG_COMP_KWARGS)
 def test_cofactor_distribution_plot_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
                                 groupby = "experiment",
@@ -760,6 +774,7 @@ def test_cofactor_distribution_plot_figsize(mouse_data):
 @image_comparison(baseline_images = ['cofac_distrib_sex_experiment'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_cofactor_distribution_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
                                 groupby = "experiment",
@@ -771,6 +786,7 @@ def test_cofactor_distribution_splitby(mouse_data):
 @image_comparison(baseline_images = ['cofac_distrib_sex_experiment_set2'],
                   **IMG_COMP_KWARGS)
 def test_cofactor_distribution_splitby_cmap(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cofactor_distribution(mouse_data,
                                 marker = "Ly6G",
                                 groupby = "experiment",
@@ -783,6 +799,7 @@ def test_cofactor_distribution_splitby_cmap(mouse_data):
 @image_comparison(baseline_images = ['cofac_distrib_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_cofactor_distribution_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 3))
@@ -799,6 +816,7 @@ def test_cofactor_distribution_ax_return(mouse_data):
 @image_comparison(baseline_images = ['cofac_distrib_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_cofactor_distribution_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -821,6 +839,7 @@ def test_cofactor_distribution_ax_return_double(mouse_data):
 
 
 def test_cofactor_distribution_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cofactor_distribution(mouse_data,
                                      marker = "Ly6G",
                                      groupby = "experiment",
@@ -838,6 +857,7 @@ def test_cofactor_distribution_dataframe(mouse_data):
 
 
 def test_cofactor_distribution_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cofactor_distribution(mouse_data,
                                      marker = "Ly6G",
                                      groupby = "experiment",
@@ -861,6 +881,7 @@ def test_cofactor_distribution_dataframe_splitby(mouse_data):
 @image_comparison(baseline_images = ['clus_freq'],
                   **IMG_COMP_KWARGS)
 def test_cluster_frequency_plot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_frequency(mouse_data,
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
@@ -872,6 +893,7 @@ def test_cluster_frequency_plot(mouse_data):
 @image_comparison(baseline_images = ['clus_freq_barplot'],
                   **IMG_COMP_KWARGS)
 def test_cluster_frequency_barplot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_frequency(mouse_data,
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
@@ -883,6 +905,7 @@ def test_cluster_frequency_barplot(mouse_data):
 @image_comparison(baseline_images = ['clus_freq_sex_figsize'],
                   **IMG_COMP_KWARGS)
 def test_cluster_frequency_plot_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_frequency(mouse_data,
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
@@ -895,6 +918,7 @@ def test_cluster_frequency_plot_figsize(mouse_data):
 @image_comparison(baseline_images = ['clus_freq_sex_experiment'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_cluster_frequency_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_frequency(mouse_data,
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
@@ -907,6 +931,7 @@ def test_cluster_frequency_splitby(mouse_data):
 @image_comparison(baseline_images = ['clus_freq_sex_experiment_set2'],
                   **IMG_COMP_KWARGS)
 def test_cluster_frequency_splitby_cmap(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_frequency(mouse_data,
                             gate = "Neutrophils",
                             cluster_key = "Neutrophils_compensated_leiden",
@@ -920,6 +945,7 @@ def test_cluster_frequency_splitby_cmap(mouse_data):
 @image_comparison(baseline_images = ['clus_freq_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_cluster_frequency_distribution_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 3))
@@ -937,6 +963,7 @@ def test_cluster_frequency_distribution_ax_return(mouse_data):
 @image_comparison(baseline_images = ['clus_freq_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_cluster_frequency_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -961,6 +988,7 @@ def test_cluster_frequency_ax_return_double(mouse_data):
 
 
 def test_cluster_frequency_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cluster_frequency(mouse_data,
                                  gate = "Neutrophils",
                                  cluster_key = "Neutrophils_compensated_leiden",
@@ -990,6 +1018,7 @@ def test_cluster_frequency_dataframe(mouse_data):
 
 
 def test_cluster_frequency_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cluster_frequency(mouse_data,
                                  gate = "Neutrophils",
                                  cluster_key = "Neutrophils_compensated_leiden",
@@ -1024,6 +1053,7 @@ def test_cluster_frequency_dataframe_splitby(mouse_data):
 @image_comparison(baseline_images = ['clus_abund'],
                   **IMG_COMP_KWARGS)
 def test_cluster_abundance_plot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_abundance(mouse_data,
                             cluster_key = "Neutrophils_compensated_leiden",
                             groupby = "experiment",
@@ -1033,6 +1063,7 @@ def test_cluster_abundance_plot(mouse_data):
 @image_comparison(baseline_images = ['clus_abund_sex_figsize'],
                   **IMG_COMP_KWARGS)
 def test_cluster_abundance_plot_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_abundance(mouse_data,
                             cluster_key = "Neutrophils_compensated_leiden",
                             groupby = "experiment",
@@ -1044,6 +1075,7 @@ def test_cluster_abundance_plot_figsize(mouse_data):
 @image_comparison(baseline_images = ['clus_abund_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_cluster_abundance_distribution_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 3))
@@ -1058,6 +1090,7 @@ def test_cluster_abundance_distribution_ax_return(mouse_data):
 @image_comparison(baseline_images = ['clus_abund_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_cluster_abundance_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -1076,6 +1109,7 @@ def test_cluster_abundance_ax_return_double(mouse_data):
 
 
 def test_cluster_abundance_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cluster_abundance(mouse_data,
                                  cluster_key = "Neutrophils_compensated_leiden",
                                  groupby = "experiment",
@@ -1106,6 +1140,7 @@ def test_cluster_abundance_dataframe(mouse_data):
 @image_comparison(baseline_images = ['metadata'],
                   **IMG_COMP_KWARGS)
 def test_metadata(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.metadata(mouse_data,
                    marker = "age",
                    groupby = "experiment",
@@ -1115,6 +1150,7 @@ def test_metadata(mouse_data):
 @image_comparison(baseline_images = ['metadata_figsize'],
                   **IMG_COMP_KWARGS)
 def test_metadata_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.metadata(mouse_data,
                    marker = "age",
                    groupby = "experiment",
@@ -1125,6 +1161,7 @@ def test_metadata_figsize(mouse_data):
 @image_comparison(baseline_images = ['metadata_splitby'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_metadata_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.metadata(mouse_data,
                    marker = "age",
                    groupby = "experiment",
@@ -1136,6 +1173,7 @@ def test_metadata_splitby(mouse_data):
 @image_comparison(baseline_images = ['metadata_splitby_cmap'],
                   **IMG_COMP_KWARGS)
 def test_metadata_splitby_cmap(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.metadata(mouse_data,
                    marker = "age",
                    groupby = "experiment",
@@ -1148,6 +1186,7 @@ def test_metadata_splitby_cmap(mouse_data):
 @image_comparison(baseline_images = ['metadata_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_metadata_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 4))
@@ -1164,6 +1203,7 @@ def test_metadata_ax_return(mouse_data):
 @image_comparison(baseline_images = ['metadata_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_metadata_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -1182,6 +1222,7 @@ def test_metadata_ax_return_double(mouse_data):
 
 
 def test_metadata_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.metadata(mouse_data,
                         marker = "age",
                         groupby = "experiment",
@@ -1193,6 +1234,7 @@ def test_metadata_dataframe(mouse_data):
 
 
 def test_metadata_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.metadata(mouse_data,
                         marker = "age",
                         groupby = "experiment",
@@ -1210,6 +1252,7 @@ def test_metadata_dataframe_splitby(mouse_data):
 @image_comparison(baseline_images = ['gate_freq'],
                   **IMG_COMP_KWARGS)
 def test_gate_frequency_plot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
@@ -1221,6 +1264,7 @@ def test_gate_frequency_plot(mouse_data):
 @image_comparison(baseline_images = ['gate_freq_sample_ID'],
                   **IMG_COMP_KWARGS)
 def test_gate_frequency_barplot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
@@ -1231,6 +1275,7 @@ def test_gate_frequency_barplot(mouse_data):
 @image_comparison(baseline_images = ['gate_freq_figsize'],
                   **IMG_COMP_KWARGS)
 def test_gate_frequency_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
@@ -1242,6 +1287,7 @@ def test_gate_frequency_figsize(mouse_data):
 @image_comparison(baseline_images = ['gate_freq_splitby'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_gate_frequency_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
@@ -1254,6 +1300,7 @@ def test_gate_frequency_splitby(mouse_data):
 @image_comparison(baseline_images = ['gate_freq_splitby_cmap'],
                   **IMG_COMP_KWARGS)
 def test_gate_frequency_splitby_cmap(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.gate_frequency(mouse_data,
                          gate = "Neutrophils",
                          freq_of = "parent",
@@ -1267,6 +1314,7 @@ def test_gate_frequency_splitby_cmap(mouse_data):
 @image_comparison(baseline_images = ['gate_freq_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_gate_frequency_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 4))
@@ -1283,6 +1331,7 @@ def test_gate_frequency_ax_return(mouse_data):
 @image_comparison(baseline_images = ['gate_frequency_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_gate_frequency_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -1303,6 +1352,7 @@ def test_gate_frequency_ax_return_double(mouse_data):
 
 
 def test_gate_frequency_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.gate_frequency(mouse_data,
                               gate = "Neutrophils",
                               freq_of = "parent",
@@ -1334,6 +1384,7 @@ def test_gate_frequency_dataframe(mouse_data):
 
 
 def test_gate_frequency_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.gate_frequency(mouse_data,
                               gate = "Neutrophils",
                               freq_of = "parent",
@@ -1365,6 +1416,7 @@ def test_gate_frequency_dataframe(mouse_data):
 
 
 def test_gate_frequency_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.gate_frequency(mouse_data,
                               gate = "Neutrophils",
                               freq_of = "parent",
@@ -1402,6 +1454,7 @@ def test_gate_frequency_dataframe_splitby(mouse_data):
 @image_comparison(baseline_images = ['cell_count'],
                   **IMG_COMP_KWARGS)
 def test_cell_counts_plot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
                       groupby = "experiment",
@@ -1411,6 +1464,7 @@ def test_cell_counts_plot(mouse_data):
 @image_comparison(baseline_images = ['cell_count_sample_ID'],
                   **IMG_COMP_KWARGS)
 def test_cell_count_barplot(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
                       groupby = "sample_ID",
@@ -1420,6 +1474,7 @@ def test_cell_count_barplot(mouse_data):
 @image_comparison(baseline_images = ['cell_count_figsize'],
                   **IMG_COMP_KWARGS)
 def test_cell_count_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
                       groupby = "sample_ID",
@@ -1430,6 +1485,7 @@ def test_cell_count_figsize(mouse_data):
 @image_comparison(baseline_images = ['cell_count_splitby'],  # noqa
                   **IMG_COMP_KWARGS)
 def test_cell_count_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
                       groupby = "experiment",
@@ -1440,6 +1496,7 @@ def test_cell_count_splitby(mouse_data):
 @image_comparison(baseline_images = ['cell_count_splitby_cmap'],
                   **IMG_COMP_KWARGS)
 def test_cell_count_splitby_cmap(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cell_counts(mouse_data,
                       gate = "Neutrophils",
                       groupby = "experiment",
@@ -1451,6 +1508,7 @@ def test_cell_count_splitby_cmap(mouse_data):
 @image_comparison(baseline_images = ['cell_count_ax_return'],
                   **IMG_COMP_KWARGS)
 def test_cell_count_ax_return(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 1,
                          nrows = 1,
                          figsize = (3, 4))
@@ -1466,6 +1524,7 @@ def test_cell_count_ax_return(mouse_data):
 @image_comparison(baseline_images = ['cell_count_ax_return_double'],
                   **IMG_COMP_KWARGS)
 def test_cell_count_ax_return_double(mouse_data):
+    mouse_data = mouse_data.copy()
     _, ax = plt.subplots(ncols = 2,
                          nrows = 1,
                          figsize = (4, 2))
@@ -1486,6 +1545,7 @@ def test_cell_count_ax_return_double(mouse_data):
 
 
 def test_cell_counts_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cell_counts(mouse_data,
                            gate = "Neutrophils",
                            groupby = "experiment",
@@ -1504,6 +1564,7 @@ def test_cell_counts_dataframe(mouse_data):
 
 
 def test_cell_counts_dataframe_splitby(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cell_counts(mouse_data,
                            gate = "Neutrophils",
                            groupby = "experiment",
