@@ -76,7 +76,8 @@ def biax(adata: AnnData,
          return_fig: bool = False,
          ax: Optional[Axes] = None,
          show: bool = True,
-         save: Optional[str] = None
+         save: Optional[str] = None,
+         **kwargs
          ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plot for normal biaxial representation of cytometry data.
@@ -146,6 +147,8 @@ def biax(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments that will ultimately passed to sns.scatterplot().
 
 
     Returns
@@ -252,16 +255,19 @@ def biax(adata: AnnData,
         "data": dataframe,
         "x": x_channel,
         "y": y_channel,
-        "linewidth": 0,
-        "s": 2,
         "hue": dataframe[color] if categorical_color else None,
         "palette": cmap or "Set1",
         "c": transformed_color_vector if not categorical_color else None,
         "cmap": continous_cmap,
         "legend": "auto"
     }
+    if "linewidth" not in kwargs:
+        kwargs["linewidth"] = 0
+    if "s" not in kwargs:
+        kwargs["s"] = 2
 
     sns.scatterplot(**plot_params,
+                    **kwargs,
                     ax = ax)
 
     ### axis scaling:

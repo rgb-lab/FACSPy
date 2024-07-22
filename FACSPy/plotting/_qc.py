@@ -92,7 +92,8 @@ def gate_frequency(adata: AnnData,
                    return_fig: bool = False,
                    ax: Optional[Axes] = None,
                    show: bool = True,
-                   save: Optional[str] = None
+                   save: Optional[str] = None,
+                   **kwargs
                    ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the gate frequency in comparison to a defined gate.
@@ -135,6 +136,8 @@ def gate_frequency(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.stripplot.
 
 
     Returns
@@ -187,7 +190,8 @@ def gate_frequency(adata: AnnData,
                                           groupby = groupby,
                                           splitby = splitby,
                                           stat_test = stat_test,
-                                          figsize = figsize)
+                                          figsize = figsize,
+                                          **kwargs)
 
     ax.set_title(f"gate frequency per {groupby}\ngate: {_find_current_population(gate)}")
     ax.set_xlabel("")
@@ -216,7 +220,8 @@ def cell_counts(adata: AnnData,
                 return_fig: bool = False,
                 ax: Optional[Axes] = None,
                 show: bool = True,
-                save: Optional[str] = None
+                save: Optional[str] = None,
+                **kwargs
                 ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the cell counts of a specific population.
@@ -256,6 +261,8 @@ def cell_counts(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.stripplot.
 
     Returns
     -------
@@ -307,7 +314,8 @@ def cell_counts(adata: AnnData,
                                           groupby = groupby,
                                           splitby = splitby,
                                           stat_test = stat_test,
-                                          figsize = figsize)
+                                          figsize = figsize,
+                                          **kwargs)
 
     ax.set_title(f"cell counts\ngrouped by {groupby}")
     ax.set_xlabel("")

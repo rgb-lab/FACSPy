@@ -266,7 +266,7 @@ def gate_parent_in_adata(adata: AnnData,
     if parent_gating_path == "root":
         return adata
     return subset_gate(adata,
-                       gate_path = parent_gating_path,
+                       gate = parent_gating_path,
                        as_view = True)
 
 def extract_channels_for_gate(adata: AnnData,

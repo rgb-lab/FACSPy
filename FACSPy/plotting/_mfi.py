@@ -31,7 +31,8 @@ def fop(adata: AnnData,
         return_fig: bool = False,
         ax: Optional[Axes] = None,
         show: bool = True,
-        save: Optional[str] = None
+        save: Optional[str] = None,
+        **kwargs
         ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the frequency of parent (fop) values as calculated by fp.tl.fop
@@ -81,6 +82,8 @@ def fop(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.stripplot.
 
     Returns
     -------
@@ -125,7 +128,8 @@ def fop(adata: AnnData,
                              return_dataframe = return_dataframe,
                              save = save,
                              show = show,
-                             ax = ax)
+                             ax = ax,
+                             **kwargs)
 
 
 @_default_gate_and_default_layer
@@ -145,7 +149,8 @@ def mfi(adata: AnnData,
         return_fig: bool = False,
         ax: Optional[Axes] = None,
         show: bool = True,
-        save: Optional[str] = None
+        save: Optional[str] = None,
+        **kwargs
         ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the median fluorescence intensity (mfi) values as calculated by fp.tl.mfi
@@ -195,6 +200,8 @@ def mfi(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.stripplot.
 
     Returns
     -------
@@ -239,7 +246,8 @@ def mfi(adata: AnnData,
                              return_dataframe = return_dataframe,
                              save = save,
                              show = show,
-                             ax = ax)
+                             ax = ax,
+                             **kwargs)
 
 def _mfi_fop_baseplot(adata: AnnData,
                       gate: str,
@@ -257,7 +265,8 @@ def _mfi_fop_baseplot(adata: AnnData,
                       return_dataframe: bool,
                       ax: Optional[Axes],
                       save: Optional[str],
-                      show: bool):
+                      show: bool,
+                      **kwargs):
     
     if gate is None:
         raise TypeError("A Gate has to be provided")
@@ -286,7 +295,8 @@ def _mfi_fop_baseplot(adata: AnnData,
                                           groupby = groupby,
                                           splitby = splitby,
                                           stat_test = stat_test,
-                                          figsize = figsize)
+                                          figsize = figsize,
+                                          **kwargs)
 
     ax.set_title(f"{marker}\ngrouped by {groupby}")
     ax.set_xlabel("")

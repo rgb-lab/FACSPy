@@ -24,7 +24,8 @@ def metadata(adata: AnnData,
              return_fig: bool = False,
              ax: Optional[Axes] = None,
              show: bool = True,
-             save: Optional[str] = None
+             save: Optional[str] = None,
+             **kwargs
              ) -> Optional[Union[Figure, Axes, pd.DataFrame]]:
     """\
     Plots the frequency of the metadata columns.
@@ -62,6 +63,8 @@ def metadata(adata: AnnData,
     save
         Expects a file path including the file name.
         Saves the figure to the indicated path. Defaults to None.
+    kwargs
+        keyword arguments ultimately passed to sns.stripplot.
 
 
     Returns
@@ -117,7 +120,8 @@ def metadata(adata: AnnData,
                                           groupby = groupby,
                                           splitby = splitby,
                                           stat_test = stat_test,
-                                          figsize = figsize)
+                                          figsize = figsize,
+                                          **kwargs)
 
     ax.set_title(f"{marker}\ngrouped by {groupby}")
     ax.set_xlabel("")

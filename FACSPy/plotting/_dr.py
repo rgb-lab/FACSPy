@@ -17,7 +17,7 @@ def _create_dimred_dataframe(adata: AnnData,
                              basis: str,
                              dimred: str,
                              layer: str) -> pd.DataFrame:
-    obs_frame = adata.obs
+    obs_frame = adata.obs.copy()
     dimred_coordinates = adata.obsm[basis]
     dimred_cols = [f"{dimred}{i}" for i in range(1, dimred_coordinates.shape[1] + 1)]
     obs_frame[dimred_cols] = dimred_coordinates

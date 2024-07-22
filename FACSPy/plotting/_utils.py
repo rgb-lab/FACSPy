@@ -39,8 +39,7 @@ CONTINUOUS_CMAPS = ["YlOrRd", "Reds", "YlOrBr", "PuRd", "Oranges", "Greens"]
 
 CATEGORICAL_STRIPPLOT_PARAMS = {
     "dodge": True,
-    "jitter": True,
-    "linewidth": 0.5,
+    "jitter": True
 }
 
 CATEGORICAL_BOXPLOT_PARAMS = {
