@@ -1,4 +1,3 @@
-import pytest
 import os
 import FACSPy as fp
 from anndata import AnnData
@@ -7,8 +6,8 @@ import pandas as pd
 from FACSPy.dataset._utils import (_replace_missing_cofactors,
                                    _merge_cofactors_into_dataset_var,
                                    match_cell_numbers,
-                                   find_name_of_control_sample_by_metadata,
-                                   reindex_metadata,
+                                   # find_name_of_control_sample_by_metadata,
+                                   # reindex_metadata,
                                    asinh_transform,
                                    transform_data_array,
                                    get_control_samples,
@@ -16,43 +15,15 @@ from FACSPy.dataset._utils import (_replace_missing_cofactors,
                                    create_sample_subset_with_controls,
                                    find_corresponding_control_samples)
 
-from FACSPy.dataset._supplements import Metadata, Panel, CofactorTable
-from FACSPy.dataset._workspaces import FlowJoWorkspace
-
-WSP_FILE_PATH = "FACSPy/_resources/"
-WSP_FILE_NAME = "test_wsp.wsp"
-INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-
-def create_supplement_objects():
-    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
-    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
-    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
-    return INPUT_DIRECTORY, panel, metadata, workspace
-
-@pytest.fixture
-def mock_dataset():
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    return fp.create_dataset(input_directory = input_directory,
-                             panel = panel,
-                             metadata = metadata,
-                             workspace = workspace)
-
-@pytest.fixture
-def mock_metadata():
-    return pd.read_csv(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"), sep = ";")
-
-@pytest.fixture
-def mouse_lineages_metadata():
-    return pd.read_csv(os.path.join(INPUT_DIRECTORY, "metadata_mouse_lineages.csv"))
-
 def test_replace_missing_cofactors():
     df = pd.DataFrame(data = {"pns": ["BV421-A", "BB700-A"], "cofactors": [np.nan, 4]},
                       index = list(range(2)))
     df = _replace_missing_cofactors(df)
     assert df["cofactors"].tolist() == [1,4]
 
-def test_merge_cofactors_into_dataset_var(mock_dataset: AnnData):
-    cofactors = fp.dt.CofactorTable(os.path.join(INPUT_DIRECTORY, "cofactors_test_suite.txt"))
+def test_merge_cofactors_into_dataset_var(mock_dataset: AnnData,
+                                          input_directory_test_suite):
+    cofactors = fp.dt.CofactorTable(os.path.join(input_directory_test_suite, "cofactors_test_suite.txt"))
     adata = mock_dataset
     assert "cofactors" not in adata.var.columns
     # tests if present cofactors are actually replaced
@@ -66,8 +37,9 @@ def test_merge_cofactors_into_dataset_var(mock_dataset: AnnData):
     assert not any(k == -1 for k in merged_cofactors)
     assert df["cofactors"].dtype == np.float32
 
-def test_merge_cofactors_into_dataset_var_missing_channel(mock_dataset: AnnData):
-    cofactors = fp.dt.CofactorTable(os.path.join(INPUT_DIRECTORY, "cofactors_test_suite.txt"))
+def test_merge_cofactors_into_dataset_var_missing_channel(mock_dataset: AnnData,
+                                                          input_directory_test_suite):
+    cofactors = fp.dt.CofactorTable(os.path.join(input_directory_test_suite, "cofactors_test_suite.txt"))
     cofactors.dataframe = cofactors.dataframe.loc[cofactors.dataframe["fcs_colname"] != "live_dead",:]
     adata = mock_dataset
     assert "cofactors" not in adata.var.columns
@@ -80,8 +52,9 @@ def test_merge_cofactors_into_dataset_var_missing_channel(mock_dataset: AnnData)
     assert not any(k == -1 for k in merged_cofactors)
     assert df["cofactors"].dtype == np.float32
 
-def test_merge_cofactors_into_dataset_var_additional_channel(mock_dataset: AnnData):
-    cofactors = fp.dt.CofactorTable(os.path.join(INPUT_DIRECTORY, "cofactors_test_suite.txt"))
+def test_merge_cofactors_into_dataset_var_additional_channel(mock_dataset: AnnData,
+                                                             input_directory_test_suite):
+    cofactors = fp.dt.CofactorTable(os.path.join(input_directory_test_suite, "cofactors_test_suite.txt"))
     cofactors.dataframe.loc[cofactors.dataframe["fcs_colname"] == "live_dead","fcs_colname"] = "lifez"
     adata = mock_dataset
     assert "cofactors" not in adata.var.columns
@@ -137,26 +110,12 @@ def test_reindex_metadata():
     pass
 
 def test_find_name_of_control_sample_by_metadata(mock_dataset: AnnData):
-    adata = mock_dataset
     pass
 
-def test_find_corresponding_control_samples_anndata_no_controls(mock_dataset: AnnData):
-    adata = mock_dataset
-    adata.uns["metadata"].subset("staining", "stained")
-    fp.sync.synchronize_dataset(adata)
-    assert "unstained" not in adata.obs["staining"]
-    assert not get_control_samples(adata.uns["metadata"].dataframe, by = "file_name")
-
-    _, controls = find_corresponding_control_samples(adata, by = "file_name")
-    assert isinstance(controls, dict)
-    assert all(value == [] for _, value in controls.items())
-
-    _, controls = find_corresponding_control_samples(adata, by = "sample_ID")
-    assert isinstance(controls, dict)
-    assert all(value == [] for _, value in controls.items())
 
 def test_find_corresponding_control_samples_with_controls(mock_dataset: AnnData):
     adata = mock_dataset
+    print(adata.uns["metadata"].to_df().shape)
     _, controls = find_corresponding_control_samples(adata, by = "file_name")
     assert isinstance(controls, dict)
     assert all(len(value) == 1 for _, value in controls.items())
@@ -260,9 +219,8 @@ def test_asinh_transformation():
     np.testing.assert_array_almost_equal(np.repeat([0.88137359],3), x)
 
 
-
-
 def test_find_corresponding_control_samples(mock_dataset: AnnData):
+    print(mock_dataset.uns["metadata"].to_df().shape)
     ccs = find_corresponding_control_samples(mock_dataset,
                                              by = "file_name")
     assert ccs[0] == ["file1_stained.fcs", "file2_stained.fcs", "file3_stained.fcs"]
@@ -294,6 +252,28 @@ def test_create_sample_subset_with_controls_matching(mock_dataset: AnnData):
                                            match_cell_number = True)
     assert x.shape == (68116, 21)
     assert len(x.obs["file_name"].unique()) == 2
+
+
+def test_find_corresponding_control_samples_anndata_no_controls(mock_dataset: AnnData):
+    adata = mock_dataset
+    
+    # leave syntax like this as metadata is a fixture object!
+    import copy
+    metadata = copy.deepcopy(adata.uns["metadata"])
+    metadata.subset("staining", "stained")
+    adata.uns["metadata"] = metadata
+
+    fp.sync.synchronize_dataset(adata)
+    assert "unstained" not in adata.obs["staining"]
+    assert not get_control_samples(adata.uns["metadata"].dataframe, by = "file_name")
+
+    _, controls = find_corresponding_control_samples(adata, by = "file_name")
+    assert isinstance(controls, dict)
+    assert all(value == [] for _, value in controls.items())
+
+    _, controls = find_corresponding_control_samples(adata, by = "sample_ID")
+    assert isinstance(controls, dict)
+    assert all(value == [] for _, value in controls.items())
 
 
 

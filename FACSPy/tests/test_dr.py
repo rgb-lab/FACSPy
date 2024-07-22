@@ -1,103 +1,83 @@
 import pytest
-import os
+import FACSPy as fp
 import scanpy as sc
 from anndata import AnnData
 import numpy as np
-import FACSPy as fp
 from sklearn.manifold import TSNE
-from FACSPy.dataset._supplements import Metadata, Panel
-from FACSPy.dataset._workspaces import FlowJoWorkspace
 
 from FACSPy.exceptions._exceptions import InvalidScalingError
 
-
-WSP_FILE_PATH = "FACSPy/_resources/"
-WSP_FILE_NAME = "test_wsp.wsp"
-
-def create_supplement_objects():
-    INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
-    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
-    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
-    return INPUT_DIRECTORY, panel, metadata, workspace
-
-@pytest.fixture
-def mock_dataset() -> AnnData:
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    adata = fp.create_dataset(input_directory = input_directory,
-                              panel = panel,
-                              metadata = metadata,
-                              workspace = workspace,
-                              subsample_fcs_to = 100)
-    sc.pp.subsample(adata, n_obs = 200, random_state = 187)
-    return adata
-
-def test_invalid_scaling(mock_dataset):
+def test_invalid_scaling(mock_dataset_downsampled):
     with pytest.raises(InvalidScalingError):
-        fp.tl.umap(mock_dataset,
+        fp.tl.umap(mock_dataset_downsampled,
                    gate = "live",
                    scaling = "MyCustomScaler")
     with pytest.raises(InvalidScalingError):
-        fp.tl.tsne(mock_dataset,
+        fp.tl.tsne(mock_dataset_downsampled,
                    gate = "live",
                    scaling = "MyCustomScaler")
     with pytest.raises(InvalidScalingError):
-        fp.tl.pca(mock_dataset,
+        fp.tl.pca(mock_dataset_downsampled,
                   gate = "live",
                   scaling = "MyCustomScaler")
     with pytest.raises(InvalidScalingError):
-        fp.tl.diffmap(mock_dataset,
+        fp.tl.diffmap(mock_dataset_downsampled,
                       gate = "live",
                       scaling = "MyCustomScaler")
 
 
-def test_decorator_default_gate_and_default_layer_pca(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_pca(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
 
-    fp.tl.pca(mock_dataset)
-    assert "X_pca_live_compensated" in mock_dataset.obsm
+    fp.tl.pca(mock_dataset_downsampled)
+    assert "X_pca_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_only_gate_provided_pca(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_gate_provided_pca(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_layer = "compensated"
 
-    fp.tl.pca(mock_dataset, gate = "live")
-    assert "X_pca_live_compensated" in mock_dataset.obsm
+    fp.tl.pca(mock_dataset_downsampled, gate = "live")
+    assert "X_pca_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_only_layer_provided_pca(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_layer_provided_pca(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
 
-    fp.tl.pca(mock_dataset, layer = "compensated")
-    assert "X_pca_live_compensated" in mock_dataset.obsm
+    fp.tl.pca(mock_dataset_downsampled, layer = "compensated")
+    assert "X_pca_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_pca(mock_dataset: AnnData):
-    fp.settings.default_gate = "live"
-    fp.settings.default_layer = "compensated"
-    fp.settings.add_new_alias("live", "my_personal_gate")
-
-    fp.tl.pca(mock_dataset)
-    assert "X_pca_live_compensated" in mock_dataset.obsm
-
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg_pca(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_pca(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.pca(mock_dataset, "my_personal_gate")
-    assert "X_pca_live_compensated" in mock_dataset.obsm
+    fp.tl.pca(mock_dataset_downsampled)
+    assert "X_pca_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg_pca(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg_pca(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.pca(mock_dataset, gate = "my_personal_gate")
-    assert "X_pca_live_compensated" in mock_dataset.obsm
+    fp.tl.pca(mock_dataset_downsampled, "my_personal_gate")
+    assert "X_pca_live_compensated" in mock_dataset_downsampled.obsm
+
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg_pca(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.pca(mock_dataset_downsampled, gate = "my_personal_gate")
+    assert "X_pca_live_compensated" in mock_dataset_downsampled.obsm
 
 
-def test_pca_works_as_sklearn(mock_dataset: AnnData):
-    fp.subset_gate(mock_dataset, "live")
-    adata = mock_dataset.copy()
+def test_pca_works_as_sklearn(mock_dataset_downsampled: AnnData):
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     from sklearn.decomposition import PCA
     pca_ = PCA(n_components = 20,
                random_state = 187,
@@ -120,11 +100,12 @@ def test_pca_works_as_sklearn(mock_dataset: AnnData):
     assert np.array_equal(variance_ratio, uns_dict["variance_ratio"])
     assert adata.X is None
 
-def test_pca_works_as_scanpy(mock_dataset: AnnData):
-    mock_dataset.X = mock_dataset.layers["compensated"]
-    fp.subset_gate(mock_dataset, "live")
-    scanpy_adata = mock_dataset.copy()
-    facspy_adata = mock_dataset.copy()
+def test_pca_works_as_scanpy(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    mock_dataset_downsampled.X = mock_dataset_downsampled.layers["compensated"]
+    mock_dataset_downsampled = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
+    scanpy_adata = mock_dataset_downsampled.copy()
+    facspy_adata = mock_dataset_downsampled.copy()
     sc.pp.pca(scanpy_adata,
               random_state = 187)
     fp.tl.pca(facspy_adata,
@@ -138,11 +119,12 @@ def test_pca_works_as_scanpy(mock_dataset: AnnData):
     assert np.array_equal(scanpy_adata.obsm["X_pca"],
                           facspy_adata.obsm["X_pca_live_compensated"])
 
-def test_pca_works_as_scanpy_2(mock_dataset: AnnData):
-    mock_dataset.X = mock_dataset.layers["compensated"]
-    fp.subset_gate(mock_dataset, "live")
-    scanpy_adata = mock_dataset.copy()
-    facspy_adata = mock_dataset.copy()
+def test_pca_works_as_scanpy_2(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    mock_dataset_downsampled.X = mock_dataset_downsampled.layers["compensated"]
+    mock_dataset_downsampled = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
+    scanpy_adata = mock_dataset_downsampled.copy()
+    facspy_adata = mock_dataset_downsampled.copy()
     sc.pp.pca(scanpy_adata,
               svd_solver = "randomized",
               random_state = 187)
@@ -156,9 +138,8 @@ def test_pca_works_as_scanpy_2(mock_dataset: AnnData):
     assert np.array_equal(scanpy_adata.varm["PCs"],
                           facspy_adata.varm["pca_live_compensated"])
     
-def test_pca_kwargs(mock_dataset: AnnData):
-    fp.subset_gate(mock_dataset, "live")
-    adata = mock_dataset.copy()
+def test_pca_kwargs(mock_dataset_downsampled: AnnData):
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     from sklearn.decomposition import PCA
     test_pca_ = PCA(n_components = 20,
                     random_state = 187,
@@ -189,9 +170,8 @@ def test_pca_kwargs(mock_dataset: AnnData):
     assert np.array_equal(variance_ratio, uns_dict["variance_ratio"])
     assert adata.X is None
 
-def test_pca_kwargs_2(mock_dataset: AnnData):
-    fp.subset_gate(mock_dataset, "live")
-    adata = mock_dataset.copy()
+def test_pca_kwargs_2(mock_dataset_downsampled: AnnData):
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     from sklearn.decomposition import PCA
     test_pca_ = PCA(n_components = 20,
                     random_state = 188,
@@ -222,52 +202,57 @@ def test_pca_kwargs_2(mock_dataset: AnnData):
     assert np.array_equal(variance_ratio, uns_dict["variance_ratio"])
     assert adata.X is None
 
-def test_decorator_default_gate_and_default_layer_tsne(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_tsne(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
 
-    fp.tl.tsne(mock_dataset)
-    assert "X_tsne_live_compensated" in mock_dataset.obsm
+    fp.tl.tsne(mock_dataset_downsampled)
+    assert "X_tsne_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_only_gate_provided_tsne(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_gate_provided_tsne(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_layer = "compensated"
 
-    fp.tl.tsne(mock_dataset, gate = "live")
-    assert "X_tsne_live_compensated" in mock_dataset.obsm
+    fp.tl.tsne(mock_dataset_downsampled, gate = "live")
+    assert "X_tsne_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_only_layer_provided_tsne(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_layer_provided_tsne(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
 
-    fp.tl.tsne(mock_dataset, layer = "compensated")
-    assert "X_tsne_live_compensated" in mock_dataset.obsm
+    fp.tl.tsne(mock_dataset_downsampled, layer = "compensated")
+    assert "X_tsne_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_tsne(mock_dataset: AnnData):
-    fp.settings.default_gate = "live"
-    fp.settings.default_layer = "compensated"
-    fp.settings.add_new_alias("live", "my_personal_gate")
-
-    fp.tl.tsne(mock_dataset)
-    assert "X_tsne_live_compensated" in mock_dataset.obsm
-
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg_tsne(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_tsne(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.tsne(mock_dataset, "my_personal_gate")
-    assert "X_tsne_live_compensated" in mock_dataset.obsm
+    fp.tl.tsne(mock_dataset_downsampled)
+    assert "X_tsne_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg_tsne(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg_tsne(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.tsne(mock_dataset, gate = "my_personal_gate")
-    assert "X_tsne_live_compensated" in mock_dataset.obsm
+    fp.tl.tsne(mock_dataset_downsampled, "my_personal_gate")
+    assert "X_tsne_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_tsne_works_as_sklearn(mock_dataset: AnnData):
-    fp.subset_gate(mock_dataset, "live")
-    adata = mock_dataset.copy()
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg_tsne(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.tsne(mock_dataset_downsampled, gate = "my_personal_gate")
+    assert "X_tsne_live_compensated" in mock_dataset_downsampled.obsm
+
+def test_tsne_works_as_sklearn(mock_dataset_downsampled: AnnData):
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     tsne_ = TSNE(n_components = 2,
                  perplexity = 30,
                  early_exaggeration = 12,
@@ -298,11 +283,12 @@ def test_tsne_works_as_sklearn(mock_dataset: AnnData):
     assert adata.X is None
 
 
-def test_tsne_works_as_scanpy(mock_dataset: AnnData):
-    mock_dataset.X = mock_dataset.layers["compensated"]
-    fp.subset_gate(mock_dataset, "live")
-    scanpy_adata = mock_dataset.copy()
-    facspy_adata = mock_dataset.copy()
+def test_tsne_works_as_scanpy(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    mock_dataset_downsampled.X = mock_dataset_downsampled.layers["compensated"]
+    mock_dataset_downsampled = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
+    scanpy_adata = mock_dataset_downsampled.copy()
+    facspy_adata = mock_dataset_downsampled.copy()
     sc.tl.tsne(scanpy_adata,
                random_state = 187,
                use_rep = "X",
@@ -318,11 +304,12 @@ def test_tsne_works_as_scanpy(mock_dataset: AnnData):
     assert np.array_equal(scanpy_adata.obsm["X_tsne"],
                           facspy_adata.obsm["X_tsne_live_compensated"])
 
-def test_tsne_works_as_scanpy_2(mock_dataset: AnnData):
-    mock_dataset.X = mock_dataset.layers["compensated"]
-    fp.subset_gate(mock_dataset, "live")
-    scanpy_adata = mock_dataset.copy()
-    facspy_adata = mock_dataset.copy()
+def test_tsne_works_as_scanpy_2(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    mock_dataset_downsampled.X = mock_dataset_downsampled.layers["compensated"]
+    mock_dataset_downsampled = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
+    scanpy_adata = mock_dataset_downsampled.copy()
+    facspy_adata = mock_dataset_downsampled.copy()
     sc.tl.tsne(scanpy_adata,
                early_exaggeration = 400,
                use_rep = "X",
@@ -349,10 +336,9 @@ def test_tsne_works_as_scanpy_2(mock_dataset: AnnData):
     assert np.array_equal(scanpy_adata.obsm["X_tsne"],
                           facspy_adata.obsm["X_tsne_live_compensated"])
 
-def test_tsne_works_as_sklearn_with_rep(mock_dataset: AnnData):
+def test_tsne_works_as_sklearn_with_rep(mock_dataset_downsampled: AnnData):
     """tests if rep pca works"""
-    fp.subset_gate(mock_dataset, "live")
-    adata = mock_dataset.copy()
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     fp.tl.pca(adata,
               gate = "live",
               layer = "compensated",
@@ -387,10 +373,9 @@ def test_tsne_works_as_sklearn_with_rep(mock_dataset: AnnData):
 
     assert adata.X is None
 
-def test_tsne_works_as_sklearn_with_rep_2(mock_dataset: AnnData):
+def test_tsne_works_as_sklearn_with_rep_2(mock_dataset_downsampled: AnnData):
     """tests if the npcs parameter works"""
-    fp.subset_gate(mock_dataset, "live")
-    adata = mock_dataset.copy()
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     fp.tl.pca(adata,
               gate = "live",
               layer = "compensated",
@@ -426,8 +411,8 @@ def test_tsne_works_as_sklearn_with_rep_2(mock_dataset: AnnData):
 
     assert adata.X is None
 
-def test_tsne_choose_rep_value_error(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_tsne_choose_rep_value_error(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     fp.tl.pca(adata,
               gate = "live",
               layer = "compensated")
@@ -438,8 +423,8 @@ def test_tsne_choose_rep_value_error(mock_dataset: AnnData):
                    use_rep = "X_pca_live_compensated",
                    n_pcs = 30)
         
-def test_tsne_rep_does_not_exist(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_tsne_rep_does_not_exist(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     with pytest.raises(ValueError):
         fp.tl.tsne(adata,
                    gate = "live",
@@ -447,9 +432,8 @@ def test_tsne_rep_does_not_exist(mock_dataset: AnnData):
                    use_rep = "X_pca_live_compensated",
                    n_pcs = 30)
 
-def test_tsne_kwargs(mock_dataset: AnnData):
-    fp.subset_gate(mock_dataset, "live")
-    adata = mock_dataset.copy()
+def test_tsne_kwargs(mock_dataset_downsampled: AnnData):
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     test_tsne_ = TSNE(n_components = 2,
                       perplexity = 30,
                       early_exaggeration = 12,
@@ -488,9 +472,8 @@ def test_tsne_kwargs(mock_dataset: AnnData):
 
     assert adata.X is None
 
-def test_tsne_kwargs_2(mock_dataset: AnnData):
-    fp.subset_gate(mock_dataset, "live")
-    adata = mock_dataset.copy()
+def test_tsne_kwargs_2(mock_dataset_downsampled: AnnData):
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     test_tsne_ = TSNE(n_components = 2,
                       perplexity = 30,
                       metric = "euclidean",
@@ -532,56 +515,61 @@ def test_tsne_kwargs_2(mock_dataset: AnnData):
 
     assert adata.X is None
 
-def test_decorator_default_gate_and_default_layer_umap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_umap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
 
-    fp.tl.umap(mock_dataset)
-    assert "X_umap_live_compensated" in mock_dataset.obsm
+    fp.tl.umap(mock_dataset_downsampled)
+    assert "X_umap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_only_gate_provided_umap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_gate_provided_umap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_layer = "compensated"
 
-    fp.tl.umap(mock_dataset, gate = "live")
-    assert "X_umap_live_compensated" in mock_dataset.obsm
+    fp.tl.umap(mock_dataset_downsampled, gate = "live")
+    assert "X_umap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_only_layer_provided_umap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_layer_provided_umap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
 
-    fp.tl.umap(mock_dataset, layer = "compensated")
-    assert "X_umap_live_compensated" in mock_dataset.obsm
+    fp.tl.umap(mock_dataset_downsampled, layer = "compensated")
+    assert "X_umap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_umap(mock_dataset: AnnData):
-    fp.settings.default_gate = "live"
-    fp.settings.default_layer = "compensated"
-    fp.settings.add_new_alias("live", "my_personal_gate")
-
-    fp.tl.umap(mock_dataset)
-    assert "X_umap_live_compensated" in mock_dataset.obsm
-
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg_umap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_umap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.umap(mock_dataset, "my_personal_gate")
-    assert "X_umap_live_compensated" in mock_dataset.obsm
+    fp.tl.umap(mock_dataset_downsampled)
+    assert "X_umap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg_umap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg_umap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.umap(mock_dataset, gate = "my_personal_gate")
-    assert "X_umap_live_compensated" in mock_dataset.obsm
+    fp.tl.umap(mock_dataset_downsampled, "my_personal_gate")
+    assert "X_umap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_umap_same_as_scanpy(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg_umap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.umap(mock_dataset_downsampled, gate = "my_personal_gate")
+    assert "X_umap_live_compensated" in mock_dataset_downsampled.obsm
+
+def test_umap_same_as_scanpy(mock_dataset_downsampled: AnnData):
     """
     we first compute everything after one another
     and only change the umap call
     """
-    adata = mock_dataset
-    fp.subset_gate(adata, "live")
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     scanpy_adata = adata.copy()
     scanpy_adata.X = scanpy_adata.layers["compensated"]
     fp.tl.pca(scanpy_adata,
@@ -627,13 +615,12 @@ def test_umap_same_as_scanpy(mock_dataset: AnnData):
     assert np.array_equal(scanpy_adata.obsm["X_umap"],
                           facspy_adata.obsm["X_umap_live_compensated"])
 
-def test_umap_same_as_scanpy_no_precompute_pca_neighbors(mock_dataset: AnnData):
+def test_umap_same_as_scanpy_no_precompute_pca_neighbors(mock_dataset_downsampled: AnnData):
     """
     now we see if the pca and neighbors get computed correctly
     within the umap function
     """
-    adata = mock_dataset
-    fp.subset_gate(adata, "live")
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     scanpy_adata = adata.copy()
     scanpy_adata.X = scanpy_adata.layers["compensated"]
     fp.tl.pca(scanpy_adata,
@@ -667,14 +654,13 @@ def test_umap_same_as_scanpy_no_precompute_pca_neighbors(mock_dataset: AnnData):
     assert np.array_equal(scanpy_adata.obsm["X_umap"],
                           facspy_adata.obsm["X_umap_live_compensated"])
 
-def test_umap_same_as_scanpy_no_precompute_pca_neighbors_scanpy_funcs(mock_dataset: AnnData):
+def test_umap_same_as_scanpy_no_precompute_pca_neighbors_scanpy_funcs(mock_dataset_downsampled: AnnData):
     """
     now we see if the pca and neighbors get computed correctly
     within the umap function and compare this to the scanpy
     pca and neighbors call
     """
-    adata = mock_dataset
-    fp.subset_gate(adata, "live")
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     scanpy_adata = adata.copy()
     scanpy_adata.X = scanpy_adata.layers["compensated"]
     sc.pp.pca(scanpy_adata, random_state = 187)
@@ -699,14 +685,13 @@ def test_umap_same_as_scanpy_no_precompute_pca_neighbors_scanpy_funcs(mock_datas
     assert np.array_equal(scanpy_adata.obsm["X_umap"],
                           facspy_adata.obsm["X_umap_live_compensated"])
 
-def test_umap_same_as_scanpy_no_precompute_pca_neighbors_scanpy_funcs_kwargs(mock_dataset: AnnData):
+def test_umap_same_as_scanpy_no_precompute_pca_neighbors_scanpy_funcs_kwargs(mock_dataset_downsampled: AnnData):
     """
     now we see if the pca and neighbors get computed correctly
     within the umap function and compare this to the scanpy
     pca and neighbors call
     """
-    adata = mock_dataset
-    fp.subset_gate(adata, "live")
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     scanpy_adata = adata.copy()
     scanpy_adata.X = scanpy_adata.layers["compensated"]
     sc.pp.pca(scanpy_adata, random_state = 187, n_comps = 12)
@@ -735,13 +720,12 @@ def test_umap_same_as_scanpy_no_precompute_pca_neighbors_scanpy_funcs_kwargs(moc
                           facspy_adata.obsm["X_umap_live_compensated"])
 
 
-def test_umap_same_as_scanpy_kwargs(mock_dataset: AnnData):
+def test_umap_same_as_scanpy_kwargs(mock_dataset_downsampled: AnnData):
     """
     we first compute everything after one another
     and only change the umap call
     """
-    adata = mock_dataset
-    fp.subset_gate(adata, "live")
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     scanpy_adata = adata.copy()
     scanpy_adata.X = scanpy_adata.layers["compensated"]
     fp.tl.pca(scanpy_adata,
@@ -787,13 +771,12 @@ def test_umap_same_as_scanpy_kwargs(mock_dataset: AnnData):
     assert np.array_equal(scanpy_adata.obsm["X_umap"],
                           facspy_adata.obsm["X_umap_live_compensated"])
 
-def test_umap_same_as_scanpy_no_precompute_pca_neighbors_kwargs(mock_dataset: AnnData):
+def test_umap_same_as_scanpy_no_precompute_pca_neighbors_kwargs(mock_dataset_downsampled: AnnData):
     """
     now we see if the pca and neighbors get computed correctly
     within the umap function
     """
-    adata = mock_dataset
-    fp.subset_gate(adata, "live")
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     scanpy_adata = adata.copy()
     scanpy_adata.X = scanpy_adata.layers["compensated"]
     fp.tl.pca(scanpy_adata,
@@ -829,52 +812,57 @@ def test_umap_same_as_scanpy_no_precompute_pca_neighbors_kwargs(mock_dataset: An
     assert np.array_equal(scanpy_adata.obsm["X_umap"],
                           facspy_adata.obsm["X_umap_live_compensated"])
 
-def test_decorator_default_gate_and_default_layer_dmap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_dmap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
 
-    fp.tl.diffmap(mock_dataset)
-    assert "X_diffmap_live_compensated" in mock_dataset.obsm
+    fp.tl.diffmap(mock_dataset_downsampled)
+    assert "X_diffmap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_only_gate_provided_dmap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_gate_provided_dmap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_layer = "compensated"
 
-    fp.tl.diffmap(mock_dataset, gate = "live")
-    assert "X_diffmap_live_compensated" in mock_dataset.obsm
+    fp.tl.diffmap(mock_dataset_downsampled, gate = "live")
+    assert "X_diffmap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_only_layer_provided_dmap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_only_layer_provided_dmap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
 
-    fp.tl.diffmap(mock_dataset, layer = "compensated")
-    assert "X_diffmap_live_compensated" in mock_dataset.obsm
+    fp.tl.diffmap(mock_dataset_downsampled, layer = "compensated")
+    assert "X_diffmap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_dmap(mock_dataset: AnnData):
-    fp.settings.default_gate = "live"
-    fp.settings.default_layer = "compensated"
-    fp.settings.add_new_alias("live", "my_personal_gate")
-
-    fp.tl.diffmap(mock_dataset)
-    assert "X_diffmap_live_compensated" in mock_dataset.obsm
-
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg_dmap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_dmap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.diffmap(mock_dataset, "my_personal_gate")
-    assert "X_diffmap_live_compensated" in mock_dataset.obsm
+    fp.tl.diffmap(mock_dataset_downsampled)
+    assert "X_diffmap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg_dmap(mock_dataset: AnnData):
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_arg_dmap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
     fp.settings.default_gate = "live"
     fp.settings.default_layer = "compensated"
     fp.settings.add_new_alias("live", "my_personal_gate")
 
-    fp.tl.diffmap(mock_dataset, gate = "my_personal_gate")
-    assert "X_diffmap_live_compensated" in mock_dataset.obsm
+    fp.tl.diffmap(mock_dataset_downsampled, "my_personal_gate")
+    assert "X_diffmap_live_compensated" in mock_dataset_downsampled.obsm
 
-def test_diffmap_same_as_scanpy(mock_dataset: AnnData):
-    adata = mock_dataset
-    fp.subset_gate(adata, "live")
+def test_decorator_default_gate_and_default_layer_and_gate_alias_use_alias_as_kwarg_dmap(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    fp.settings.default_gate = "live"
+    fp.settings.default_layer = "compensated"
+    fp.settings.add_new_alias("live", "my_personal_gate")
+
+    fp.tl.diffmap(mock_dataset_downsampled, gate = "my_personal_gate")
+    assert "X_diffmap_live_compensated" in mock_dataset_downsampled.obsm
+
+def test_diffmap_same_as_scanpy(mock_dataset_downsampled: AnnData):
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     fp.tl.pca(adata,
               gate = "live",
               layer = "compensated")
@@ -895,9 +883,8 @@ def test_diffmap_same_as_scanpy(mock_dataset: AnnData):
     assert np.array_equal(scanpy_adata.obsm["X_diffmap"],
                           facspy_adata.obsm["X_diffmap_live_compensated"])
 
-def test_diffmap_same_as_scanpy_kwargs(mock_dataset: AnnData):
-    adata = mock_dataset
-    fp.subset_gate(adata, "live")
+def test_diffmap_same_as_scanpy_kwargs(mock_dataset_downsampled: AnnData):
+    adata = fp.subset_gate(mock_dataset_downsampled, "live", copy = True)
     fp.tl.pca(adata,
               gate = "live",
               layer = "compensated")

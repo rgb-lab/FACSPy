@@ -7,31 +7,11 @@ from scipy.sparse import csr_matrix
 
 import FACSPy as fp
 from FACSPy.dataset import create_dataset
-from FACSPy.dataset._dataset import DatasetAssembler
+from FACSPy.dataset._supplements import Metadata, Panel
 
 from FACSPy.exceptions._exceptions import InputDirectoryNotFoundError
 from FACSPy.exceptions._supplements import SupplementDataTypeError
 
-from FACSPy.dataset._supplements import Metadata, Panel
-from FACSPy.dataset._workspaces import FlowJoWorkspace
-
-WSP_FILE_PATH = "FACSPy/_resources/"
-WSP_FILE_NAME = "test_wsp.wsp"
-
-def create_supplement_objects():
-    INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
-    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
-    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
-    return INPUT_DIRECTORY, panel, metadata, workspace
-
-@pytest.fixture
-def mock_dataset_assembler_object():
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    return DatasetAssembler(input_directory = input_directory,
-                            panel = panel,
-                            metadata = metadata,
-                            workspace = workspace)
 
 @pytest.fixture
 def mock_panel_correct():
@@ -59,28 +39,6 @@ def mock_metadata_correct():
     )
     return Metadata(metadata = metadata)
 
-@pytest.fixture
-def dummy_workspace():
-    return FlowJoWorkspace(os.path.join(WSP_FILE_PATH, WSP_FILE_NAME))
-
-@pytest.fixture
-def mock_dataset():
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    return fp.create_dataset(input_directory = input_directory,
-                             panel = panel,
-                             metadata = metadata,
-                             workspace = workspace,
-                             keep_raw = True)
-
-@pytest.fixture
-def mock_dataset_no_raw():
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    return fp.create_dataset(input_directory = input_directory,
-                             panel = panel,
-                             metadata = metadata,
-                             workspace = workspace,
-                             keep_raw = False)
-     
 
 def test_create_dataset_invalid_input_directory(mock_metadata_correct,
                                                 mock_panel_correct,
@@ -115,8 +73,8 @@ def test_create_dataset_wrong_input_metadata(mock_panel_correct,
                            panel = mock_panel_correct,
                            workspace = dummy_workspace)
 
-def test_subsample_parameter():
-    input_directory, panel, metadata, workspace = create_supplement_objects()
+def test_subsample_parameter(supplement_objects):
+    input_directory, panel, metadata, workspace = supplement_objects
     adata = create_dataset(input_directory = input_directory,
                            panel = panel,
                            metadata = metadata,
@@ -124,14 +82,14 @@ def test_subsample_parameter():
                            subsample_fcs_to = 20_000)
     assert adata.shape[0] == 120_000
 
-def test_subsample_parameter_ValueError():
-    input_directory, panel, metadata, workspace = create_supplement_objects()
+def test_subsample_parameter_ValueError(supplement_objects):
+    input_directory, panel, metadata, workspace = supplement_objects
     with pytest.raises(ValueError):
-        adata = create_dataset(input_directory = input_directory,
-                               panel = panel,
-                               metadata = metadata,
-                               workspace = workspace,
-                               subsample_fcs_to = "something")
+        _ = create_dataset(input_directory = input_directory,
+                           panel = panel,
+                           metadata = metadata,
+                           workspace = workspace,
+                           subsample_fcs_to = "something")
 
 def test_dataset_size(mock_dataset: AnnData):
     assert mock_dataset.shape == (284937, 21)
@@ -145,18 +103,18 @@ def test_correct_gating_names(mock_dataset: AnnData):
     assert "root/FSC_SSC/FSC_singlets/SSC_singlets/live/Neutrophils" in mock_dataset.uns["gating_cols"]
     assert "root/FSC_SSC/FSC_singlets/SSC_singlets/live/Neutrophils/file2_specific_gate" in mock_dataset.uns["gating_cols"]
 
-def test_correct_gating_for_one_file(mock_dataset: AnnData): 
-    fp.subset_gate(mock_dataset, "FSC_SSC")
+def test_correct_gating_for_one_file(mock_dataset: AnnData):
+    mock_dataset = fp.subset_gate(mock_dataset, gate = "FSC_SSC", copy = True)
     assert mock_dataset[mock_dataset.obs["sample_ID"] == "3",:].shape == (50624,21)
     assert len(mock_dataset.obs["sample_ID"].unique()) == 6
 
-def test_dataset_layers(mock_dataset: AnnData):
+def test_dataset_layers(mock_dataset_with_raw: AnnData):
     """tests to confirm the presence and identities of the anndata"""
-    assert mock_dataset.X is None
-    assert mock_dataset.layers
-    assert "raw" in mock_dataset.layers
-    assert "compensated" in mock_dataset.layers
-    assert isinstance(mock_dataset.obsm["gating"], csr_matrix)
+    assert mock_dataset_with_raw.X is None
+    assert mock_dataset_with_raw.layers
+    assert "raw" in mock_dataset_with_raw.layers
+    assert "compensated" in mock_dataset_with_raw.layers
+    assert isinstance(mock_dataset_with_raw.obsm["gating"], csr_matrix)
 
 def test_dataset_layers_no_raw(mock_dataset_no_raw: AnnData):
     """tests to confirm the presence and identities of the anndata"""
@@ -181,9 +139,12 @@ def test_dataset_var(mock_dataset: AnnData):
     assert "pnn" in mock_dataset.var.columns
     assert len(mock_dataset.var) == 21
 
-def test_compensated_different_to_raw(mock_dataset: AnnData):
+def test_compensated_different_to_raw(mock_dataset_with_raw: AnnData):
     import numpy as np
-    np.not_equal(mock_dataset.layers["raw"].flatten(), mock_dataset.layers["compensated"].flatten())
+    np.not_equal(
+        mock_dataset_with_raw.layers["raw"].flatten(),
+        mock_dataset_with_raw.layers["compensated"].flatten()
+    )
 
 def test_presence_of_uns_data(mock_dataset: AnnData):
     assert mock_dataset.uns["metadata"] is not None
@@ -195,12 +156,3 @@ def test_presence_of_uns_data(mock_dataset: AnnData):
     assert mock_dataset.uns["dataset_status_hash"]
     assert mock_dataset.uns["gating_cols"] is not None
     assert isinstance(mock_dataset.uns["gating_cols"], pd.Index)
-
-
-
-
-
-
-        
-
-

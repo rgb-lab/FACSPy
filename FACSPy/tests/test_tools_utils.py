@@ -1,6 +1,4 @@
 import pytest
-import os
-
 from anndata import AnnData
 import numpy as np
 import pandas as pd
@@ -24,9 +22,6 @@ from FACSPy.tools._utils import (_extract_valid_pca_kwargs,
                                  _recreate_preprocessed_view)
 
 from FACSPy.tools._neighbors import _compute_neighbors
-from FACSPy.dataset._supplements import Metadata, Panel
-from FACSPy.dataset._workspaces import FlowJoWorkspace
-from sklearn.preprocessing import MinMaxScaler
 
 from FACSPy.tools._utils import (_concat_gate_info_and_obs,
                                  _concat_gate_info_and_obs_and_fluo_data,
@@ -34,29 +29,10 @@ from FACSPy.tools._utils import (_concat_gate_info_and_obs,
                                  _preprocess_adata)
 
 
-WSP_FILE_PATH = "FACSPy/_resources/"
-WSP_FILE_NAME = "test_wsp.wsp"
 
-def create_supplement_objects():
-    INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
-    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
-    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
-    return INPUT_DIRECTORY, panel, metadata, workspace
-
-
-@pytest.fixture
-def mock_dataset() -> AnnData:
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    adata = fp.create_dataset(input_directory = input_directory,
-                              panel = panel,
-                              metadata = metadata,
-                              workspace = workspace,
-                              subsample_fcs_to = 100)
-    return adata
-
-def test_save_settings_function_dr(mock_dataset: AnnData):
-    _save_dr_settings(adata = mock_dataset,
+def test_save_settings_function_dr(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    _save_dr_settings(adata = mock_dataset_downsampled,
                       gate = "live",
                       layer = "compensated",
                       use_only_fluo = True,
@@ -66,8 +42,8 @@ def test_save_settings_function_dr(mock_dataset: AnnData):
                       some_parameter = "some_value",
                       some_other_parameter = "some_other_value")
     
-    assert mock_dataset.uns["settings"]
-    settings: dict = mock_dataset.uns["settings"]
+    assert mock_dataset_downsampled.uns["settings"]
+    settings: dict = mock_dataset_downsampled.uns["settings"]
     assert "_umap_live_compensated" in settings
     settings["_umap_live_compensated"]["gate"] == "live"
     assert settings["_umap_live_compensated"]["layer"] == "compensated"
@@ -77,8 +53,9 @@ def test_save_settings_function_dr(mock_dataset: AnnData):
     assert settings["_umap_live_compensated"]["some_parameter"] == "some_value"
     assert settings["_umap_live_compensated"]["some_other_parameter"] == "some_other_value"
 
-def test_save_settings_function_clustering(mock_dataset: AnnData):
-    _save_cluster_settings(adata = mock_dataset,
+def test_save_settings_function_clustering(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    _save_cluster_settings(adata = mock_dataset_downsampled,
                            gate = "live",
                            layer = "compensated",
                            use_only_fluo = True,
@@ -88,8 +65,8 @@ def test_save_settings_function_clustering(mock_dataset: AnnData):
                            some_parameter = "some_value",
                            some_other_parameter = "some_other_value")
     
-    assert mock_dataset.uns["settings"]
-    settings: dict = mock_dataset.uns["settings"]
+    assert mock_dataset_downsampled.uns["settings"]
+    settings: dict = mock_dataset_downsampled.uns["settings"]
     assert "_flowsom_live_compensated" in settings
     settings["_flowsom_live_compensated"]["gate"] == "live"
     assert settings["_flowsom_live_compensated"]["layer"] == "compensated"
@@ -99,8 +76,9 @@ def test_save_settings_function_clustering(mock_dataset: AnnData):
     assert settings["_flowsom_live_compensated"]["some_parameter"] == "some_value"
     assert settings["_flowsom_live_compensated"]["some_other_parameter"] == "some_other_value"
 
-def test_save_settings_function_dr_samplewise(mock_dataset: AnnData):
-    _save_samplewise_dr_settings(adata = mock_dataset,
+def test_save_settings_function_dr_samplewise(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    _save_samplewise_dr_settings(adata = mock_dataset_downsampled,
                                  data_metric = "mfi",
                                  data_group = "group",
                                  layer = "compensated",
@@ -112,8 +90,8 @@ def test_save_settings_function_dr_samplewise(mock_dataset: AnnData):
                                  some_parameter = "some_value",
                                  some_other_parameter = "some_other_value")
     
-    assert mock_dataset.uns["settings"]
-    settings: dict = mock_dataset.uns["settings"]
+    assert mock_dataset_downsampled.uns["settings"]
+    settings: dict = mock_dataset_downsampled.uns["settings"]
     assert "_pca_samplewise_mfi_compensated" in settings
     assert settings["_pca_samplewise_mfi_compensated"]["data_metric"] == "mfi"
     assert settings["_pca_samplewise_mfi_compensated"]["data_group"] == "group"
@@ -125,50 +103,56 @@ def test_save_settings_function_dr_samplewise(mock_dataset: AnnData):
     assert settings["_pca_samplewise_mfi_compensated"]["some_parameter"] == "some_value"
     assert settings["_pca_samplewise_mfi_compensated"]["some_other_parameter"] == "some_other_value"
 
-def test_concat_gate_info_and_obs(mock_dataset: AnnData):
-    df = _concat_gate_info_and_obs(mock_dataset)
+def test_concat_gate_info_and_obs(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    df = _concat_gate_info_and_obs(mock_dataset_downsampled)
     assert isinstance(df, pd.DataFrame)
-    assert all([col in df.columns for col in mock_dataset.uns["gating_cols"]])
-    assert all([col in df.columns for col in mock_dataset.obs.columns])
+    assert all([col in df.columns for col in mock_dataset_downsampled.uns["gating_cols"]])
+    assert all([col in df.columns for col in mock_dataset_downsampled.obs.columns])
 
-def test_concat_gate_info_and_obs(mock_dataset: AnnData):
-    df = _concat_gate_info_and_obs_and_fluo_data(mock_dataset,
+def test_concat_gate_info_and_obs(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    df = _concat_gate_info_and_obs_and_fluo_data(mock_dataset_downsampled,
                                                  "compensated")
     assert isinstance(df, pd.DataFrame)
-    assert all([col in df.columns for col in mock_dataset.uns["gating_cols"]])
-    assert all([col in df.columns for col in mock_dataset.obs.columns])
-    expr_data = mock_dataset.to_df(layer = "compensated")
+    assert all([col in df.columns for col in mock_dataset_downsampled.uns["gating_cols"]])
+    assert all([col in df.columns for col in mock_dataset_downsampled.obs.columns])
+    expr_data = mock_dataset_downsampled.to_df(layer = "compensated")
     assert np.array_equal(expr_data["FSC-A"].values, df["FSC-A"].values)
 
-def test_scale_adata_minmaxscaler(mock_dataset: AnnData):
-    df = mock_dataset.to_df(layer = "compensated")
+def test_scale_adata_minmaxscaler(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    df = mock_dataset_downsampled.to_df(layer = "compensated")
     scaled = MinMaxScaler().fit_transform(df.values)
 
-    adata = _scale_adata(mock_dataset,
+    adata = _scale_adata(mock_dataset_downsampled,
                          layer = "compensated",
                          scaling = "MinMaxScaler")
     assert np.array_equal(scaled, adata.X)
 
-def test_scale_adata_robustscaler(mock_dataset: AnnData):
-    df = mock_dataset.to_df(layer = "compensated")
+def test_scale_adata_robustscaler(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    df = mock_dataset_downsampled.to_df(layer = "compensated")
     scaled = RobustScaler().fit_transform(df.values)
 
-    adata = _scale_adata(mock_dataset,
+    adata = _scale_adata(mock_dataset_downsampled,
                          layer = "compensated",
                          scaling = "RobustScaler")
     assert np.array_equal(scaled, adata.X)
 
-def test_scale_adata_robustscaler(mock_dataset: AnnData):
-    df = mock_dataset.to_df(layer = "compensated")
+def test_scale_adata_robustscaler(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    df = mock_dataset_downsampled.to_df(layer = "compensated")
     scaled = StandardScaler().fit_transform(df.values)
 
-    adata = _scale_adata(mock_dataset,
+    adata = _scale_adata(mock_dataset_downsampled,
                          layer = "compensated",
                          scaling = "StandardScaler")
     assert np.array_equal(scaled, adata.X)
 
-def test_preprocess_adata_use_only_fluo_true(mock_dataset: AnnData):
-    adata = _preprocess_adata(mock_dataset,
+def test_preprocess_adata_use_only_fluo_true(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    adata = _preprocess_adata(mock_dataset_downsampled,
                               gate = "live",
                               layer = "compensated",
                               scaling = None,
@@ -179,17 +163,18 @@ def test_preprocess_adata_use_only_fluo_true(mock_dataset: AnnData):
     # fluo channels should be subset
     assert fp._utils.contains_only_fluo(adata)
 
-    fp.subset_gate(mock_dataset,
+    fp.subset_gate(mock_dataset_downsampled,
                    "live")
-    fp.subset_fluo_channels(mock_dataset)
-    fluo_data_original = mock_dataset.to_df(layer = "compensated")
+    fp.subset_fluo_channels(mock_dataset_downsampled)
+    fluo_data_original = mock_dataset_downsampled.to_df(layer = "compensated")
     assert np.array_equal(fluo_data_original.values, adata.layers["compensated"])
     assert adata.is_view
-    assert adata.shape == mock_dataset.shape
+    assert adata.shape == mock_dataset_downsampled.shape
     
     
-def test_preprocess_adata_scaling(mock_dataset: AnnData):
-    adata = _preprocess_adata(mock_dataset,
+def test_preprocess_adata_scaling(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    adata = _preprocess_adata(mock_dataset_downsampled,
                               gate = "live",
                               layer = "compensated",
                               scaling = "MinMaxScaler",
@@ -203,7 +188,7 @@ def test_preprocess_adata_scaling(mock_dataset: AnnData):
 
     scaled_data = adata.X
     # no scaling performed
-    subset = fp.subset_gate(mock_dataset,
+    subset = fp.subset_gate(mock_dataset_downsampled,
                             "live",
                             as_view = True)
     subset = fp.subset_fluo_channels(subset,
@@ -214,8 +199,9 @@ def test_preprocess_adata_scaling(mock_dataset: AnnData):
     assert adata.is_view
     assert adata.shape == subset.shape
 
-def test_preprocess_adata_exclude(mock_dataset: AnnData):
-    adata = _preprocess_adata(mock_dataset,
+def test_preprocess_adata_exclude(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    adata = _preprocess_adata(mock_dataset_downsampled,
                               gate = "live",
                               layer = "compensated",
                               scaling = "MinMaxScaler",
@@ -230,7 +216,7 @@ def test_preprocess_adata_exclude(mock_dataset: AnnData):
 
     scaled_data = adata.X
     # no scaling performed
-    subset = fp.subset_gate(mock_dataset,
+    subset = fp.subset_gate(mock_dataset_downsampled,
                             "live",
                             as_view = True)
     subset = fp.subset_fluo_channels(subset,
@@ -244,8 +230,9 @@ def test_preprocess_adata_exclude(mock_dataset: AnnData):
     assert adata.is_view
     assert adata.shape == subset.shape
 
-def test_preprocess_adata_use_only_fluo_false(mock_dataset: AnnData):
-    adata = _preprocess_adata(mock_dataset,
+def test_preprocess_adata_use_only_fluo_false(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    adata = _preprocess_adata(mock_dataset_downsampled,
                               gate = "live",
                               layer = "compensated",
                               scaling = None,
@@ -258,7 +245,7 @@ def test_preprocess_adata_use_only_fluo_false(mock_dataset: AnnData):
 
     scaled_data = adata.X
 
-    subset = fp.subset_gate(mock_dataset,
+    subset = fp.subset_gate(mock_dataset_downsampled,
                             "live",
                             as_view = True)
     fluo_data_original = subset.layers["compensated"]
@@ -267,8 +254,9 @@ def test_preprocess_adata_use_only_fluo_false(mock_dataset: AnnData):
     assert adata.is_view
     assert adata.shape == subset.shape
 
-def test_merge_dimred_varm_info_into_adata(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_merge_dimred_varm_info_into_adata(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    adata = mock_dataset_downsampled
     subset = fp.subset_gate(adata, "live", as_view = True)
 
     pca_ = PCA(n_components = 10)
@@ -284,8 +272,9 @@ def test_merge_dimred_varm_info_into_adata(mock_dataset: AnnData):
     assert "pca_live_compensated" in adata.varm
     assert adata.varm["pca_live_compensated"].shape == (21,10)
 
-def test_merge_dimred_coordinates_into_adata(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_merge_dimred_coordinates_into_adata(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    adata = mock_dataset_downsampled
     subset = fp.subset_gate(adata, "live", as_view = True)
 
     pca_ = PCA(n_components = 10)
@@ -300,8 +289,9 @@ def test_merge_dimred_coordinates_into_adata(mock_dataset: AnnData):
     assert "X_pca_live_compensated" in adata.obsm
     assert adata.obsm["X_pca_live_compensated"].shape == (adata.shape[0],10)
 
-def test_add_uns_data(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_add_uns_data(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    adata = mock_dataset_downsampled
     subset = fp.subset_gate(adata, "live", as_view = True)
 
     pca_ = PCA(n_components = 10)
@@ -325,9 +315,9 @@ def test_add_uns_data(mock_dataset: AnnData):
     assert isinstance(uns_dict["variance"], np.ndarray)
     assert isinstance(uns_dict["variance_ratio"], np.ndarray)
 
-def test_merge_symmetrical_csr_matrix_scanpy(mock_dataset: AnnData):
+def test_merge_symmetrical_csr_matrix_scanpy(mock_dataset_downsampled: AnnData):
     import scanpy as sc
-    adata = mock_dataset
+    adata = mock_dataset_downsampled.copy()
     adata.X = adata.layers["compensated"] # needed for scanpy
     live_subset = fp.subset_gate(adata, "live", copy = True)
     sc.pp.neighbors(live_subset)
@@ -340,8 +330,8 @@ def test_merge_symmetrical_csr_matrix_scanpy(mock_dataset: AnnData):
     indexed_matrix: csr_matrix = live_subset.obsp["connectivities"]
     assert (connectivities != indexed_matrix).nnz == 0
 
-def test_merge_symmetrical_csr_matrix_facspy(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_merge_symmetrical_csr_matrix_facspy(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     adata.X = adata.layers["compensated"] # needed for scanpy
     live_subset = fp.subset_gate(adata, "live", copy = True)
     _, connectivities, _ = _compute_neighbors(live_subset,
@@ -435,8 +425,8 @@ def test_extract_valid_leiden_kwargs(kwargs_dict: dict):
                   "obsp", "copy"]:
         assert param in leiden_kwargs 
 
-def test_choose_use_rep_as_scanpy(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_choose_use_rep_as_scanpy(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     from FACSPy.tools._utils import _choose_use_rep_as_scanpy
     use_rep = _choose_use_rep_as_scanpy(adata,
                                         uns_key = "live_compensated",
@@ -502,8 +492,8 @@ def test_choose_use_rep_as_scanpy(mock_dataset: AnnData):
                                             use_rep = None,
                                             n_pcs = None)
 
-def test_choose_representation(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_choose_representation(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     adata.X = adata.layers["compensated"]
     from FACSPy.tools._utils import _choose_representation
     use_rep = _choose_representation(adata,
@@ -586,19 +576,20 @@ def test_choose_representation(mock_dataset: AnnData):
                                          use_rep = None,
                                          n_pcs = None)
         
-def test_recreate_preprocessed_view(mock_dataset: AnnData):
-    preprocessed_adata = _preprocess_adata(mock_dataset,
+def test_recreate_preprocessed_view(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    preprocessed_adata = _preprocess_adata(mock_dataset_downsampled,
                                            gate = "live",
                                            layer = "compensated",
                                            use_only_fluo = True,
                                            exclude = ["CD16", "live_dead"],
                                            scaling = "MinMaxScaler")
-    test_view = _recreate_preprocessed_view(mock_dataset,
+    test_view = _recreate_preprocessed_view(mock_dataset_downsampled,
                                             preprocessed_adata)
     assert all(test_view.obs_names == preprocessed_adata.obs_names)
     assert all(test_view.var_names == preprocessed_adata.var_names)
     assert test_view.shape == preprocessed_adata.shape
-    assert test_view.shape != mock_dataset.shape
+    assert test_view.shape != mock_dataset_downsampled.shape
     assert "CD16" not in test_view.var_names
     assert "live_dead" not in test_view.var_names
     assert test_view.is_view

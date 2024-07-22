@@ -1,8 +1,5 @@
-import pytest
-
 import os
 import FACSPy as fp
-from anndata import AnnData
 import pandas as pd
 from pathlib import Path
 from matplotlib.testing.decorators import image_comparison
@@ -20,32 +17,13 @@ IMG_COMP_KWARGS = {
     "tol": 2
 }
 
-@pytest.fixture
-def mouse_data() -> AnnData:
-    adata = fp.mouse_lineages()
-    fp.tl.gate_frequencies(adata)
-    fp.tl.mfi(adata, layer = "compensated")
-    fp.tl.fop(adata, layer = "compensated")
-    gate = "Neutrophils"
-    layer = "compensated"
-    fp.tl.pca(adata, gate = gate, layer = layer)
-    fp.tl.neighbors(adata, gate = gate, layer = layer)
-    fp.tl.leiden(adata, gate = gate, layer = layer)
-    fp.tl.mfi(adata,
-              groupby = "Neutrophils_compensated_leiden",
-              aggregate = False)
-    fp.tl.fop(adata,
-              groupby = "Neutrophils_compensated_leiden",
-              aggregate = False)
-
-    return adata
-
 # expression_heatmap
 
 
 @image_comparison(baseline_images = ['expression_heatmap_mfi'],
                   **IMG_COMP_KWARGS)
 def test_expression_heatmap_mfi(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.expression_heatmap(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -58,6 +36,7 @@ def test_expression_heatmap_mfi(mouse_data):
 @image_comparison(baseline_images = ['expression_heatmap_technicals'],
                   **IMG_COMP_KWARGS)
 def test_expression_heatmap_mfi_technicals(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.expression_heatmap(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -71,6 +50,7 @@ def test_expression_heatmap_mfi_technicals(mouse_data):
 @image_comparison(baseline_images = ['expression_heatmap_fop'],
                   **IMG_COMP_KWARGS)
 def test_expression_heatmap_fop(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.expression_heatmap(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -85,6 +65,7 @@ def test_expression_heatmap_fop(mouse_data):
 @image_comparison(baseline_images = ['expression_heatmap_figsize'],
                   **IMG_COMP_KWARGS)
 def test_expression_heatmap_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.expression_heatmap(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -99,6 +80,7 @@ def test_expression_heatmap_figsize(mouse_data):
 
 
 def test_expression_heatmap_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.expression_heatmap(mouse_data,
                                   gate = "Neutrophils",
                                   layer = "compensated",
@@ -122,6 +104,7 @@ def test_expression_heatmap_dataframe(mouse_data):
 @image_comparison(baseline_images = ['cluster_heatmap_mfi'],
                   **IMG_COMP_KWARGS)
 def test_cluster_heatmap_mfi(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_heatmap(mouse_data,
                           gate = "Neutrophils",
                           layer = "compensated",
@@ -133,6 +116,7 @@ def test_cluster_heatmap_mfi(mouse_data):
 @image_comparison(baseline_images = ['cluster_heatmap_technicals'],
                   **IMG_COMP_KWARGS)
 def test_cluster_heatmap_heatmap_mfi_technicals(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_heatmap(mouse_data,
                           gate = "Neutrophils",
                           layer = "compensated",
@@ -145,6 +129,7 @@ def test_cluster_heatmap_heatmap_mfi_technicals(mouse_data):
 @image_comparison(baseline_images = ['cluster_heatmap_fop'],
                   **IMG_COMP_KWARGS)
 def test_cluster_heatmap_fop(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_heatmap(mouse_data,
                           gate = "Neutrophils",
                           layer = "compensated",
@@ -158,6 +143,7 @@ def test_cluster_heatmap_fop(mouse_data):
 @image_comparison(baseline_images = ['cluster_heatmap_figsize'],
                   **IMG_COMP_KWARGS)
 def test_cluster_heatmap_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.cluster_heatmap(mouse_data,
                           gate = "Neutrophils",
                           layer = "compensated",
@@ -171,6 +157,7 @@ def test_cluster_heatmap_figsize(mouse_data):
 @image_comparison(baseline_images = ['cluster_heatmap_aggregated'],
                   **IMG_COMP_KWARGS)
 def test_cluster_heatmap_aggregated(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.tl.fop(mouse_data,
               groupby = "Neutrophils_compensated_leiden",
               aggregate = True)
@@ -185,6 +172,7 @@ def test_cluster_heatmap_aggregated(mouse_data):
 
 
 def test_cluster_heatmap_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.cluster_heatmap(mouse_data,
                                gate = "Neutrophils",
                                layer = "compensated",
@@ -208,6 +196,7 @@ def test_cluster_heatmap_dataframe(mouse_data):
 @image_comparison(baseline_images = ['sample_dist_mfi'],
                   **IMG_COMP_KWARGS)
 def test_sample_dist_mfi(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.sample_distance(mouse_data,
                           gate = "Neutrophils",
                           layer = "compensated",
@@ -219,6 +208,7 @@ def test_sample_dist_mfi(mouse_data):
 @image_comparison(baseline_images = ['sample_dist_technicals'],
                   **IMG_COMP_KWARGS)
 def test_sample_dist_mfi_technicals(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.sample_distance(mouse_data,
                           gate = "Neutrophils",
                           layer = "compensated",
@@ -231,6 +221,7 @@ def test_sample_dist_mfi_technicals(mouse_data):
 @image_comparison(baseline_images = ['sample_dist_heatmap_fop'],
                   **IMG_COMP_KWARGS)
 def test_sample_dist_fop(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.sample_distance(mouse_data,
                           gate = "Neutrophils",
                           layer = "compensated",
@@ -244,6 +235,7 @@ def test_sample_dist_fop(mouse_data):
 @image_comparison(baseline_images = ['sample_dist_heatmap_figsize'],
                   **IMG_COMP_KWARGS)
 def test_sample_dist_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.sample_distance(mouse_data,
                           gate = "Neutrophils",
                           layer = "compensated",
@@ -257,6 +249,7 @@ def test_sample_dist_figsize(mouse_data):
 
 
 def test_sample_dist_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.sample_distance(mouse_data,
                                gate = "Neutrophils",
                                layer = "compensated",
@@ -276,6 +269,7 @@ def test_sample_dist_dataframe(mouse_data):
 @image_comparison(baseline_images = ['marker_corr_mfi'],
                   **IMG_COMP_KWARGS)
 def test_marker_corr_mfi(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.marker_correlation(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -285,6 +279,7 @@ def test_marker_corr_mfi(mouse_data):
 @image_comparison(baseline_images = ['marker_corr_technicals'],
                   **IMG_COMP_KWARGS)
 def test_marker_corr_technicals(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.marker_correlation(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -297,6 +292,7 @@ def test_marker_corr_technicals(mouse_data):
 @image_comparison(baseline_images = ['sample_corr_mfi'],
                   **IMG_COMP_KWARGS)
 def test_sample_corr_mfi(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.sample_correlation(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -308,6 +304,7 @@ def test_sample_corr_mfi(mouse_data):
 @image_comparison(baseline_images = ['sample_corr_technicals'],
                   **IMG_COMP_KWARGS)
 def test_sample_corr_mfi_technicals(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.sample_correlation(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -320,6 +317,7 @@ def test_sample_corr_mfi_technicals(mouse_data):
 @image_comparison(baseline_images = ['sample_corr_heatmap_fop'],
                   **IMG_COMP_KWARGS)
 def test_sample_corr_fop(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.sample_correlation(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -333,6 +331,7 @@ def test_sample_corr_fop(mouse_data):
 @image_comparison(baseline_images = ['sample_corr_figsize'],
                   **IMG_COMP_KWARGS)
 def test_sample_corr_figsize(mouse_data):
+    mouse_data = mouse_data.copy()
     fp.pl.sample_correlation(mouse_data,
                              gate = "Neutrophils",
                              layer = "compensated",
@@ -346,6 +345,7 @@ def test_sample_corr_figsize(mouse_data):
 
 
 def test_sample_corr_dataframe(mouse_data):
+    mouse_data = mouse_data.copy()
     df = fp.pl.sample_correlation(mouse_data,
                                   gate = "Neutrophils",
                                   layer = "compensated",

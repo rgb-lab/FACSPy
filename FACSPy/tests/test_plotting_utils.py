@@ -1,7 +1,4 @@
 import pytest
-import os
-
-import scanpy as sc
 from anndata import AnnData
 
 import FACSPy as fp
@@ -12,16 +9,13 @@ import pandas as pd
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
-from FACSPy.dataset._supplements import Metadata, Panel
-from FACSPy.dataset._workspaces import FlowJoWorkspace
-
 from FACSPy.plotting._utils import (_remove_ticks,
                                     _remove_ticklabels,
                                     _label_metaclusters_in_dataset)
 from FACSPy.exceptions._exceptions import MetaclusterOverwriteWarning
 
 @pytest.fixture
-def test_figure() -> Figure:
+def test_figure() -> tuple[Figure, Axes]:
     np.random.seed(187)
     data = pd.DataFrame(data = {"x": np.random.randint(1, 50,50),
                                 "y": np.random.randint(1, 50, 50)},
@@ -33,26 +27,6 @@ def test_figure() -> Figure:
                     ax = ax)
     return fig, ax
 
-WSP_FILE_PATH = "FACSPy/_resources/"
-WSP_FILE_NAME = "test_wsp.wsp"
-
-def create_supplement_objects():
-    INPUT_DIRECTORY = "FACSPy/_resources/test_suite_dataset"
-    panel = Panel(os.path.join(INPUT_DIRECTORY, "panel.txt"))
-    metadata = Metadata(os.path.join(INPUT_DIRECTORY, "metadata_test_suite.csv"))
-    workspace = FlowJoWorkspace(os.path.join(INPUT_DIRECTORY, "test_suite.wsp"))
-    return INPUT_DIRECTORY, panel, metadata, workspace
-
-
-@pytest.fixture
-def mock_dataset() -> AnnData:
-    input_directory, panel, metadata, workspace = create_supplement_objects()
-    adata = fp.create_dataset(input_directory = input_directory,
-                              panel = panel,
-                              metadata = metadata,
-                              workspace = workspace)
-    sc.pp.subsample(adata, n_obs = 200, random_state = 187)
-    return adata
 
 def test_remove_ticks_and_labels_x(test_figure: tuple[Figure, Axes]):
     _, ax = test_figure
@@ -73,8 +47,8 @@ def test_remove_ticks_and_labels_both(test_figure: tuple[Figure, Axes]):
     assert ax.get_yticklabels() == []
     assert ax.get_xticklabels() == []
 
-def test_label_metaclusters_in_dataset(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_label_metaclusters_in_dataset(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     data: pd.DataFrame = adata.uns["metadata"].dataframe.copy()
     data["metacluster"] = list(range(data.shape[0]))
     _label_metaclusters_in_dataset(adata = adata,
@@ -83,8 +57,8 @@ def test_label_metaclusters_in_dataset(mock_dataset: AnnData):
     assert "metacluster" in metadata.columns
     assert data[["sample_ID", "metacluster"]].to_dict() == metadata[["sample_ID", "metacluster"]].to_dict()
 
-def test_label_metaclusters_in_dataset_warning(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_label_metaclusters_in_dataset_warning(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     data: pd.DataFrame = adata.uns["metadata"].dataframe.copy()
     adata.uns["metadata"].dataframe["metacluster"] = list(range(adata.uns["metadata"].dataframe.shape[0]))
     data["metacluster"] = list(range(data.shape[0]))
@@ -97,8 +71,8 @@ def test_label_metaclusters_in_dataset_warning(mock_dataset: AnnData):
     assert "metacluster" in metadata.columns
     assert data[["sample_ID", "metacluster"]].to_dict() == metadata[["sample_ID", "metacluster"]].to_dict()
 
-def test_label_metaclusters_in_dataset_warning_II(mock_dataset: AnnData):
-    adata = mock_dataset
+def test_label_metaclusters_in_dataset_warning_II(mock_dataset_downsampled: AnnData):
+    adata = mock_dataset_downsampled.copy()
     data = adata.uns["metadata"].dataframe.copy()
     adata.uns["metadata"].dataframe["my_key"] = list(range(adata.uns["metadata"].dataframe.shape[0]))
     data["metacluster"] = list(range(data.shape[0]))
@@ -136,27 +110,29 @@ def test_label_metaclusters_in_dataset_warning_II(mock_dataset: AnnData):
 #    control_mapping: pd.DataFrame = control_map_func(metaclusters, sample_IDs)
 #    assert facspy_mapping.equals(control_mapping)
 #
-def test_get_uns_dataframe_I(mock_dataset: AnnData):
-    fp.tl.mfi(mock_dataset, layer = "compensated")
+def test_get_uns_dataframe_I(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    fp.tl.mfi(mock_dataset_downsampled, layer = "compensated")
     from FACSPy.plotting._utils import _get_uns_dataframe
     from FACSPy._utils import _find_gate_path_of_gate
-    df = _get_uns_dataframe(mock_dataset,
+    df = _get_uns_dataframe(mock_dataset_downsampled,
                             gate = "live",
                             table_identifier = "mfi_sample_ID_compensated")
-    assert all(df["gate"] == _find_gate_path_of_gate(mock_dataset, "live"))
-    assert all(col in df.columns for col in mock_dataset.uns["metadata"].dataframe.columns)
+    assert all(df["gate"] == _find_gate_path_of_gate(mock_dataset_downsampled, "live"))
+    assert all(col in df.columns for col in mock_dataset_downsampled.uns["metadata"].dataframe.columns)
     assert "sample_ID" in df.columns
     assert "gate" in df.columns
 
-def test_get_uns_dataframe_II(mock_dataset: AnnData):
-    fp.tl.mfi(mock_dataset, groupby = "condition1", layer = "compensated")
+def test_get_uns_dataframe_II(mock_dataset_downsampled: AnnData):
+    mock_dataset_downsampled = mock_dataset_downsampled.copy()
+    fp.tl.mfi(mock_dataset_downsampled, groupby = "condition1", layer = "compensated")
     from FACSPy.plotting._utils import _get_uns_dataframe
     from FACSPy._utils import _find_gate_path_of_gate
-    df = _get_uns_dataframe(mock_dataset,
+    df = _get_uns_dataframe(mock_dataset_downsampled,
                             gate = "live",
                             table_identifier = "mfi_condition1_compensated")
-    assert all(df["gate"] == _find_gate_path_of_gate(mock_dataset, "live"))
-    assert all(col in df.columns for col in mock_dataset.uns["metadata"].dataframe.columns)
+    assert all(df["gate"] == _find_gate_path_of_gate(mock_dataset_downsampled, "live"))
+    assert all(col in df.columns for col in mock_dataset_downsampled.uns["metadata"].dataframe.columns)
     assert "sample_ID" in df.columns
     assert "gate" in df.columns
     assert "condition1" in df.columns
