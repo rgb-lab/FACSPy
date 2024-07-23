@@ -31,7 +31,7 @@ dependencies = [
     "phenograph",
     "seaborn==0.12.2",
     "imblearn",
-    "matplotlib>=3.7.0"
+    "matplotlib<=3.7.0"
 ]
 [project.optional-dependencies]
 dev = ["pre-commit", "twine>=4.0.2"]
