@@ -17,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "flowsom@git+https://github.com/TarikExner/FlowSOM_Python.git@pip_issue",
+    "flowsom@git+https://github.com/saeyslab/FlowSOM_Python",
     "scanpy<=1.9.3",
     "pandas>=2.0.2,<=2.1.1",
     "statsmodels>=0.10.0rc2",
@@ -27,10 +27,11 @@ dependencies = [
     "KDEpy",
     "anytree",
     "statannotations",
-    "parc@git+https://github.com/ShobiStassen/PARC.git@master", # pip version is not up to date.
+    "parc",
     "phenograph",
     "seaborn==0.12.2",
-    "imblearn"
+    "imblearn",
+    "matplotlib>=3.7.0"
 ]
 [project.optional-dependencies]
 dev = ["pre-commit", "twine>=4.0.2"]
