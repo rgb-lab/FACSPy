@@ -99,7 +99,9 @@ def _remove_technical_channels(adata: AnnData,
     fluo_channels = _fetch_fluo_channels(adata)
     technical_channels = [ch for ch in adata.var_names
                           if ch not in fluo_channels]
-    return df.drop(technical_channels, axis = 1)
+    technical_channels_in_dataframe = [ch for ch in technical_channels
+                                       if ch in df.columns]
+    return df.drop(technical_channels_in_dataframe, axis = 1)
 
 def _remove_ticks(ax: Axes,
                   which: Literal["x", "y", "both"]) -> None:
