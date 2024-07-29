@@ -43,8 +43,11 @@ docs = [
     "nbsphinx",
     "nbsphinx-link",
     "pandoc",
-    "myst_parser"
+    "myst_parser",
+    "docutils<=0.20",
+    "ipython"
 ]
+
 test = [
     "pytest"
 ]
