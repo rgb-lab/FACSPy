@@ -36,7 +36,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pre-commit", "twine>=4.0.2"]
 docs = [
-    "sphinx>=4",
+    "sphinx<=7.4",
     "sphinx-book-theme>=1.0.0",
     "sphinxcontrib-bibtex>=1.0.0",
     "sphinx-autodoc-typehints",
