@@ -1,5 +1,14 @@
 # FACSPy
-Automated flow-, spectral-flow- and mass-cytometry platform 
+
+[![Tests][badge-tests]][link-tests]
+[![Documentation][badge-docs]][link-docs]
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+[badge-tests]: https://img.shields.io/github/actions/workflow/status/rgb-lab/FACSPy/pytest.yml?branch=main
+[link-tests]: https://github.com/rgb-lab/FACSPy/actions/workflows/pytest.yml
+[badge-docs]: https://img.shields.io/readthedocs/facspy
+
+An automated flow-, spectral-flow- and mass-cytometry platform.
 
 ## Installation
 Currently, FACSPy is in beta phase. A pypi distribution will be available once the beta phase is completed.
@@ -43,14 +52,23 @@ To test if everything went successfull open a python console and import FACSPy:
 
 ## Getting Started
 
-Code examples are found under "vignettes" and currently include:
-- FACSPy dataset explanation
-- Metadata objects
-- Panel objects
-- Cofactor-Table objects
+Please refer to the [documentation][link-docs]. Examples are found under "Vignettes" and currently include:
 
-- analysis of a spectral flow cytometry dataset
-- analysis of a flow cytometry dataset consisting of mouse lineages
+Code examples are found under "vignettes" and currently include:
+- Dataset Creation and Transformation
+- Dataset Gating: Unsupervised Gating
+- Data Analysis: Fluorescence intensity and Frequency of Parents
+- Data Analysis: Cell frequency analysis
+- Data Analysis: Samplewise Analysis
+- Data Analysis: Single cell analysis
+- Data Analysis: Interacting with R packages
+- The Panel object
+- The Metadata object
+- The CofactorTable object
+
+- The FACSPy dataset: Structure
+- The FACSPy dataset: Gate Handling
+
 
 ## Features
 
@@ -518,9 +536,14 @@ For the near future, the following features are meant to be implemented:
 - minimal spanning trees
 - t.b.a.
 
+If you have any requests regarding example analyses or analysis strategies, submit an issue!
+
 
 ## Contributing
 
 Your contributions are welcome!
 
 Please submit an issue or pull request via Github! Pull requests with updated documentation and accompanying unit tests are preferred but not obligate!
+
+
+[link-docs]: https://facspy.readthedocs.io
