@@ -898,7 +898,8 @@ class supervisedGating(BaseGating):
     def run_data_setup(self,
                        gated_samples: list[str],
                        layer: str,
-                       scaling: Optional[str] = "StandardScaler"):
+                       scaling: Optional[str] = "StandardScaler",
+                       n_cells: Optional[int] = None):
         """\
         Public method to run the data setup. Extracts gated samples and scales the data.
         
@@ -911,6 +912,8 @@ class supervisedGating(BaseGating):
             classifier.
         scaling
             Scaling method. Can be one of `MinMaxScaler`, `StandardScaler` or `RobustScaler`.
+        n_cells:
+            If integer, the indicated number of cells will be subsampled for training.
 
         Returns
         -------
@@ -946,9 +949,19 @@ class supervisedGating(BaseGating):
         self.X = self.gated_adata.layers[layer]
         self.y = self.gated_adata.obsm["gating"].toarray()
 
+        if n_cells is not None:
+            self.X, self.y = self._subsample_cells(self.X, self.y, n_cells)
+
         self.scaler = None
         if scaling is not None:
             self.X, self.scaler = self._scale_data(self.X, scaling)
+
+    def _subsample_cells(self,
+                         X: np.ndarray,
+                         y: np.ndarray,
+                         n: int) -> tuple[np.ndarray, np.ndarray]:
+        idxs = np.random.choice(X.shape[0], n, replace = False)
+        return X[idxs], y[idxs]
 
     def _scale_data(self,
                     X: np.ndarray,
