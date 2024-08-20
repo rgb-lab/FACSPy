@@ -16,7 +16,7 @@ Currently, FACSPy is in beta phase. A pypi distribution will be available once t
 To install, first clone this repository to your local drive via your terminal:
 
 ```shell
->>> git clone https://github.com/TarikExner/FACSPy.git
+>>> git clone https://github.com/rgb-lab/FACSPy.git
 ```
 
 It is recommended to choose conda as your package manager. Conda can be obtained, e.g., by installing the Miniconda distribution, for detailed instructions, please refer to the respective documentation.
